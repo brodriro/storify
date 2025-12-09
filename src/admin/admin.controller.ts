@@ -1,4 +1,5 @@
 import { Controller, Get, Post, UseGuards, Render, Request, StreamableFile } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createReadStream } from 'fs';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -6,7 +7,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('admin')
 @UseGuards(JwtAuthGuard)
 export class AdminController {
-    constructor(private adminService: AdminService) { }
+    constructor(
+        private adminService: AdminService,
+        private configService: ConfigService
+    ) { }
 
     @Get('dashboard')
     @Render('dashboard')
@@ -17,7 +21,8 @@ export class AdminController {
             return { user: req.user, error: 'Access Denied: Admins only' };
         }
         const stats = await this.adminService.getStats();
-        return { user: req.user, stats, config: { totalStorageGb: 10 } };
+        const totalStorageGb = this.configService.get<number>('TOTAL_STORAGE_GB') ?? 10;
+        return { user: req.user, stats, config: { totalStorageGb } };
     }
 
     @Post('backup')
