@@ -43,6 +43,7 @@
     "@types/archiver": "^7.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/hbs": "^4.0.5",
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",

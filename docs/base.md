@@ -2,121 +2,86 @@
 
 ## 🧭 **Contexto General del Proyecto**
 
-Este proyecto consiste en la creación de un **gestor de archivos tipo
-NAS**, construido con **Node.js**, **NestJS**, **TypeScript**, **HBS
-como motor de plantillas**, y manejado con **pnpm**. Su finalidad es
-proporcionar una solución ligera, modular, escalable y extensible para
-administrar archivos de forma remota mediante una interfaz web
-minimalista y moderna.
+Este proyecto consiste en la creación de un **gestor de archivos tipo NAS**, construido con **Node.js**, **NestJS**, **TypeScript**, **HBS como motor de plantillas**, y manejado con **pnpm**. Su finalidad es proporcionar una solución ligera, modular, escalable y extensible para administrar archivos de forma remota mediante una interfaz web minimalista y moderna.
 
-El proyecto debe: - Permitir **subir, eliminar, leer, listar, mover y
-descargar archivos**. - Tener una **arquitectura limpia y mantenible**,
-adecuada para NestJS. - Ofrecer autenticación por usuarios declarados en
-variables de entorno. - Manejar roles: **public**, **moderator**,
-**admin**. - Permitir tareas administrativas como **generación de
-backups** y **visualización de estadísticas** del almacenamiento
-mediante gráficos. - Administrar archivos en carpetas individuales para
-cada usuario, con accesos restringidos. - Ser fácilmente extensible, de
-modo que este prompt sirva como documento base para futuras mejoras.
+El proyecto implementado:
+-   Permite **subir, eliminar, leer, listar, mover y descargar archivos**.
+-   Tiene una **arquitectura limpia y mantenible**, basada en módulos (Auth, Filesystem, Admin, Notification).
+-   Ofrece autenticación por usuarios declarados en variables de entorno (`USERS`).
+-   Maneja roles: **public**, **moderator**, **admin**.
+-   Permite tareas administrativas como **generación de backups** (ZIP) y **visualización de estadísticas** del almacenamiento.
+-   Administra archivos en carpetas individuales para cada usuario en `/public/users/{USERNAME}/`.
+-   Cuenta con un diseño **Premium** (Glassmorphism, Animaciones, Iconos SVG).
 
-# 🔧 **Requerimientos Técnicos**
+# 🔧 **Implementación Técnica**
 
 ### 1. Arquitectura limpia
-
-El proyecto debe usar una arquitectura limpia y bien organizada: -
-Modules separados por dominios. - Services, Controllers, Repositories,
-Entities, DTOs. - Separación estricta de capas.
+El proyecto sigue una arquitectura modular de NestJS:
+-   **AuthModule**: Estrategia JWT y Guards.
+-   **FileSystemModule**: Lógica core de archivos (`fs` operations).
+-   **AdminModule**: Dashboard y Backups (`archiver`).
+-   **NotificationModule**: Servicio de notificaciones (Mock Email).
 
 ### 2. Gestión de dependencias
-
 -   Se usa **pnpm**.
--   Todas las dependencias con **versiones exactas** (sin \^).
+-   Dependencias clave: `@nestjs/common`, `hbs`, `archiver`, `cookie-parser`.
 
-### 3. GIT obligatorio
-
--   Implementar control de versiones.
--   `.gitignore` completo para NestJS.
--   `.env` no debe ser rastreado.
+### 3. Estructura de Proyecto
+-   Control de versiones con `.mb` y `.gitignore` optimizado.
+-   Configuración mediante `.env` (seguro).
 
 ### 4. Variables de entorno
+Variables implementadas:
+```env
+PORT=3000
+STORAGE_PATH=./public/users
+TOTAL_STORAGE_GB=10
+ADMIN_EMAIL=admin@storify.local
+USERS="ALICE,INVITADO,ADMIN"
+USER_ALICE=...
+```
 
-Debe existir un `.env` y un `env_example`.\
-Variables mínimas:
+### 5. Frontend (HBS + CSS)
+-   Plantillas: `browser.hbs`, `dashboard.hbs`, `index.hbs`.
+-   Partials: `header.hbs`.
+-   **CSS Centralizado**: Todo el estilo se encuentra en `/public/css/style.css`.
+-   **Iconografía**: Se utilizan Iconos SVG (Heroicons) en lugar de emojis.
 
-    PORT=
-    STORAGE_PATH=/public/
-    TOTAL_STORAGE_GB=
-    ADMIN_EMAIL=
-    USERS="ALICE,INVITADO,ADMIN"
-    USER_ALICE=
-    USER_INVITADO=
-    USER_ADMIN=
+### 6. Almacenamiento
+-   Ruta base: `/public/users/{USERNAME}/`.
+-   Prevención de Path Traversal estricta.
 
-### 5. Motor de plantillas HBS
-
-Estructura requerida:
-
-    /views/partials/header.hbs
-    /views/partials/content.hbs
-    /views/partials/footer.hbs
-
-### 6. Carpeta pública
-
-Los archivos estarán en `/public/`.
-
-### 7. Carpeta por usuario
-
-Cada usuario tendrá:
-
-    /public/users/{USERNAME}/
-
-Se crea automáticamente si no existe.\
-El admin ve todo; los demás solo su carpeta.
-
-# 📁 **Requerimientos Funcionales**
+# 📁 **Funcionalidades**
 
 ### 1. Gestión de archivos
+-   Listar archivos y carpetas con ordenamiento (Nombre/Fecha).
+-   **Subir**: Drag & Drop con barra de progreso.
+-   **Mover**: Funcionalidad explícita para trasladar archivos entre carpetas.
+-   **Previsualización**: Modal para imágenes y videos sin descargar.
 
--   Listar archivos y carpetas.
--   Subir, eliminar, descargar, mover.
--   Drag & drop.
--   Orden asc/desc por nombre o fecha.
+### 2. Seguridad
+-   Roles implementados:
+    -   **public**: Solo lectura.
+    -   **moderator**: Gestión de archivos (Subir/Mover/Borrar).
+    -   **admin**: Acceso global y Dashboard.
 
-### 2. Seguridad con .env
+### 3. Manejo de duplicados
+-   Detección automática de archivos existentes.
+-   Renombrado automático: `archivo_duplicado.ext`.
+-   **Feedback UI**: Alerta al usuario cuando un archivo es renombrado.
 
--   Usuarios listados en USERS.
--   Contraseñas con USER_USERNAME.
--   Se detectan automáticamente variables USER\_.
+### 4. Backups y Notificaciones
+-   Generación de ZIP de todo el directorio `users`.
+-   **Notificación**: Se utiliza `NotificationService` para simular el envío de un correo al `ADMIN_EMAIL` (visible en logs).
 
-### 3. Roles
-
-**public:** leer/descargar.\
-**moderator:** leer/subir/mover/descargar.\
-**admin:** todo + backups.
-
-### 4. Manejo de duplicados
-
-Si se sube un archivo existente: - Mostrar advertencia. - Guardar como
-`archivo_duplicado`. - Si existe otro, `archivo_duplicado2`, etc.
-
-### 5. Backups
-
--   El admin genera backups.
--   Notificación navegador + correo a ADMIN_EMAIL.
-
-# 📊 **Dashboard Administrativo (Una sola página)**
-
-Incluye: - Botón de backups. - Gráficos de tipos de archivo. - Gráfico
-de almacenamiento. - Datos por usuario.
+# 📊 **Dashboard Administrativo**
+-   Visualización de uso de disco total vs límite.
+-   Gráfico de distribución por tipos de archivo.
+-   Cuotas de uso por usuario.
+-   Descarga directa de Backups.
 
 # 🎨 **Interfaz Web**
-
--   Minimalista.
--   Tema claro/oscuro con botón.
--   Responsive.
-
-# 🌐 **Objetivo del Prompt**
-
-Este prompt sirve como base completa para: - Generar código. - Mantener
-coherencia. - Extender funcionalidad. - Guiar a futuros modelos en
-mejoras del proyecto NAS.
+-   Diseño **Glassmorphism** moderno.
+-   Tema Claro/Oscuro persistente.
+-   Totalmente Responsive.
+-   Animaciones suaves (Fade-in, Slide-up).

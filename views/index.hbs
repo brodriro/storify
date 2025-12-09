@@ -1,47 +1,33 @@
-<div style="display: grid; place-items: center; min-height: 60vh;">
-    <div
-        style="background: var(--card-bg); padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; max-width: 400px;">
-        <h2 style="margin-top: 0;">Login</h2>
-        <form id="loginForm" style="display: flex; flex-direction: column; gap: 1rem;">
-            <div>
-                <label for="username" style="display: block; margin-bottom: 0.5rem;">Username</label>
-                <input type="text" id="username" name="username" required
-                    style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+{{#> main}}
+<div class="login-container animate-fade-in">
+    <div class="login-card">
+        <h2 style="text-align: center; margin-bottom: 2rem; color: var(--primary);">Storify NAS</h2>
+
+        <form class="login-form" action="/auth/login" method="POST">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" name="username" class="form-input" placeholder="e.g. Alice" required>
             </div>
-            <div>
-                <label for="password" style="display: block; margin-bottom: 0.5rem;">Password</label>
-                <input type="password" id="password" name="password" required
-                    style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-input" placeholder="Enter password..." required>
             </div>
-            <button type="submit"
-                style="background: var(--primary); color: white; padding: 0.75rem; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Sign
-                In</button>
+
+            <button type="submit" class="btn btn-submit">Login</button>
         </form>
-        <p id="errorMsg" style="color: red; display: none; margin-top: 1rem;">Invalid credentials</p>
+
+        <div id="error-msg" class="error-msg">
+            Invalid credentials
+        </div>
     </div>
 </div>
 
 <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData);
-        console.log("beforeSendData", data);
-        try {
-            const res = await fetch('/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            console.log("afterSendData", res);
-            if (res.ok) {
-                window.location.href = '/files/browser'; // Redirect to browser on success
-            } else {
-                document.getElementById('errorMsg').style.display = 'block';
-            }
-        } catch (err) {
-            console.error(err);
-            document.getElementById('errorMsg').style.display = 'block';
-        }
-    });
+    // Simple query param check for error
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('error')) {
+        document.getElementById('error-msg').style.display = 'block';
+    }
 </script>
+{{/main}}

@@ -34,7 +34,7 @@ export class FileSystemService {
         return this.getUserPath(username);
     }
 
-    async listFiles(username: string, relativePath: string = '', isAdmin: boolean = false) {
+    async listFiles(username: string, relativePath: string = '', isAdmin: boolean = false, sortBy: 'name' | 'date' = 'name', order: 'asc' | 'desc' = 'asc') {
         const root = this.resolveRoot(username, isAdmin);
         const target = path.join(root, relativePath);
 
@@ -46,12 +46,32 @@ export class FileSystemService {
         if (!fs.existsSync(target)) return [];
 
         const items = await fs.promises.readdir(target, { withFileTypes: true });
-        return items.map(item => ({
-            name: item.name,
-            isDirectory: item.isDirectory(),
-            size: item.isDirectory() ? 0 : fs.statSync(path.join(target, item.name)).size,
-            modifiedAt: fs.statSync(path.join(target, item.name)).mtime,
-        }));
+        const mappedItems = items.map(item => {
+            const ext = item.isDirectory() ? '' : path.extname(item.name).toLowerCase();
+            return {
+                name: item.name,
+                isDirectory: item.isDirectory(),
+                size: item.isDirectory() ? 0 : fs.statSync(path.join(target, item.name)).size,
+                modifiedAt: fs.statSync(path.join(target, item.name)).mtime,
+                extension: ext,
+                isImage: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'].includes(ext),
+                isVideo: ['.mp4', '.webm', '.ogg', '.mov'].includes(ext)
+            };
+        });
+
+        return mappedItems.sort((a, b) => {
+            if (a.isDirectory && !b.isDirectory) return -1;
+            if (!a.isDirectory && b.isDirectory) return 1;
+
+            let comparison = 0;
+            if (sortBy === 'name') {
+                comparison = a.name.localeCompare(b.name);
+            } else if (sortBy === 'date') {
+                comparison = a.modifiedAt.getTime() - b.modifiedAt.getTime();
+            }
+
+            return order === 'asc' ? comparison : -comparison;
+        });
     }
 
     async createFolder(username: string, relativePath: string, folderName: string, isAdmin: boolean = false) {
@@ -140,6 +160,36 @@ export class FileSystemService {
         }
 
         await fs.promises.rename(oldTarget, newTarget);
+    }
+
+    async moveItem(username: string, currentPath: string, destinationPath: string, isAdmin: boolean = false) {
+        const root = this.resolveRoot(username, isAdmin);
+        const source = path.join(root, currentPath);
+        // destinationPath is relative to root. If destinationPath is '..', we handle logical parent in UI or here? 
+        // Better to treat destinationPath as the target directory relative to root.
+
+        // If user says "move file.txt to /subfolder", destinationPath is "subfolder"
+        const destDir = path.join(root, destinationPath);
+        const filename = path.basename(source);
+        const finalDest = path.join(destDir, filename);
+
+        if (!source.startsWith(root) || !finalDest.startsWith(root)) {
+            throw new Error('Access denied');
+        }
+
+        if (!fs.existsSync(source)) {
+            throw new Error('Source item not found');
+        }
+
+        if (!fs.existsSync(destDir)) {
+            throw new Error('Destination folder does not exist');
+        }
+
+        if (fs.existsSync(finalDest)) {
+            throw new Error('File with same name exists in destination');
+        }
+
+        await fs.promises.rename(source, finalDest);
     }
     async getGlobalStats() {
         const root = path.join(this.baseStoragePath, 'users');

@@ -1,144 +1,320 @@
-<div style="padding: 1rem;">
-    <h2>File Browser</h2>
-    <div style="margin-bottom: 1rem; padding: 0.5rem; background: #eef; border-radius: 4px;">
-        <strong>Current Path:</strong> /{{currentPath}}
+{{#> main}}
+<div class="animate-slide-up">
+    <div class="browser-header">
+        <h2 style="margin: 0;">File Browser</h2>
+        <div style="display: flex; gap: 1rem;">
+            <div class="glass-panel sort-controls">
+                <span class="sort-label">Sort by:</span>
+                <select id="sortSelect" onchange="applySort()" class="sort-select">
+                    <option value="name">Name</option>
+                    <option value="date">Date</option>
+                </select>
+                <button onclick="toggleOrder()" class="btn btn-sm btn-secondary icon-btn" id="orderBtn">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <path d="M12 5v14M19 12l-7 7-7-7"></path>
+                    </svg>
+                </button>
+            </div>
+            <button onclick="document.getElementById('fileInput').click()" class="btn btn-primary icon-btn">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Upload
+            </button>
+            <button onclick="createNewFolder()" class="btn btn-secondary icon-btn">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    <line x1="12" y1="11" x2="12" y2="17"></line>
+                    <line x1="9" y1="14" x2="15" y2="14"></line>
+                </svg>
+                New Folder
+            </button>
+        </div>
+    </div>
+
+    <div class="glass-panel current-path-bar">
+        <span style="color: var(--text-muted);">Current Path:</span>
+        <code class="path-code">/{{currentPath}}</code>
         {{#if currentPath}}
-        <a href="/files/browser?path={{parentPath}}" style="margin-left: 1rem;">⬆ Up Level</a>
+        <a href="/files/browser?path={{parentPath}}" class="btn btn-sm btn-secondary icon-btn">
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M12 19V5M5 12l7-7 7 7"></path>
+            </svg>
+            Up Level
+        </a>
         {{/if}}
     </div>
 
-    <!-- Toolbar -->
-    <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
-        <button onclick="document.getElementById('fileInput').click()">Upload File</button>
-        <button onclick="createNewFolder()">New Folder</button>
-    </div>
-
     <!-- Drag & Drop Zone -->
-    <div id="dropZone"
-        style="border: 2px dashed #ccc; border-radius: 8px; padding: 2rem; min-height: 300px; background: var(--card-bg);">
+    <div id="dropZone" class="dropZone" style="min-height: 50vh;">
 
         {{#unless files.length}}
-        <p style="text-align: center; color: #888;">No files found. Drag files here to upload.</p>
+        <div class="empty-state">
+            <div class="empty-icon">
+                <svg class="icon-lg" style="opacity: 0.3;" viewBox="0 0 24 24">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+            </div>
+            <p>This folder is empty.</p>
+            <p style="font-size: 0.9rem;">Drag and drop files here to upload.</p>
+        </div>
         {{/unless}}
 
-        <ul
-            style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+        <ul class="file-grid">
             {{#each files}}
-            <li style="text-align: center; padding: 1rem; border: 1px solid #eee; border-radius: 4px; cursor: pointer;"
-                {{#if this.isDirectory}}
-                onclick="window.location.href='/files/browser?path={{../currentPath}}/{{this.name}}'" {{else}}
-                onclick="window.open('/files/download?path={{../currentPath}}/{{this.name}}')" {{/if}}>
-                <div style="font-size: 2rem;">{{#if this.isDirectory}}📁{{else}}📄{{/if}}</div>
-                <div style="word-break: break-all; font-size: 0.9rem; margin-top: 0.5rem;">{{this.name}}</div>
+            <li class="glass-panel file-card" {{#if this.isDirectory}}
+                onclick="window.location.href='/files/browser?path={{../currentPath}}/{{this.name}}'" {{#unless
+                ../isAdmin}}style="cursor: pointer;" {{/unless}}{{else}} onclick="previewFile('{{this.name}}')" {{/if}}>
+
+                <div class="file-icon">
+                    {{#if this.isDirectory}}
+                    <svg class="icon-lg" style="color: var(--primary);" viewBox="0 0 24 24">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    {{else if this.isImage}}
+                    <img src="/files/download?path={{#if ../currentPath}}{{../currentPath}}/{{/if}}{{this.name}}"
+                        alt="{{this.name}}" class="file-thumbnail" loading="lazy"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <svg class="icon-lg fallback-icon" style="color: var(--text-muted); display: none;"
+                        viewBox="0 0 24 24">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                        <polyline points="13 2 13 9 20 9"></polyline>
+                    </svg>
+                    {{else if this.isVideo}}
+                    <video class="file-thumbnail" preload="metadata" muted>
+                        <source
+                            src="/files/download?path={{#if ../currentPath}}{{../currentPath}}/{{/if}}{{this.name}}#t=0.5">
+                    </video>
+                    {{else}}
+                    <svg class="icon-lg" style="color: var(--text-muted);" viewBox="0 0 24 24">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                        <polyline points="13 2 13 9 20 9"></polyline>
+                    </svg>
+                    {{/if}}
+                </div>
+                <div class="file-name">{{this.name}}</div>
+
                 {{#unless this.isDirectory}}
-                <div style="font-size: 0.75rem; color: #666;">{{this.size}} B</div>
+                <div class="file-meta">{{this.size}} B</div>
                 {{/unless}}
-                <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
-                    <button onclick="event.stopPropagation(); renameItem('{{this.name}}')" title="Rename"
-                        style="cursor: pointer; padding: 2px 6px; border: 1px solid #ddd; background: white; border-radius: 4px;">✏️</button>
-                    <button onclick="event.stopPropagation(); deleteItem('{{this.name}}')" title="Delete"
-                        style="cursor: pointer; padding: 2px 6px; border: 1px solid #ddd; background: white; border-radius: 4px; color: red;">🗑️</button>
+
+                <div class="file-actions">
+                    <button onclick="event.stopPropagation(); renameItem('{{this.name}}')"
+                        class="btn btn-sm btn-secondary" title="Rename">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                    </button>
+                    <button onclick="event.stopPropagation(); moveItem('{{this.name}}')"
+                        class="btn btn-sm btn-secondary" title="Move">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                    <button onclick="event.stopPropagation(); deleteItem('{{this.name}}')" class="btn btn-sm btn-danger"
+                        title="Delete">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                            </path>
+                        </svg>
+                    </button>
                 </div>
             </li>
             {{/each}}
         </ul>
-
     </div>
 
     <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFiles(this.files)">
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="modal-overlay" onclick="closePreview(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modalTitle" style="margin: 0;">Preview</h3>
+                <button class="btn-close" onclick="closePreview(event)">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content injected here -->
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <a id="modalDownloadLink" href="#" class="btn btn-primary icon-btn" download>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
     const currentPath = "{{currentPath}}";
+
+    function handleFiles(files) {
+        if (!files.length) return;
+
+        const formData = new FormData();
+        Array.from(files).forEach(file => {
+            formData.append('files', file);
+        });
+        formData.append('path', currentPath);
+
+        fetch('/files/upload', {
+            method: 'POST',
+            body: formData
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.uploaded) {
+                        const warnings = data.uploaded.filter(u => u.original !== u.final);
+                        if (warnings.length > 0) {
+                            const msg = warnings.map(w => `"${w.original}" -> "${w.final}"`).join('\n');
+                            alert(`Duplicate files renamed:\n${msg}`);
+                        }
+                    }
+                    window.location.reload();
+                } else {
+                    alert('Upload failed');
+                }
+            })
+            .catch(err => console.error(err));
+    }
+
     const dropZone = document.getElementById('dropZone');
 
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = 'var(--primary)';
-        dropZone.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+        dropZone.classList.add('drag-over');
     });
 
-    dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = '#ccc';
-        dropZone.style.backgroundColor = 'var(--card-bg)';
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
     });
 
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = '#ccc';
-        dropZone.style.backgroundColor = 'var(--card-bg)';
+        dropZone.classList.remove('drag-over');
         handleFiles(e.dataTransfer.files);
     });
 
-    async function handleFiles(files) {
-        if (!files.length) return;
+    function createNewFolder() {
+        const name = prompt("Enter folder name:");
+        if (!name) return;
 
-        const formData = new FormData();
-        // Since backend might handle single or array, let's append all
-        for (let i = 0; i < files.length; i++) {
-            formData.append('files', files[i]);
-        }
-        formData.append('path', currentPath);
-
-        try {
-            // Need to implement upload endpoint
-            const res = await fetch('/files/upload', {
-                method: 'POST',
-                body: formData
-            });
-            if (res.ok) {
-                window.location.reload();
-            } else {
-                alert('Upload failed');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error uploading');
-        }
+        fetch('/files/mkdir', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: currentPath, name })
+        }).then(() => window.location.reload());
     }
 
-    async function createNewFolder() {
-        const name = prompt("Folder name:");
-        if (name) {
-            await fetch('/files/mkdir', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: currentPath, name })
-            });
-            window.location.reload();
-        }
+    function deleteItem(name) {
+        if (!confirm(`Delete ${name}?`)) return;
+
+        fetch('/files/delete', {
+            method: 'DELETE', // Using DELETE verb but explicit endpoint
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: currentPath ? currentPath + '/' + name : name })
+        }).then(() => window.location.reload());
     }
 
-    async function deleteItem(name) {
-        if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+    function renameItem(name) {
+        const newName = prompt("Enter new name:", name);
+        if (!newName || newName === name) return;
 
-        try {
-            const res = await fetch('/files/delete', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: currentPath ? currentPath + '/' + name : name })
-            });
-            if (res.ok) window.location.reload();
-            else alert('Failed to delete');
-        } catch (e) { console.error(e); alert('Error deleting'); }
+        fetch('/files/rename', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                path: currentPath ? currentPath + '/' + name : name,
+                newName
+            })
+        }).then(() => window.location.reload());
     }
 
-    async function renameItem(name) {
-        const newName = prompt("New name:", name);
-        if (newName && newName !== name) {
-            try {
-                const res = await fetch('/files/rename', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        path: currentPath ? currentPath + '/' + name : name,
-                        newName
-                    })
-                });
-                if (res.ok) window.location.reload();
-                else alert('Failed to rename: ' + (await res.text()).substring(0, 50));
-            } catch (e) { console.error(e); alert('Error renaming'); }
+    function applySort() {
+        const sortBy = document.getElementById('sortSelect').value;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('sort', sortBy);
+        window.location.href = currentUrl.toString();
+    }
+
+    function toggleOrder() {
+        const currentUrl = new URL(window.location.href);
+        const currentOrder = currentUrl.searchParams.get('order') || 'asc';
+        const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+        currentUrl.searchParams.set('order', newOrder);
+        window.location.href = currentUrl.toString();
+    }
+
+    // Set initial values from server if rendered (or rely on default query param redirect)
+    // We can assume server passed sortBy/order in context if we wanted to set the select/button state accurately.
+    // For now, defaults in UI trigger defaults in URL.
+
+    // Preview Logic
+    function previewFile(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const path = currentPath ? currentPath + '/' + filename : filename;
+        const downloadUrl = `/files/download?path=${encodeURIComponent(path)}`;
+
+        const modal = document.getElementById('previewModal');
+        const modalBody = document.getElementById('modalBody');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDownload = document.getElementById('modalDownloadLink');
+
+        modalTitle.textContent = filename;
+        modalDownload.href = downloadUrl;
+        modalBody.innerHTML = ''; // Clear previous
+
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+            const img = document.createElement('img');
+            img.src = downloadUrl;
+            modalBody.appendChild(img);
+        } else if (['mp4', 'webm'].includes(ext)) {
+            const video = document.createElement('video');
+            video.src = downloadUrl;
+            video.controls = true;
+            modalBody.appendChild(video);
+        } else {
+            modalBody.innerHTML = '<p>Preview not available for this file type.</p>';
         }
+
+        modal.classList.add('active');
+    }
+
+    function closePreview(e) {
+        if (e) e.stopPropagation();
+        const modal = document.getElementById('previewModal');
+        modal.classList.remove('active');
+        // Stop video playback
+        const video = modal.querySelector('video');
+        if (video) video.pause();
+    }
+
+    function moveItem(name) {
+        const destination = prompt("Enter destination path (relative to root, e.g. 'photos' or '..'):", currentPath);
+        if (destination === null) return; // Cancelled
+
+        fetch('/files/move', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                path: currentPath ? currentPath + '/' + name : name,
+                destination
+            })
+        }).then(res => res.json())
+            .then(data => {
+                if (data.success) window.location.reload();
+                else alert('Move failed');
+            });
     }
 </script>
+{{/main}}

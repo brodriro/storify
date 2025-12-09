@@ -1,10 +1,30 @@
-<header
-    style="background: var(--card-bg); padding: 1rem 2rem; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center;">
-    <div style="font-weight: bold; font-size: 1.25rem;">Storify</div>
-    <div>
-        <button onclick="toggleTheme()" style="padding: 0.5rem 1rem; cursor: pointer;">Toggle Theme</button>
+<header class="main-header glass-panel">
+    <div class="logo">
+        <svg class="icon" style="color: var(--primary); margin-right: 0.5rem;" viewBox="0 0 24 24">
+            <path
+                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+            </path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+        Storify
+    </div>
+    <div class="header-controls">
+        <button onclick="toggleTheme()" class="btn btn-secondary btn-sm icon-btn">
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            Theme
+        </button>
         {{#if user}}
-        <a href="/auth/logout" style="margin-left: 1rem; color: var(--primary);">Logout</a>
+        <a href="/auth/logout" class="btn btn-secondary btn-sm btn-logout icon-btn">
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Logout
+        </a>
         {{/if}}
     </div>
 </header>

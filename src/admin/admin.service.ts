@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { FileSystemService } from '../filesystem/filesystem.service';
 import { ConfigService } from '@nestjs/config';
+import { NotificationService } from '../notification/notification.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import archiver from 'archiver';
@@ -11,7 +12,8 @@ export class AdminService {
 
     constructor(
         private fileSystemService: FileSystemService,
-        private configService: ConfigService
+        private configService: ConfigService,
+        private notificationService: NotificationService
     ) {
         this.baseStoragePath = this.configService.get<string>('storagePath') ?? './public/users';
     }
@@ -34,7 +36,13 @@ export class AdminService {
         });
 
         return new Promise((resolve, reject) => {
-            output.on('close', function () {
+            output.on('close', async () => {
+                const adminEmail = this.configService.get<string>('ADMIN_EMAIL') || 'admin@storify.local';
+                await this.notificationService.sendEmail(
+                    adminEmail,
+                    'Backup Created',
+                    `Backup saved to ${backupPath}`
+                ).catch(e => console.error('Email error', e));
                 resolve(backupPath);
             });
 
