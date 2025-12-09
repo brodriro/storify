@@ -26,6 +26,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/serve-static": "^5.0.4",
     "archiver": "^7.0.1",
     "cookie-parser": "^1.4.7",
     "hbs": "^4.2.0",

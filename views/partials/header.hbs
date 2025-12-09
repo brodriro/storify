@@ -9,6 +9,11 @@
         </svg>
         Storify
     </div>
+    {{#if user}}
+    <div class="welcome-text">
+        Bienvenido {{user.username}}
+    </div>
+    {{/if}}
     <div class="header-controls">
         <button onclick="toggleTheme()" class="btn btn-secondary btn-sm icon-btn">
             <svg class="icon icon-sm" viewBox="0 0 24 24">
