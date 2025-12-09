@@ -38,7 +38,7 @@
         <span style="color: var(--text-muted);">Current Path:</span>
         <code class="path-code">/{{currentPath}}</code>
         {{#if currentPath}}
-        <a href="/files/browser?path={{parentPath}}" class="btn btn-sm btn-secondary icon-btn">
+        <a href="#" onclick="goToPath('{{parentPath}}'); return false;" class="btn btn-sm btn-secondary icon-btn">
             <svg class="icon icon-sm" viewBox="0 0 24 24">
                 <path d="M12 19V5M5 12l7-7 7 7"></path>
             </svg>
@@ -83,7 +83,7 @@
             {{#each files}}
             <li class="glass-panel file-card" 
                 {{#if this.isDirectory}}
-                    onclick="window.location.href='/files/browser?path={{../currentPath}}/{{this.name}}'"
+                    onclick="openFolder('{{this.name}}')"
                     ondragover="onFolderDragOver(event)"
                     ondragleave="onFolderDragLeave(event)"
                     ondrop="onFolderDrop(event, '{{this.name}}')"
@@ -265,6 +265,24 @@
                 newName
             })
         }).then(() => window.location.reload());
+    }
+
+    function goToPath(path) {
+        const url = new URL(window.location.origin + '/files/browser');
+        if (path) {
+            url.searchParams.set('path', path);
+        }
+        const currentUrl = new URL(window.location.href);
+        const currentSort = currentUrl.searchParams.get('sort');
+        const currentOrder = currentUrl.searchParams.get('order');
+        if (currentSort) url.searchParams.set('sort', currentSort);
+        if (currentOrder) url.searchParams.set('order', currentOrder);
+        window.location.href = url.toString();
+    }
+
+    function openFolder(name) {
+        const base = currentPath ? currentPath + '/' : '';
+        goToPath(base + name);
     }
 
     function applySort() {

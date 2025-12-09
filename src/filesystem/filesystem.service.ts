@@ -106,19 +106,26 @@ export class FileSystemService {
         });
 
         // Filter out other users' folders for non-admin users at root level
+        const usersConfig = this.configService.get<any[]>('users') || [];
+        const knownUsernames = new Set<string>(usersConfig.map(u => u.username));
+
         const filteredItems = mappedItems.filter(item => {
             // Admin can see everything
             if (isAdmin) return true;
 
-            // If not at root level, show everything (user is in their own folder)
+            // If not at root level, show everything (user is in their own folder tree)
             if (relativePath !== '') return true;
 
-            // At root level: hide directories that don't belong to this user
-            if (item.isDirectory && item.name !== username) {
-                return false;
+            // At root level: hide directories whose name matches a configured user
+            // different from the current user. Directories with names that are not
+            // configured usernames are considered global and are visible.
+            if (item.isDirectory) {
+                if (knownUsernames.has(item.name) && item.name !== username) {
+                    return false;
+                }
             }
 
-            // Show files and user's own folder
+            // Show files and allowed folders
             return true;
         });
 
