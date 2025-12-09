@@ -20,11 +20,11 @@
 
             <div class="usage-meta">
                 <span>Total Size</span>
-                <strong>{{stats.totalSize}} bytes</strong>
+                <strong>{{totalSizeMb}} MB</strong>
             </div>
 
             <div class="usage-bar-container">
-                <div class="usage-bar-fill" style="width: 45%;"></div>
+                <div class="usage-bar-fill" style="width: {{usagePercent}}%;"></div>
             </div>
             <p class="usage-note">
                 Usage relative to {{config.totalStorageGb}}GB limit

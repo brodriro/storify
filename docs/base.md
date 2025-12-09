@@ -10,7 +10,7 @@ El proyecto implementado:
 -   Ofrece autenticación por usuarios declarados en variables de entorno (`USERS`).
 -   Maneja roles: **public**, **moderator**, **admin**.
 -   Permite tareas administrativas como **generación de backups** (ZIP) y **visualización de estadísticas** del almacenamiento.
--   Administra archivos en carpetas individuales para cada usuario en `/public/users/{USERNAME}/`.
+-   Administra archivos en una **raíz compartida** `/public/users/` con carpetas individuales por usuario en `/public/users/{USERNAME}/`.
 -   Cuenta con un diseño **Premium** (Glassmorphism, Animaciones, Iconos SVG).
 
 # 🔧 **Implementación Técnica**
@@ -48,8 +48,9 @@ USER_ALICE=...
 -   **Iconografía**: Se utilizan Iconos SVG (Heroicons) en lugar de emojis.
 
 ### 6. Almacenamiento
--   Ruta base: `/public/users/{USERNAME}/`.
--   Prevención de Path Traversal estricta.
+-   Ruta base física: `/public/users/` (raíz común para todos los usuarios).
+-   Estructura lógica por usuario: `/public/users/{USERNAME}/`.
+-   Prevención de Path Traversal estricta (validación de rutas y normalización en backend).
 
 # 📁 **Funcionalidades**
 
@@ -64,6 +65,20 @@ USER_ALICE=...
     -   **public**: Solo lectura.
     -   **moderator**: Gestión de archivos (Subir/Mover/Borrar).
     -   **admin**: Acceso global y Dashboard.
+    
+-   Reglas de visibilidad de archivos y carpetas:
+    -   Todos los usuarios operan sobre la raíz compartida `/users`.
+    -   Usuarios **no admin**:
+        -   Solo pueden navegar dentro de su propia carpeta (`/users/{USERNAME}/`).
+        -   No pueden listar ni acceder a carpetas de otros usuarios.
+        -   Pueden operar sobre elementos sueltos ubicados directamente en la raíz `/users` (p. ej. archivos compartidos), siempre sin acceder a subcarpetas ajenas.
+    -   Usuarios **admin**:
+        -   Pueden ver y operar sobre todas las carpetas y archivos bajo `/users`.
+
+-   Flujo de autenticación y cierre de sesión:
+    -   Login mediante formulario en `/` que envía `POST /auth/login`.
+    -   Tras login correcto se emite un JWT que se guarda en cookie (`jwt`) y se redirige al navegador de archivos (`/files/browser`).
+    -   El logout (`/auth/logout`) limpia la cookie `jwt` y **redirige siempre al login** (`/`).
 
 ### 3. Manejo de duplicados
 -   Detección automática de archivos existentes.

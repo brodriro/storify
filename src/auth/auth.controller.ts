@@ -34,6 +34,7 @@ export class AuthController {
         return res.redirect('/files/browser');
     }
 
+    @Get('logout')
     @Post('logout')
     async logout(@Res() res: Response): Promise<void> {
         res.clearCookie('jwt');

@@ -22,7 +22,13 @@ export class AdminController {
         }
         const stats = await this.adminService.getStats();
         const totalStorageGb = this.configService.get<number>('TOTAL_STORAGE_GB') ?? 10;
-        return { user: req.user, stats, config: { totalStorageGb } };
+        const totalBytesLimit = totalStorageGb * 1024 * 1024 * 1024;
+        const totalSizeMb = Math.round(stats.totalSize / (1024 * 1024));
+        const usagePercent = totalBytesLimit > 0
+            ? Math.min(100, Math.round((stats.totalSize / totalBytesLimit) * 100))
+            : 0;
+
+        return { user: req.user, stats, config: { totalStorageGb }, isAdmin: true, usagePercent, totalSizeMb };
     }
 
     @Post('backup')

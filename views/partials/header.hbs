@@ -17,6 +17,14 @@
             Theme
         </button>
         {{#if user}}
+        {{#if isAdmin}}
+        <a href="/admin/dashboard" class="btn btn-primary btn-sm icon-btn">
+            <svg class="icon icon-sm" viewBox="0 0 24 24">
+                <path d="M3 13h4v8H3zM10 3h4v18h-4zM17 9h4v12h-4z"></path>
+            </svg>
+            Admin Dashboard
+        </a>
+        {{/if}}
         <a href="/auth/logout" class="btn btn-secondary btn-sm btn-logout icon-btn">
             <svg class="icon icon-sm" viewBox="0 0 24 24">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
