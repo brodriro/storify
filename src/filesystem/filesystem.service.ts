@@ -310,6 +310,9 @@ export class FileSystemService {
 
                     if (username) {
                         stats.userUsage[username] = (stats.userUsage[username] || 0) + size;
+                    } else {
+                        // Archivos que no pertenecen a ningún usuario directo (p.ej. en la raíz compartida)
+                        stats.userUsage['OTROS'] = (stats.userUsage['OTROS'] || 0) + size;
                     }
                 }
             }

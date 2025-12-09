@@ -63,10 +63,36 @@
         {{/unless}}
 
         <ul class="file-grid">
+            {{#if currentPath}}
+            {{#if files.length}}
+            <li class="glass-panel file-card parent-drop-card"
+                ondragover="onParentDropZoneDragOver(event)"
+                ondragleave="onParentDropZoneDragLeave(event)"
+                ondrop="onParentDropZoneDrop(event)">
+                <div class="file-icon">
+                    <svg class="icon-lg" style="color: var(--text-muted);" viewBox="0 0 24 24">
+                        <circle cx="6" cy="12" r="1.8"></circle>
+                        <circle cx="12" cy="12" r="1.8"></circle>
+                        <circle cx="18" cy="12" r="1.8"></circle>
+                    </svg>
+                </div>
+                <div class="file-name">Move to parent folder</div>
+            </li>
+            {{/if}}
+            {{/if}}
             {{#each files}}
-            <li class="glass-panel file-card" {{#if this.isDirectory}}
-                onclick="window.location.href='/files/browser?path={{../currentPath}}/{{this.name}}'" {{#unless
-                ../isAdmin}}style="cursor: pointer;" {{/unless}}{{else}} onclick="previewFile('{{this.name}}')" {{/if}}>
+            <li class="glass-panel file-card" 
+                {{#if this.isDirectory}}
+                    onclick="window.location.href='/files/browser?path={{../currentPath}}/{{this.name}}'"
+                    ondragover="onFolderDragOver(event)"
+                    ondragleave="onFolderDragLeave(event)"
+                    ondrop="onFolderDrop(event, '{{this.name}}')"
+                    {{#unless ../isAdmin}}style="cursor: pointer;" {{/unless}}
+                {{else}}
+                    onclick="previewFile('{{this.name}}')"
+                    draggable="true"
+                    ondragstart="onFileDragStart(event, '{{this.name}}')"
+                {{/if}}>
 
                 <div class="file-icon">
                     {{#if this.isDirectory}}
@@ -156,6 +182,7 @@
 
 <script>
     const currentPath = "{{currentPath}}";
+    const parentPath = "{{parentPath}}";
 
     function handleFiles(files) {
         if (!files.length) return;
@@ -303,18 +330,77 @@
         const destination = prompt("Enter destination path (relative to root, e.g. 'photos' or '..'):", currentPath);
         if (destination === null) return; // Cancelled
 
+        performMove(currentPath ? currentPath + '/' + name : name, destination);
+    }
+
+    function onFileDragStart(event, name) {
+        const sourcePath = currentPath ? currentPath + '/' + name : name;
+        event.dataTransfer.setData('text/plain', sourcePath);
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function onFolderDragOver(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        const target = event.currentTarget;
+        target.classList.add('drag-over');
+    }
+
+    function onFolderDragLeave(event) {
+        const target = event.currentTarget;
+        target.classList.remove('drag-over');
+    }
+
+    function onFolderDrop(event, folderName) {
+        event.preventDefault();
+        const target = event.currentTarget;
+        target.classList.remove('drag-over');
+
+        const sourcePath = event.dataTransfer.getData('text/plain');
+        if (!sourcePath) return; // No internal drag data
+
+        const destination = currentPath ? currentPath + '/' + folderName : folderName;
+        performMove(sourcePath, destination);
+    }
+
+    function onParentDropZoneDragOver(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        const target = event.currentTarget;
+        target.classList.add('drag-over');
+    }
+
+    function onParentDropZoneDragLeave(event) {
+        const target = event.currentTarget;
+        target.classList.remove('drag-over');
+    }
+
+    function onParentDropZoneDrop(event) {
+        event.preventDefault();
+        const target = event.currentTarget;
+        target.classList.remove('drag-over');
+
+        const sourcePath = event.dataTransfer.getData('text/plain');
+        if (!sourcePath) return;
+
+        const destination = parentPath || '';
+        performMove(sourcePath, destination);
+    }
+
+    function performMove(path, destination) {
         fetch('/files/move', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                path: currentPath ? currentPath + '/' + name : name,
-                destination
-            })
+            body: JSON.stringify({ path, destination })
         }).then(res => res.json())
             .then(data => {
-                if (data.success) window.location.reload();
-                else alert('Move failed');
-            });
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Move failed');
+                }
+            })
+            .catch(() => alert('Move failed'));
     }
 </script>
 {{/main}}

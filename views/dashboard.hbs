@@ -71,10 +71,10 @@
                 User Quotas
             </h3>
             <ul class="list-clean">
-                {{#each stats.userUsage}}
+                {{#each userUsageMb}}
                 <li class="list-item-row">
                     <span style="font-weight: 500;">{{@key}}</span>
-                    <span style="color: var(--text-muted);">{{this}} bytes</span>
+                    <span style="color: var(--text-muted);">{{this}} MB</span>
                 </li>
                 {{/each}}
             </ul>
@@ -90,19 +90,68 @@
                 System Backup
             </h3>
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-                Create a full backup of all user data.
+                Create and download a full backup of all user data.
             </p>
-            <form action="/admin/backup" method="POST">
-                <button type="submit" class="btn btn-primary icon-btn" style="width: 100%;">
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <button type="button" class="btn btn-primary icon-btn" style="width: 100%;"
+                    onclick="triggerBackup()">
                     <svg class="icon" viewBox="0 0 24 24">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    Download Backup (ZIP)
+                    Create Backup
                 </button>
-            </form>
+                <button type="button" class="btn btn-secondary icon-btn" style="width: 100%;"
+                    onclick="downloadBackup()">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Download Latest Backup
+                </button>
+                <div id="backupToast" style="display:none; margin-top:0.5rem; font-size:0.85rem; color: var(--text-muted);">
+                </div>
+            </div>
         </div>
     </div>
 </div>
+<script>
+    async function triggerBackup() {
+        try {
+            const res = await fetch('/admin/backup', { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+
+            if (data.inProgress) {
+                showBackupToast('Ya hay un backup ejecutándose.');
+            } else if (data.success) {
+                showBackupToast('Backup iniciado. Se generará en segundo plano.');
+            } else {
+                showBackupToast('No se pudo iniciar el backup.');
+            }
+        } catch (e) {
+            showBackupToast('Error al iniciar el backup.');
+            console.error(e);
+        }
+    }
+
+    function downloadBackup() {
+        window.location.href = '/admin/backup/download';
+    }
+
+    function showBackupToast(message) {
+        const el = document.getElementById('backupToast');
+        if (!el) return;
+        el.textContent = message;
+        el.style.display = 'block';
+        el.style.opacity = '1';
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 300);
+        }, 3000);
+    }
+</script>
 {{/main}}

@@ -90,13 +90,22 @@ USER_ALICE=...
 -   **Notificación**: Se utiliza `NotificationService` para simular el envío de un correo al `ADMIN_EMAIL` (visible en logs).
 
 # 📊 **Dashboard Administrativo**
--   Visualización de uso de disco total vs límite.
--   Gráfico de distribución por tipos de archivo.
--   Cuotas de uso por usuario.
--   Descarga directa de Backups.
+-   Visualización de uso de disco total vs límite (`TOTAL_STORAGE_GB`), incluyendo:
+    -   **Barra de uso** con porcentaje (`0–100%`) calculado según el total en bytes almacenados.
+    -   Tamaño total agregado mostrado en **MB**.
+-   Gráfico / listado de distribución por tipos de archivo.
+-   Cuotas de uso por usuario (uso en bytes por cada `USERNAME`).
+-   Descarga directa de Backups (ZIP completo del directorio `users`).
+-   Para usuarios con rol **admin**:
+    -   Acceso al dashboard desde el navegador de archivos mediante un botón "Admin Dashboard" en el header.
+    -   Botón en el propio dashboard para **volver al navegador de archivos** (`/files/browser`).
 
 # 🎨 **Interfaz Web**
 -   Diseño **Glassmorphism** moderno.
 -   Tema Claro/Oscuro persistente.
 -   Totalmente Responsive.
 -   Animaciones suaves (Fade-in, Slide-up).
+-   Header común con:
+    -   Botón de cambio de tema.
+    -   Mensaje de bienvenida contextual: `Bienvenido {USERNAME}` para el usuario autenticado.
+    -   Botón de **Logout** que limpia la cookie `jwt` y redirige al login.

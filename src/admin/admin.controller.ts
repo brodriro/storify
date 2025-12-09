@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Render, Request, StreamableFile } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Render, Request, StreamableFile, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream } from 'fs';
 import { AdminService } from './admin.service';
@@ -28,12 +28,29 @@ export class AdminController {
             ? Math.min(100, Math.round((stats.totalSize / totalBytesLimit) * 100))
             : 0;
 
-        return { user: req.user, stats, config: { totalStorageGb }, isAdmin: true, usagePercent, totalSizeMb };
+        const userUsageMb: Record<string, number> = {};
+        for (const [key, value] of Object.entries(stats.userUsage)) {
+            userUsageMb[key] = Math.round((value as number) / (1024 * 1024));
+        }
+
+        return { user: req.user, stats, userUsageMb, config: { totalStorageGb }, isAdmin: true, usagePercent, totalSizeMb };
     }
 
     @Post('backup')
     async createBackup() {
-        const backupPath = await this.adminService.createBackup();
+        const started = this.adminService.createBackup();
+        if (!started) {
+            return { success: false, inProgress: true };
+        }
+        return { success: true, inProgress: false };
+    }
+
+    @Get('backup/download')
+    async downloadBackup() {
+        const backupPath = this.adminService.getLatestBackupPath();
+        if (!backupPath) {
+            throw new NotFoundException('No backup available');
+        }
         const file = createReadStream(backupPath);
         return new StreamableFile(file);
     }
