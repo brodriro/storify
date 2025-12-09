@@ -1,0 +1,10 @@
+<header
+    style="background: var(--card-bg); padding: 1rem 2rem; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center;">
+    <div style="font-weight: bold; font-size: 1.25rem;">Storify</div>
+    <div>
+        <button onclick="toggleTheme()" style="padding: 0.5rem 1rem; cursor: pointer;">Toggle Theme</button>
+        {{#if user}}
+        <a href="/auth/logout" style="margin-left: 1rem; color: var(--primary);">Logout</a>
+        {{/if}}
+    </div>
+</header>

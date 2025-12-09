@@ -1,0 +1,144 @@
+<div style="padding: 1rem;">
+    <h2>File Browser</h2>
+    <div style="margin-bottom: 1rem; padding: 0.5rem; background: #eef; border-radius: 4px;">
+        <strong>Current Path:</strong> /{{currentPath}}
+        {{#if currentPath}}
+        <a href="/files/browser?path={{parentPath}}" style="margin-left: 1rem;">⬆ Up Level</a>
+        {{/if}}
+    </div>
+
+    <!-- Toolbar -->
+    <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+        <button onclick="document.getElementById('fileInput').click()">Upload File</button>
+        <button onclick="createNewFolder()">New Folder</button>
+    </div>
+
+    <!-- Drag & Drop Zone -->
+    <div id="dropZone"
+        style="border: 2px dashed #ccc; border-radius: 8px; padding: 2rem; min-height: 300px; background: var(--card-bg);">
+
+        {{#unless files.length}}
+        <p style="text-align: center; color: #888;">No files found. Drag files here to upload.</p>
+        {{/unless}}
+
+        <ul
+            style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+            {{#each files}}
+            <li style="text-align: center; padding: 1rem; border: 1px solid #eee; border-radius: 4px; cursor: pointer;"
+                {{#if this.isDirectory}}
+                onclick="window.location.href='/files/browser?path={{../currentPath}}/{{this.name}}'" {{else}}
+                onclick="window.open('/files/download?path={{../currentPath}}/{{this.name}}')" {{/if}}>
+                <div style="font-size: 2rem;">{{#if this.isDirectory}}📁{{else}}📄{{/if}}</div>
+                <div style="word-break: break-all; font-size: 0.9rem; margin-top: 0.5rem;">{{this.name}}</div>
+                {{#unless this.isDirectory}}
+                <div style="font-size: 0.75rem; color: #666;">{{this.size}} B</div>
+                {{/unless}}
+                <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
+                    <button onclick="event.stopPropagation(); renameItem('{{this.name}}')" title="Rename"
+                        style="cursor: pointer; padding: 2px 6px; border: 1px solid #ddd; background: white; border-radius: 4px;">✏️</button>
+                    <button onclick="event.stopPropagation(); deleteItem('{{this.name}}')" title="Delete"
+                        style="cursor: pointer; padding: 2px 6px; border: 1px solid #ddd; background: white; border-radius: 4px; color: red;">🗑️</button>
+                </div>
+            </li>
+            {{/each}}
+        </ul>
+
+    </div>
+
+    <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFiles(this.files)">
+</div>
+
+<script>
+    const currentPath = "{{currentPath}}";
+    const dropZone = document.getElementById('dropZone');
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--primary)';
+        dropZone.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ccc';
+        dropZone.style.backgroundColor = 'var(--card-bg)';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ccc';
+        dropZone.style.backgroundColor = 'var(--card-bg)';
+        handleFiles(e.dataTransfer.files);
+    });
+
+    async function handleFiles(files) {
+        if (!files.length) return;
+
+        const formData = new FormData();
+        // Since backend might handle single or array, let's append all
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+        formData.append('path', currentPath);
+
+        try {
+            // Need to implement upload endpoint
+            const res = await fetch('/files/upload', {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert('Upload failed');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error uploading');
+        }
+    }
+
+    async function createNewFolder() {
+        const name = prompt("Folder name:");
+        if (name) {
+            await fetch('/files/mkdir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: currentPath, name })
+            });
+            window.location.reload();
+        }
+    }
+
+    async function deleteItem(name) {
+        if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+
+        try {
+            const res = await fetch('/files/delete', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: currentPath ? currentPath + '/' + name : name })
+            });
+            if (res.ok) window.location.reload();
+            else alert('Failed to delete');
+        } catch (e) { console.error(e); alert('Error deleting'); }
+    }
+
+    async function renameItem(name) {
+        const newName = prompt("New name:", name);
+        if (newName && newName !== name) {
+            try {
+                const res = await fetch('/files/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path: currentPath ? currentPath + '/' + name : name,
+                        newName
+                    })
+                });
+                if (res.ok) window.location.reload();
+                else alert('Failed to rename: ' + (await res.text()).substring(0, 50));
+            } catch (e) { console.error(e); alert('Error renaming'); }
+        }
+    }
+</script>

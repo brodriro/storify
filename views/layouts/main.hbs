@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storify - NAS</title>
+    <!-- Use vanilla CSS for now, user asked for Tailwind only if requested -->
+    <style>
+        :root {
+            --bg-color: #f4f4f5;
+            --text-color: #18181b;
+            --primary: #2563eb;
+            --card-bg: #ffffff;
+        }
+        body.dark {
+            --bg-color: #18181b;
+            --text-color: #f4f4f5;
+            --primary: #3b82f6;
+            --card-bg: #27272a;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        main {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    {{> header}}
+    
+    <main>
+        {{{body}}}
+    </main>
+
+    {{> footer}}
+
+    <script>
+        // Theme toggler logic
+        const toggleTheme = () => {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+        };
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark');
+        }
+    </script>
+</body>
+</html>
