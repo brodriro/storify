@@ -12,6 +12,11 @@ export class FileSystemService {
         if (!fs.existsSync(this.baseStoragePath)) {
             fs.mkdirSync(this.baseStoragePath, { recursive: true });
         }
+        // Ensure standard "users" subdirectory structure
+        const usersDir = path.join(this.baseStoragePath, 'users');
+        if (!fs.existsSync(usersDir)) {
+            fs.mkdirSync(usersDir, { recursive: true });
+        }
     }
 
     getUserPath(username: string): string {
@@ -22,11 +27,18 @@ export class FileSystemService {
         return userPath;
     }
 
-    async listFiles(username: string, relativePath: string = '') {
-        const root = this.getUserPath(username);
+    private resolveRoot(username: string, isAdmin: boolean): string {
+        if (isAdmin) {
+            return path.join(this.baseStoragePath, 'users');
+        }
+        return this.getUserPath(username);
+    }
+
+    async listFiles(username: string, relativePath: string = '', isAdmin: boolean = false) {
+        const root = this.resolveRoot(username, isAdmin);
         const target = path.join(root, relativePath);
 
-        // Security check to prevent backtracking
+        // Security check
         if (!target.startsWith(root)) {
             throw new Error('Access denied');
         }
@@ -42,9 +54,10 @@ export class FileSystemService {
         }));
     }
 
-    async createFolder(username: string, relativePath: string, folderName: string) {
-        const root = this.getUserPath(username);
+    async createFolder(username: string, relativePath: string, folderName: string, isAdmin: boolean = false) {
+        const root = this.resolveRoot(username, isAdmin);
         const target = path.join(root, relativePath, folderName);
+
         if (!target.startsWith(root)) throw new Error('Access denied');
 
         if (!fs.existsSync(target)) {
@@ -52,21 +65,18 @@ export class FileSystemService {
         }
     }
 
-    async handleUpload(username: string, file: any, relativePath: string) {
-        // file type is Express.Multer.File but avoiding strict type check for now to bypass lint issues if types are missing
-        const root = this.getUserPath(username);
+    async handleUpload(username: string, file: any, relativePath: string, isAdmin: boolean = false) {
+        const root = this.resolveRoot(username, isAdmin);
         let targetDir = path.join(root, relativePath);
+
         if (!targetDir.startsWith(root)) throw new Error('Access denied');
 
-        // Ensure target dir exists
         if (!fs.existsSync(targetDir)) {
             await fs.promises.mkdir(targetDir, { recursive: true });
         }
 
         let finalName = file.originalname;
         let targetPath = path.join(targetDir, finalName);
-
-        // Handle duplicates
         let counter = 1;
         const ext = path.extname(finalName);
         const name = path.basename(finalName, ext);
@@ -77,12 +87,12 @@ export class FileSystemService {
             counter++;
         }
 
-        // Move file
         await fs.promises.rename(file.path, targetPath);
         return finalName;
     }
-    async downloadFile(username: string, relativePath: string): Promise<string> {
-        const root = this.getUserPath(username);
+
+    async downloadFile(username: string, relativePath: string, isAdmin: boolean = false): Promise<string> {
+        const root = this.resolveRoot(username, isAdmin);
         const target = path.join(root, relativePath);
 
         if (!target.startsWith(root)) {
@@ -96,8 +106,8 @@ export class FileSystemService {
         return target;
     }
 
-    async deleteItem(username: string, relativePath: string) {
-        const root = this.getUserPath(username);
+    async deleteItem(username: string, relativePath: string, isAdmin: boolean = false) {
+        const root = this.resolveRoot(username, isAdmin);
         const target = path.join(root, relativePath);
 
         if (!target.startsWith(root)) {
@@ -111,8 +121,8 @@ export class FileSystemService {
         await fs.promises.rm(target, { recursive: true, force: true });
     }
 
-    async renameItem(username: string, currentPath: string, newName: string) {
-        const root = this.getUserPath(username);
+    async renameItem(username: string, currentPath: string, newName: string, isAdmin: boolean = false) {
+        const root = this.resolveRoot(username, isAdmin);
         const oldTarget = path.join(root, currentPath);
         const dir = path.dirname(oldTarget);
         const newTarget = path.join(dir, newName);
@@ -130,5 +140,43 @@ export class FileSystemService {
         }
 
         await fs.promises.rename(oldTarget, newTarget);
+    }
+    async getGlobalStats() {
+        const root = path.join(this.baseStoragePath, 'users');
+        const stats = {
+            totalSize: 0,
+            totalFiles: 0,
+            fileTypes: {} as Record<string, number>,
+            userUsage: {} as Record<string, number>,
+        };
+
+        if (!fs.existsSync(root)) return stats;
+
+        const processDir = async (dirPath: string, username?: string) => {
+            const items = await fs.promises.readdir(dirPath, { withFileTypes: true });
+
+            for (const item of items) {
+                const fullPath = path.join(dirPath, item.name);
+                if (item.isDirectory()) {
+                    // If we are at the root 'users' dir, the next level is the username
+                    const nextUsername = username || (dirPath === root ? item.name : undefined);
+                    await processDir(fullPath, nextUsername);
+                } else {
+                    const size = fs.statSync(fullPath).size;
+                    stats.totalSize += size;
+                    stats.totalFiles++;
+
+                    const ext = path.extname(item.name).toLowerCase() || 'unknown';
+                    stats.fileTypes[ext] = (stats.fileTypes[ext] || 0) + 1;
+
+                    if (username) {
+                        stats.userUsage[username] = (stats.userUsage[username] || 0) + size;
+                    }
+                }
+            }
+        };
+
+        await processDir(root);
+        return stats;
     }
 }

@@ -1,21 +1,55 @@
 import { Injectable } from '@nestjs/common';
 import { FileSystemService } from '../filesystem/filesystem.service';
+import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
+import archiver from 'archiver';
 
 @Injectable()
 export class AdminService {
-    constructor(private fileSystemService: FileSystemService) { }
+    private baseStoragePath: string;
 
-    async getStats() {
-        // TODO: Implement recursive stats gathering
-        return {
-            totalSize: 0,
-            fileTypes: {},
-            userUsage: {},
-        };
+    constructor(
+        private fileSystemService: FileSystemService,
+        private configService: ConfigService
+    ) {
+        this.baseStoragePath = this.configService.get<string>('storagePath') ?? './public/users';
     }
 
-    async createBackup() {
-        // TODO: Implement zip logic
-        return 'backup.zip';
+    async getStats() {
+        return this.fileSystemService.getGlobalStats();
+    }
+
+    async createBackup(): Promise<string> {
+        const backupDir = path.join(this.baseStoragePath, 'backups');
+        if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupPath = path.join(backupDir, `backup-${timestamp}.zip`);
+        const output = fs.createWriteStream(backupPath);
+        const archive = archiver('zip', {
+            zlib: { level: 9 } // Sets the compression level.
+        });
+
+        return new Promise((resolve, reject) => {
+            output.on('close', function () {
+                resolve(backupPath);
+            });
+
+            archive.on('error', function (err) {
+                reject(err);
+            });
+
+            archive.pipe(output);
+
+            const usersDir = path.join(this.baseStoragePath, 'users');
+            if (fs.existsSync(usersDir)) {
+                archive.directory(usersDir, 'users');
+            }
+
+            archive.finalize();
+        });
     }
 }

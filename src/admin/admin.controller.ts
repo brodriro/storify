@@ -1,4 +1,5 @@
-import { Controller, Get, Post, UseGuards, Render, Request } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Render, Request, StreamableFile } from '@nestjs/common';
+import { createReadStream } from 'fs';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -21,6 +22,8 @@ export class AdminController {
 
     @Post('backup')
     async createBackup() {
-        return this.adminService.createBackup();
+        const backupPath = await this.adminService.createBackup();
+        const file = createReadStream(backupPath);
+        return new StreamableFile(file);
     }
 }
