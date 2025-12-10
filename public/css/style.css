@@ -199,9 +199,8 @@ a:hover {
 .file-card {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 1.5rem;
-    text-align: center;
+    padding: 1.3rem;
+    text-align: left;
     transition: all var(--transition-medium);
     cursor: pointer;
     position: relative;
@@ -220,7 +219,7 @@ a:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 120px;
+    min-height: 220px;
     margin-bottom: 1rem;
     transition: transform var(--transition-medium);
 }
@@ -228,7 +227,7 @@ a:hover {
 /* File Thumbnails */
 .file-thumbnail {
     width: 100%;
-    height: 120px;
+    height: 220px;
     object-fit: cover;
     border-radius: 8px;
     background: var(--bg-secondary);
@@ -244,28 +243,75 @@ a:hover {
 
 .file-name {
     font-weight: 500;
-    font-size: 0.95rem;
+    font-size: 0.72rem;
     word-break: break-all;
     line-height: 1.4;
     color: var(--text-main);
 }
 
 .file-meta {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     color: var(--text-muted);
-    margin-top: 0.5rem;
+    margin-top: 0.4rem;
 }
 
 .file-actions {
-    margin-top: 1rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin-top: 0;
     opacity: 0;
     transition: opacity var(--transition-fast);
     display: flex;
-    gap: 0.5rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    pointer-events: none;
 }
 
 .file-card:hover .file-actions {
     opacity: 1;
+    pointer-events: auto;
+}
+
+.file-action-eye {
+    width: 100%;
+    justify-content: center;
+}
+
+.file-actions-row {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+}
+
+.file-action-btn {
+    padding: 0.45rem 0.65rem;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-actions-row .file-action-btn .icon {
+    width: 1.5em;
+    height: 1.5em;
+}
+
+.file-actions-row .file-action-btn svg {
+    fill: currentColor;
+    stroke: none;
+}
+
+/* Hover blur effect over previews */
+.file-card:hover .file-thumbnail {
+    filter: blur(4px) brightness(0.7);
+}
+
+/* Ensure SVG icons visually share similar space as thumbnails */
+.file-icon svg.icon-lg {
+    width: 60%;
+    height: 60%;
 }
 
 /* Dashboard */

@@ -12,7 +12,7 @@
             gap: 0.5rem;
         }
 
-        .browser-header > div {
+        .browser-header>div {
             width: 100%;
             flex-wrap: wrap;
             justify-content: flex-start;
@@ -32,7 +32,7 @@
         .file-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.5rem;
+            gap: 0.25rem;
         }
 
         .file-card {
@@ -40,16 +40,16 @@
         }
 
         .file-name {
-            font-size: 0.8rem;
+            font-size: 0.72rem;
             word-break: break-word;
         }
 
         .file-actions {
-            gap: 0.25rem;
+            gap: 0.1rem;
         }
 
         .file-actions .btn {
-            padding: 0.25rem 0.35rem;
+            padding: 0.15rem 0.25rem;
         }
     }
 </style>
@@ -119,10 +119,8 @@
         <ul class="file-grid">
             {{#if currentPath}}
             {{#if files.length}}
-            <li class="glass-panel file-card parent-drop-card"
-                ondragover="onParentDropZoneDragOver(event)"
-                ondragleave="onParentDropZoneDragLeave(event)"
-                ondrop="onParentDropZoneDrop(event)">
+            <li class="glass-panel file-card parent-drop-card" ondragover="onParentDropZoneDragOver(event)"
+                ondragleave="onParentDropZoneDragLeave(event)" ondrop="onParentDropZoneDrop(event)">
                 <div class="file-icon">
                     <svg class="icon-lg" style="color: var(--text-muted);" viewBox="0 0 24 24">
                         <circle cx="6" cy="12" r="1.8"></circle>
@@ -135,18 +133,11 @@
             {{/if}}
             {{/if}}
             {{#each files}}
-            <li class="glass-panel file-card" 
-                {{#if this.isDirectory}}
-                    onclick="openFolder('{{this.name}}')"
-                    ondragover="onFolderDragOver(event)"
-                    ondragleave="onFolderDragLeave(event)"
-                    ondrop="onFolderDrop(event, '{{this.name}}')"
-                    {{#unless ../isAdmin}}style="cursor: pointer;" {{/unless}}
-                {{else}}
-                    onclick="previewFile('{{this.name}}')"
-                    draggable="true"
-                    ondragstart="onFileDragStart(event, '{{this.name}}')"
-                {{/if}}>
+            <li class="glass-panel file-card" {{#if this.isDirectory}} onclick="openFolder('{{this.name}}')"
+                ondragover="onFolderDragOver(event)" ondragleave="onFolderDragLeave(event)"
+                ondrop="onFolderDrop(event, '{{this.name}}')" {{#unless ../isAdmin}}style="cursor: pointer;" {{/unless}}
+                {{else}} onclick="previewFile('{{this.name}}')" draggable="true"
+                ondragstart="onFileDragStart(event, '{{this.name}}')" {{/if}}>
 
                 <div class="file-icon">
                     {{#if this.isDirectory}}
@@ -181,27 +172,39 @@
                 {{/unless}}
 
                 <div class="file-actions">
-                    <button onclick="event.stopPropagation(); renameItem('{{this.name}}')"
-                        class="btn btn-sm btn-secondary" title="Rename">
+                    <button onclick="event.stopPropagation(); previewFile('{{this.name}}')"
+                        class="btn btn-sm file-action-eye" title="View full">
                         <svg class="icon icon-lg" viewBox="0 0 24 24">
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+
+                    <button onclick="event.stopPropagation(); renameItem('{{this.name}}')"
+                        class="btn btn-sm file-action-btn" title="Rename">
+                        <svg class="icon" viewBox="0 0 24 24">
                             <path d="M12 20h9"></path>
                             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                         </svg>
+                        <span>Rename</span>
                     </button>
                     <button onclick="event.stopPropagation(); moveItem('{{this.name}}')"
-                        class="btn btn-sm btn-secondary" title="Move">
-                        <svg class="icon icon-lg" viewBox="0 0 24 24">
+                        class="btn btn-sm file-action-btn" title="Move">
+                        <svg class="icon" viewBox="0 0 24 24">
                             <polyline points="9 18 15 12 9 6"></polyline>
                         </svg>
+                        <span>Move</span>
                     </button>
-                    <button onclick="event.stopPropagation(); deleteItem('{{this.name}}')" class="btn btn-sm btn-danger"
-                        title="Delete">
-                        <svg class="icon icon-lg" viewBox="0 0 24 24">
+                    <button onclick="event.stopPropagation(); deleteItem('{{this.name}}')"
+                        class="btn btn-sm btn-danger file-action-btn" title="Delete">
+                        <svg class="icon" viewBox="0 0 24 24">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
                             </path>
                         </svg>
+                        <span>Delete</span>
                     </button>
+
                 </div>
             </li>
             {{/each}}
