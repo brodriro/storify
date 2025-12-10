@@ -290,7 +290,7 @@ a:hover {
     padding: 0.45rem 0.65rem;
     width: 100%;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .file-actions-row .file-action-btn .icon {
@@ -654,6 +654,8 @@ a:hover {
     width: 3rem;
     height: 2.2rem;
     stroke-width: 1.5;
+    stroke: currentColor;
+    fill: none;
 }
 
 .icon-btn {

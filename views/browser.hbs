@@ -172,6 +172,15 @@
                 {{/unless}}
 
                 <div class="file-actions">
+                    {{#if this.isDirectory}}
+                    <button onclick="event.stopPropagation(); openFolder('{{this.name}}')"
+                        class="btn btn-sm file-action-eye" title="Open folder">
+                        <svg class="icon icon-lg" viewBox="0 0 24 24">
+                            <path d="M3 7h5l2 3h11v9a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path>
+                            <polyline points="9 14 12 17 15 14"></polyline>
+                        </svg>
+                    </button>
+                    {{else}}
                     <button onclick="event.stopPropagation(); previewFile('{{this.name}}')"
                         class="btn btn-sm file-action-eye" title="View full">
                         <svg class="icon icon-lg" viewBox="0 0 24 24">
@@ -179,6 +188,7 @@
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                     </button>
+                    {{/if}}
 
                     <button onclick="event.stopPropagation(); renameItem('{{this.name}}')"
                         class="btn btn-sm file-action-btn" title="Rename">
