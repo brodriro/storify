@@ -1,4 +1,28 @@
 {{#> main}}
+<style>
+    @media (max-width: 768px) {
+        .stats-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 1rem;
+        }
+
+        .dashboard-title {
+            font-size: 1.3rem;
+        }
+
+        .animate-slide-up > div:first-child {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .animate-slide-up > div:first-child .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
 <div class="animate-slide-up">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2 class="dashboard-title">Admin Dashboard</h2>

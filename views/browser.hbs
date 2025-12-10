@@ -1,4 +1,58 @@
 {{#> main}}
+<style>
+    @media (max-width: 640px) {
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .browser-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .browser-header > div {
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+        }
+
+        .current-path-bar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+        }
+
+        .current-path-bar .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+        }
+
+        .file-card {
+            padding: 0.6rem;
+        }
+
+        .file-name {
+            font-size: 0.8rem;
+            word-break: break-word;
+        }
+
+        .file-actions {
+            gap: 0.25rem;
+        }
+
+        .file-actions .btn {
+            padding: 0.25rem 0.35rem;
+        }
+    }
+</style>
 <div class="animate-slide-up">
     <div class="browser-header">
         <h2 style="margin: 0;">File Browser</h2>
@@ -123,7 +177,7 @@
                 <div class="file-name">{{this.name}}</div>
 
                 {{#unless this.isDirectory}}
-                <div class="file-meta">{{this.size}} B</div>
+                <div class="file-meta">{{this.sizeMb}} MB</div>
                 {{/unless}}
 
                 <div class="file-actions">

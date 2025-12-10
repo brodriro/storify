@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Request, UseGuards, Render, Post, UploadedFiles, UseInterceptors, Body, StreamableFile, Delete } from '@nestjs/common';
 import { createReadStream } from 'fs';
+import * as path from 'path';
 import { FileSystemService } from './filesystem.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -63,7 +64,10 @@ export class FileSystemController {
         const isAdmin = req.user.roles?.includes('admin');
         const fullPath = await this.filesystemService.downloadFile(req.user.username, filePath, isAdmin);
         const file = createReadStream(fullPath);
-        return new StreamableFile(file);
+        const filename = path.basename(fullPath);
+        return new StreamableFile(file, {
+            disposition: `attachment; filename="${filename}"`
+        });
     }
 
     @Delete('delete')

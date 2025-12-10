@@ -1,4 +1,30 @@
-<header class="main-header glass-panel">
+<header class="main-header glass-panel" style="display: flex; align-items: center; justify-content: space-between;">
+    <style>
+        @media (max-width: 640px) {
+            .main-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .header-controls {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+                gap: 0.4rem;
+            }
+
+            .header-controls .btn,
+            .header-controls a {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+
+            .welcome-text {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
     <div class="logo">
         <svg class="icon" style="color: var(--primary); margin-right: 0.5rem;" viewBox="0 0 24 24">
             <path

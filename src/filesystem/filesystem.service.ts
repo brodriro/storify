@@ -93,12 +93,17 @@ export class FileSystemService {
 
         const items = await fs.promises.readdir(target, { withFileTypes: true });
         const mappedItems = items.map(item => {
+            const fullItemPath = path.join(target, item.name);
             const ext = item.isDirectory() ? '' : path.extname(item.name).toLowerCase();
+            const stats = fs.statSync(fullItemPath);
+            const sizeBytes = item.isDirectory() ? 0 : stats.size;
+            const sizeMb = item.isDirectory() ? 0 : Math.max(1, Math.round(sizeBytes / (1024 * 1024)));
             return {
                 name: item.name,
                 isDirectory: item.isDirectory(),
-                size: item.isDirectory() ? 0 : fs.statSync(path.join(target, item.name)).size,
-                modifiedAt: fs.statSync(path.join(target, item.name)).mtime,
+                size: sizeBytes,
+                sizeMb,
+                modifiedAt: stats.mtime,
                 extension: ext,
                 isImage: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'].includes(ext),
                 isVideo: ['.mp4', '.webm', '.ogg', '.mov'].includes(ext)
