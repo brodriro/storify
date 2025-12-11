@@ -90,4 +90,16 @@ export class FileSystemController {
         await this.filesystemService.moveItem(req.user.username, body.path, body.destination, isAdmin);
         return { success: true };
     }
+
+    @Get('recent')
+    async getRecentFiles(@Query('days') days: number = 7, @Request() req) {
+        const recentFiles = await this.filesystemService.getRecentFiles(days);
+        return { success: true, files: recentFiles };
+    }
+
+    @Get('disk-usage')
+    async getDiskUsage(@Request() req) {
+        const diskUsage = await this.filesystemService.getDiskUsage();
+        return { success: true, diskUsage };
+    }
 }

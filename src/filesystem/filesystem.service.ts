@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,7 +8,8 @@ export class FileSystemService {
     private baseStoragePath: string;
 
     constructor(private configService: ConfigService) {
-        this.baseStoragePath = this.configService.get<string>('storagePath') ?? './public/users';
+        this.baseStoragePath = this.configService.get<string>('storagePath') ?? './public_storage';
+
         if (!fs.existsSync(this.baseStoragePath)) {
             fs.mkdirSync(this.baseStoragePath, { recursive: true });
         }
@@ -332,5 +333,45 @@ export class FileSystemService {
 
         await processDir(root);
         return stats;
+    }
+
+    async getDiskUsage(): Promise<{ totalBytes: number }> {
+        const stats = await this.getGlobalStats();
+        return { totalBytes: stats.totalSize };
+    }
+
+    async getRecentFiles(days: number = 7): Promise<any[]> {
+        const root = this.getUsersRoot();
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+
+        const recentFiles: any[] = [];
+
+        const traverseDirectory = async (dirPath: string) => {
+            const items = await fs.promises.readdir(dirPath, { withFileTypes: true });
+
+            for (const item of items) {
+                const fullPath = path.join(dirPath, item.name);
+                const stats = fs.statSync(fullPath);
+
+                if (stats.isDirectory()) {
+                    await traverseDirectory(fullPath);
+                } else if (stats.mtime > cutoffDate) {
+                    recentFiles.push({
+                        name: item.name,
+                        path: fullPath,
+                        size: stats.size,
+                        modifiedAt: stats.mtime,
+                        extension: path.extname(item.name).toLowerCase(),
+                    });
+                }
+            }
+        };
+
+        if (fs.existsSync(root)) {
+            await traverseDirectory(root);
+        }
+
+        return recentFiles;
     }
 }
