@@ -19,11 +19,14 @@
 .chat-sidebar {
     position: fixed;
     bottom: 0;
-    right: -350px; /* Hidden by default */
-    width: 350px;
+    right: -385px; /* Hidden by default, original 350px + 10% */
+    width: 385px; /* 350px + 10% */
     height: 100%;
-    background-color: #f8f9fa;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.15); /* Glassmorphism effect */
+    backdrop-filter: blur(25px); /* Glassmorphism effect */
+    -webkit-backdrop-filter: blur(10px); /* Glassmorphism effect for Safari */
+    border-left: 1px solid rgba(255, 255, 255, 0.3); /* Glassmorphism effect */
+    box-shadow: -2px 0 15px rgba(0, 0, 0, 0.3); /* Stronger shadow */
     z-index: 999;
     transition: right 0.3s ease-in-out;
     display: flex;
@@ -39,8 +42,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 15px;
-    background-color: #e9ecef;
-    border-bottom: 1px solid #dee2e6;
+    background: rgba(255, 255, 255, 0.2); /* Semi-transparent header */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--text-color); /* Ensure text is visible */
 }
 
 .chat-header h3 {
@@ -53,36 +57,51 @@
     border: none;
     font-size: 20px;
     cursor: pointer;
+    color: var(--text-color); /* Ensure button is visible */
 }
 
 .chat-history {
     flex-grow: 1;
     padding: 15px;
     overflow-y: auto;
-    background-color: #fff;
+    background: rgba(255, 255, 255, 0.1); /* Slightly transparent background */
 }
 
 .chat-input {
     display: flex;
     padding: 15px;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2); /* Semi-transparent footer */
 }
 
 .chat-input input {
     flex-grow: 1;
-    border: 1px solid #ced4da;
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 4px;
     padding: 8px;
     margin-right: 10px;
+    background: rgba(255, 255, 255, 0.3); /* Input background */
+    color: var(--text-color); /* Input text color */
 }
 
 .chat-input button {
-    background-color: #007bff;
+    background-color: var(--primary);
     color: white;
     border: none;
     border-radius: 4px;
     padding: 8px 15px;
     cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.chat-input button:hover {
+    background-color: var(--primary-dark);
+}
+
+.chat-input input:disabled,
+.chat-input button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .chat-message {
@@ -91,18 +110,64 @@
     border-radius: 15px;
     max-width: 80%;
     word-wrap: break-word;
+    animation: fadeIn 0.3s ease-out;
 }
 
 .chat-message.user {
-    background-color: #007bff;
+    background-color: var(--primary);
     color: white;
     margin-left: auto;
     border-bottom-right-radius: 2px;
 }
 
 .chat-message.ai {
-    background-color: #e2e6ea;
-    color: #333;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-color);
     margin-right: auto;
     border-bottom-left-radius: 2px;
+}
+
+/* Typing Indicator */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.typing-indicator.visible {
+    opacity: 1;
+}
+
+.typing-indicator span {
+    height: 10px;
+    width: 10px;
+    margin: 0 2px;
+    background-color: var(--text-muted);
+    border-radius: 50%;
+    opacity: 0.7;
+    animation: bounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: -1.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: -1.0s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

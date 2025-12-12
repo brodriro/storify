@@ -47,7 +47,11 @@ export class ChatGateway {
           response.response = `Found ${suspiciousLogs.length} suspicious log entries.`;
           break;
         default:
-          response.response = 'I do not understand that request.';
+          if (intent === 'unknown') {
+            response.response = 'I did not understand your request. Please try one of the following commands: disk usage, recent files, backup, or suspicious activity.';
+          } else {
+            response.response = 'I do not understand that request.';
+          }
           break;
       }
     } catch (error) {
@@ -56,7 +60,10 @@ export class ChatGateway {
       response.error = error.message;
     }
 
-    this.server.emit('chatResponse', response);
-    this.logsService.log(`Sent chat response: ${JSON.stringify(response)}`, 'ChatGateway');
+    // Generate human-like response using LLM
+    const finalResponse = await this.llmService.generateResponse(message, response, response.action);
+
+    this.server.emit('chatResponse', { intent, action: response.action, response: finalResponse });
+    this.logsService.log(`Sent chat response: ${JSON.stringify({ intent, action: response.action, response: finalResponse })}`, 'ChatGateway');
   }
 }
