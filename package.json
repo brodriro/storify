@@ -32,9 +32,11 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.3",
     "hbs": "^4.2.0",
+    "mammoth": "^1.11.0",
     "openai": "^6.10.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pdf-parse": "^2.4.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1"
