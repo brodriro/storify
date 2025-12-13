@@ -1,7 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as mammoth from 'mammoth';
+const PdfParse = require('pdf-parse');
 
 @Injectable()
 export class FileSystemService {
@@ -373,5 +375,28 @@ export class FileSystemService {
         }
 
         return recentFiles;
+    }
+
+    async readDocumentContent(filePath: string): Promise<string> {
+        const fullPath = path.join(this.baseStoragePath, 'users', filePath);
+        const ext = path.extname(fullPath).toLowerCase();
+
+        if (!fs.existsSync(fullPath)) {
+            throw new NotFoundException(`File not found: ${filePath}`);
+        }
+
+        switch (ext) {
+            case '.txt':
+                return (await fs.promises.readFile(fullPath, 'utf8')).trim();
+            case '.docx':
+                const result = await mammoth.extractRawText({ path: fullPath });
+                return result.value.trim();
+            case '.pdf':
+                const dataBuffer = await fs.promises.readFile(fullPath);
+                const pdf = await PdfParse.default(dataBuffer);
+                return pdf.text.trim();
+            default:
+                throw new BadRequestException(`Unsupported file type for reading content: ${ext}`);
+        }
     }
 }

@@ -4,6 +4,8 @@ import { LlmService } from '../llm/llm.service';
 import { FileSystemService } from '../../../filesystem/filesystem.service';
 import { AdminService } from '../../../admin/admin.service';
 import { LogsService } from '../logs/logs.service';
+import { FileReaderService } from '../file-reader/file-reader.service';
+import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({ cors: true }) // Enable CORS for development
 export class ChatGateway {
@@ -14,6 +16,7 @@ export class ChatGateway {
     private readonly fileSystemService: FileSystemService,
     private readonly adminService: AdminService,
     private readonly logsService: LogsService,
+    private readonly fileReaderService: FileReaderService,
   ) {}
 
   @SubscribeMessage('chat')
@@ -46,6 +49,45 @@ export class ChatGateway {
           response.action = { suspiciousLogs };
           response.response = `Found ${suspiciousLogs.length} suspicious log entries.`;
           break;
+
+        case 'list_documents_by_name':
+          // Assuming the message will contain the search term, e.g., "list documents named 'report'"
+          const searchNameMatch = message.match(/(?:named|llamados)\s+['"]?([^'"]+)['"]?/i);
+          const searchName = searchNameMatch ? searchNameMatch[1] : '';
+
+          if (searchName) {
+            // Assuming a default directory for now, could be made dynamic
+            const matchingDocs = await this.fileReaderService.listDocumentsByName(searchName);
+            response.action = { matchingDocs };
+            response.response = matchingDocs.length > 0
+              ? `I found these documents matching "${searchName}": ${matchingDocs.join(', ')}.`
+              : `I could not find any documents matching "${searchName}".`;
+          } else {
+            response.response = 'Please provide a name to search for documents. E.g., "list documents named \'report\'"';
+          }
+          break;
+
+        case 'summarize_document':
+          // Assuming the message will contain the file path, e.g., "summarize file /path/to/document.pdf"
+          const filePathMatch = message.match(/(?:archivo|documento)\s+(['"]?)(.*?)(['"]?)$/i);
+          const filePath = filePathMatch ? filePathMatch[2] : '';
+
+          if (filePath) {
+            try {
+              const fileContent = await this.fileReaderService.readFileContent(filePath);
+              const summary = await this.llmService.summarizeText(fileContent);
+              response.action = { summary };
+              response.response = `Aquí esta el resumen de ${filePath}: ${summary}`;
+            } catch (fileError) {
+              Logger.error(`Error summarizing document ${filePath}: ${fileError.message}`, fileError.stack, 'ChatGateway');
+              response.response = `I could not summarize the document at ${filePath}. It might be unreadable or an unsupported type.`;
+              response.error = fileError.message;
+            }
+          } else {
+            response.response = 'Please provide the path to the document you want to summarize. E.g., "summarize file /documents/report.pdf"';
+          }
+          break;
+
         default:
           if (intent === 'unknown') {
             response.response = 'I did not understand your request. Please try one of the following commands: disk usage, recent files, backup, or suspicious activity.';
@@ -61,9 +103,9 @@ export class ChatGateway {
     }
 
     // Generate human-like response using LLM
-    const finalResponse = await this.llmService.generateResponse(message, response, response.action);
+    const finalResponse = await this.llmService.generateResponse(message, response.intent, response);
 
     this.server.emit('chatResponse', { intent, action: response.action, response: finalResponse });
-    this.logsService.log(`Sent chat response: ${JSON.stringify({ intent, action: response.action, response: finalResponse })}`, 'ChatGateway');
+    this.logsService.log(`Sent chat response: ${JSON.stringify({ intent, action: response.intent, response: finalResponse })}`, 'ChatGateway');
   }
 }
