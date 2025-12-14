@@ -9,7 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isChatInitialized = false;
 
-    const socket = io(); // Connect to Socket.io server
+    const socket = io({ 
+        transports: ['websocket'],
+        pingInterval: 25000, // Client pings server every 25 seconds
+        pingTimeout: 60000 // Server must respond within 60 seconds
+    }); // Connect to Socket.io server
 
     chatButton.addEventListener('click', () => {
         chatSidebar.classList.toggle('open');

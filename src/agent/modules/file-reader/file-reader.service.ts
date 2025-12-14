@@ -7,20 +7,18 @@ import { PDFParse } from 'pdf-parse';
 @Injectable()
 export class FileReaderService {
   async readFileContent(filePath: string): Promise<string> {
-    let files = await this.listDocumentsByName(filePath)
-    let file = files[0]
-
-    const ext = path.extname(file).toLowerCase();
+  
+    const ext = path.extname(filePath).toLowerCase();
     let content = '';
 
     try {
       if (ext === '.txt') {
-        content = await fs.readFile(file, 'utf8');
+        content = await fs.readFile(filePath, 'utf8');
       } else if (ext === '.docx') {
-        const result = await mammoth.extractRawText({ path: file });
+        const result = await mammoth.extractRawText({ path: filePath });
         content = result.value;
       } else if (ext === '.pdf') {
-        const dataBuffer = await fs.readFile(file);
+        const dataBuffer = await fs.readFile(filePath);
         const parser = new PDFParse({ data: dataBuffer });
         const result = await parser.getText();
         content = result.text;
