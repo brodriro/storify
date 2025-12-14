@@ -5,8 +5,4 @@ import { LlmService } from './llm.service';
 export class LlmController {
   constructor(private readonly llmService: LlmService) {}
 
-  @Post('intent')
-  async getIntent(@Body('message') message: string) {
-    return this.llmService.getIntent(message);
-  }
 }
