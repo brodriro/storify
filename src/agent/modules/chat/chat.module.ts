@@ -5,9 +5,10 @@ import { FileSystemModule } from '../../../filesystem/filesystem.module';
 import { AdminModule } from '../../../admin/admin.module';
 import { LogsModule } from '../logs/logs.module';
 import { FileReaderModule } from '../file-reader/file-reader.module';
+import { AgentModule } from '../agent/agent.module';
 
 @Module({
-  imports: [LlmModule, FileSystemModule, AdminModule, LogsModule, FileReaderModule],
+  imports: [LlmModule, FileSystemModule, AdminModule, LogsModule, FileReaderModule, AgentModule],
   providers: [ChatGateway],
 })
 export class ChatModule {}
