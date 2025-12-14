@@ -5,26 +5,14 @@ import { AdminService } from '../../../admin/admin.service';
 import { LogsService } from '../logs/logs.service';
 import { FileReaderService } from '../file-reader/file-reader.service';
 import { AgentResponseDto } from './dto/agent-response.dto';
-
-interface FunctionParameters {
-  type: 'object';
-  properties: { [key: string]: { type: string; description: string; required?: boolean; default?: any } };
-  required: string[];
-  [key: string]: any;
-}
-
-interface Tool {
-  name: string;
-  description: string;
-  parameters: FunctionParameters;
-}
+import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
 
 @Injectable()
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
   private maxIterations = 3;
 
-  private availableTools: Tool[] = [
+  private availableTools: ToolNas[] = [
     {
       name: 'get_disk_usage',
       description: 'Obtiene el uso actual del disco del NAS.',
@@ -95,7 +83,7 @@ export class AgentService {
     private readonly fileReaderService: FileReaderService,
   ) { }
 
-  async processMessage(userMessage: string): Promise<{ response: string }> {
+  async processMessage(userMessage: string, history: ChatMessage[]): Promise<{ response: string }> {
     let currentMessage = userMessage;
     let agentResponse: AgentResponseDto | null = null;
     let iterations = 0;
@@ -107,6 +95,7 @@ export class AgentService {
       agentResponse = await this.llmService.getAgentAction(
         currentMessage,
         this.availableTools,
+        history
       );
 
       if (agentResponse.type === 'final') {

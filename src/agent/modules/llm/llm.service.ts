@@ -1,21 +1,10 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
-import { ChatCompletionMessageToolCall, ChatCompletionMessageFunctionToolCall, ChatCompletionTool } from 'openai/resources/chat/completions';
 import * as dotenv from 'dotenv';
 import { AgentResponseDto } from '../agent/dto/agent-response.dto';
-import { AutoParseableTool } from 'openai/lib/parser';
 import { Tool } from 'openai/resources/responses/responses';
+import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
 dotenv.config();
-
-interface ToolNas {
-  name: string;
-  description: string;
-  parameters: {
-    type: 'object';
-    properties: { [key: string]: { type: string; description: string; required?: boolean; default?: any } };
-    required: string[];
-  };
-}
 
 @Injectable()
 export class LlmService {
@@ -34,6 +23,7 @@ export class LlmService {
   async getAgentAction(
     userMessage: string,
     availableTools: ToolNas[],
+    chatHistory: ChatMessage[] = [],
   ): Promise<AgentResponseDto> {
     this.logger.log(`Getting agent action for message: ${userMessage}`);
 
@@ -45,17 +35,20 @@ export class LlmService {
       strict: false
     }));
 
+    const messages = [
+      {
+        role: 'system' as const,
+        content:
+          'You are a helpful and friendly NAS assistant. You can perform various tasks related to NAS management by using the available tools. Decide whether to call a tool or provide a final answer to the user. If a tool call is needed, provide the tool name and parameters. If a final answer is sufficient, provide the message.',
+      },
+      ...chatHistory.map(msg => ({ role: msg.role as 'user' | 'assistant', content: msg.content })),
+      { role: 'user' as const, content: userMessage },
+    ];
+
     try {
       const response = await this.openai.responses.create({
         model: 'gpt-5-mini',
-        input: [
-          {
-            role: 'system',
-            content:
-              'You are a helpful and friendly NAS assistant. You can perform various tasks related to NAS management by using the available tools. Decide whether to call a tool or provide a final answer to the user. If a tool call is needed, provide the tool name and parameters. If a final answer is sufficient, provide the message.',
-          },
-          { role: 'user', content: userMessage },
-        ],
+        input: messages,
         tools: toolsForLlm,
       });
 
@@ -74,7 +67,7 @@ export class LlmService {
         };
 
       } else {
-        const message = response.output_text?? null // textOutput?.content[0]["text"]?? null
+        const message = response.output_text ?? null // textOutput?.content[0]["text"]?? null
         Logger.log(`Message ==> ${message}`, "LlmService")
         return {
           type: "final",
