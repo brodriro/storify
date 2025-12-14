@@ -28,8 +28,8 @@ export default () => {
 
     return {
         port: parseInt(process.env.PORT || '3000', 10),
-        storagePath: process.env.STORAGE_PATH || './public/users',
-        totalStorageGb: parseInt(process.env.TOTAL_STORAGE_GB || '5', 10),
+        storagePath: process.env.STORAGE_PATH || './public_storage',
+        totalStorageGb: parseInt(process.env.TOTAL_STORAGE_GB || '500', 10),
         adminEmail: process.env.ADMIN_EMAIL,
         users,
     };

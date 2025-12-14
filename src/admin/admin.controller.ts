@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Render, Request, StreamableFile, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Render, Request, StreamableFile, NotFoundException, Body } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream } from 'fs';
 import { AdminService } from './admin.service';
@@ -37,12 +37,22 @@ export class AdminController {
     }
 
     @Post('backup')
-    async createBackup() {
-        const started = this.adminService.createBackup();
+    async createBackup(@Body('isIncremental') isIncremental: boolean = false) {
+        const started = await this.adminService.createBackup(isIncremental);
         if (!started) {
             return { success: false, inProgress: true };
         }
         return { success: true, inProgress: false };
+    }
+
+    @Get('backup/last-timestamp')
+    getLastBackupTimestamp() {
+        return { timestamp: this.adminService.getLastBackupTimestamp() };
+    }
+
+    @Get('backup/in-progress')
+    isBackupInProgress() {
+        return { inProgress: this.adminService.isBackupInProgress() };
     }
 
     @Get('backup/download')

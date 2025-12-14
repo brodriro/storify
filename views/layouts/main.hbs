@@ -6,10 +6,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Storify NAS</title>
     <link rel="stylesheet" href="/css/style.css?v=2">
+    <link rel="stylesheet" href="/css/chat.css">
 </head>
 
 <body class="container animate-fade-in vivoqui">
     {{> header}}
+
+    <div id="chat-button" class="chat-button">
+        💬
+    </div>
+
+    <div id="chat-sidebar" class="chat-sidebar">
+        <div class="chat-header">
+            <h3>Chat with Storify AI</h3>
+            <button id="close-chat">X</button>
+        </div>
+        <div class="chat-history" id="chat-history">
+            <!-- Chat messages will be displayed here -->
+        </div>
+        <div class="typing-indicator" id="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="chat-message-input" placeholder="Type your message...">
+            <button id="send-chat-message">Send</button>
+        </div>
+    </div>
 
     {{> @partial-block }}
 
@@ -23,6 +47,9 @@
             document.body.classList.add('dark');
         }
     </script>
+    <script src="/js/chat.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </body>
 
 </html>

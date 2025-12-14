@@ -8,5 +8,6 @@ import { NotificationModule } from '../notification/notification.module';
     imports: [FileSystemModule, NotificationModule],
     controllers: [AdminController],
     providers: [AdminService],
+    exports: [AdminService],
 })
 export class AdminModule { }

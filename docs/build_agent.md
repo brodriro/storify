@@ -45,6 +45,11 @@ Output:
 -   logs_analyzer
 -   llm_intent_parser
 
+## TECNOLOGIES
+
+- Socket io for chat
+- OpenIA for llm_intent_parser
+
 ## LOGIC
 
 1.  Receive message\

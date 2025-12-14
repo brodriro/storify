@@ -6,6 +6,9 @@ import configuration from './config/configuration';
 import { AuthModule } from './auth/auth.module';
 import { FileSystemModule } from './filesystem/filesystem.module';
 import { AdminModule } from './admin/admin.module';
+import { LlmModule } from './agent/modules/llm/llm.module';
+import { LogsModule } from './agent/modules/logs/logs.module';
+import { ChatModule } from './agent/modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { AdminModule } from './admin/admin.module';
     AuthModule,
     FileSystemModule,
     AdminModule,
+    LlmModule,
+    LogsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
