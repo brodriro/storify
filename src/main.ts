@@ -23,6 +23,10 @@ async function bootstrap() {
   // Register Layouts as partials (required for {{#> layout}} syntax)
   hbs.registerPartials(join(viewsPath, 'layouts'));
 
+  hbs.registerHelper('if_eq', function (arg1, arg2, options) {
+    return (arg1 == arg2) ? options.fn(this) : options.inverse(this);
+  });
+
   app.use(cookieParser());
 
   await app.listen(process.env.PORT ?? 3000);
