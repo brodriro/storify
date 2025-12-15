@@ -67,6 +67,8 @@ La documentación funcional más detallada se encuentra en `docs/base.md`.
 
 Storify incluye un **sistema agéntico conversacional** que permite interactuar con el NAS mediante lenguaje natural. El sistema implementa un patrón **ReAct (Reasoning + Acting)** combinado con **Tool-Calling** y **memoria conversacional**.
 
+![Diagrama de Arquitectura Agéntica](docs/diagram.png)
+
 ### Patrones Identificados
 
 El sistema utiliza los siguientes patrones agénticos:
