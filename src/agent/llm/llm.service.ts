@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import * as dotenv from 'dotenv';
-import { AgentResponseDto } from '../agent/dto/agent-response.dto';
+import { AgentResponseDto } from '../dto/agent-response.dto';
 import { Tool } from 'openai/resources/responses/responses';
 import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
 dotenv.config();

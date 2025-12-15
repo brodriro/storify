@@ -2,7 +2,7 @@ import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, Conne
 import { Server } from 'socket.io';
 import { LogsService } from '../logs/logs.service';
 import { Logger } from '@nestjs/common';
-import { AgentService } from '../agent/agent.service'; // Import AgentService
+import { AgentService } from '../../agent/agent.service'; // Import AgentService
 import { Socket } from 'socket.io';
 import { ChatMessage } from 'src/agent/interfaces/ChatMessage';
 

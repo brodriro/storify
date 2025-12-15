@@ -2,6 +2,8 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ensureDirectoryExists, resolveStoragePath } from '../shared/utils/path.utils';
+
 import * as mammoth from 'mammoth';
 const PdfParse = require('pdf-parse');
 
@@ -12,34 +14,18 @@ export class FileSystemService {
     constructor(private configService: ConfigService) {
         this.baseStoragePath = this.configService.get<string>('storagePath') ?? './public_storage';
 
-        if (!fs.existsSync(this.baseStoragePath)) {
-            fs.mkdirSync(this.baseStoragePath, { recursive: true });
-        }
+        ensureDirectoryExists(this.baseStoragePath);
         // Ensure standard "users" subdirectory structure
-        const usersDir = path.join(this.baseStoragePath, 'users');
-        if (!fs.existsSync(usersDir)) {
-            fs.mkdirSync(usersDir, { recursive: true });
-        }
-        const publicDir = path.join(this.baseStoragePath, 'public');
-        if (!fs.existsSync(publicDir)) {
-            fs.mkdirSync(publicDir, { recursive: true });
-        }
+        resolveStoragePath(this.baseStoragePath, 'users');
+        resolveStoragePath(this.baseStoragePath, 'public');
     }
 
     getUserPath(username: string): string {
-        const userPath = path.join(this.baseStoragePath, 'users', username);
-        if (!fs.existsSync(userPath)) {
-            fs.mkdirSync(userPath, { recursive: true });
-        }
-        return userPath;
+        return resolveStoragePath(this.baseStoragePath, 'users', username);
     }
 
     private getUsersRoot(): string {
-        const usersRoot = path.join(this.baseStoragePath, 'users');
-        if (!fs.existsSync(usersRoot)) {
-            fs.mkdirSync(usersRoot, { recursive: true });
-        }
-        return usersRoot;
+        return resolveStoragePath(this.baseStoragePath, 'users');
     }
 
     private resolveRoot(username: string, userRole: string): string {
