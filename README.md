@@ -280,5 +280,19 @@ En caso contrario, las operaciones de subida, borrado o backup fallarán.
 
 ## Licencia
 
-Este proyecto está basado en el starter de NestJS y se distribuye bajo licencia MIT.
+Este proyecto está basado en el starter de NestJS y se distribuye bajo la **MIT License**.
+
+### Términos de la Licencia
+
+La licencia MIT es una licencia de software libre permisiva que permite:
+
+- ✅ Usar, copiar, modificar, fusionar, publicar, distribuir, sublicenciar y vender copias del software
+- ✅ Usar el software para fines comerciales o privados
+- ✅ Crear trabajos derivados basados en este proyecto
+
+### Requisitos
+
+- ⚠️ **Atribución requerida**: Debes incluir el aviso de copyright y el texto de la licencia en todas las copias o porciones sustanciales del software
+
+El texto completo de la licencia se encuentra en el archivo [LICENSE](LICENSE) en la raíz del proyecto.
 
