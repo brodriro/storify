@@ -11,6 +11,30 @@ El backend está escrito con NestJS y renderiza vistas Handlebars.
 
 ---
 
+## Índice
+
+- [Finalidad del proyecto](#finalidad-del-proyecto)
+- [Arquitectura Agéntica](#arquitectura-agéntica)
+  - [Patrones Identificados](#patrones-identificados)
+  - [Ciclo Agéntico](#ciclo-agéntico)
+  - [Autonomía y Decisión](#autonomía-y-decisión)
+  - [Memoria Conversacional](#memoria-conversacional)
+  - [Controles y Seguridad](#controles-y-seguridad)
+  - [Herramientas Disponibles](#herramientas-disponibles)
+  - [Uso del Agente](#uso-del-agente)
+- [Requisitos](#requisitos)
+- [Configuración de entorno](#configuración-de-entorno)
+- [Puesta en marcha en desarrollo](#puesta-en-marcha-en-desarrollo)
+- [Despliegue en producción](#despliegue-en-producción)
+  - [1. Build](#1-build)
+  - [2. Arranque en modo producción](#2-arranque-en-modo-producción)
+  - [3. Servir detrás de un reverse proxy (opcional, recomendado)](#3-servir-detrás-de-un-reverse-proxy-opcional-recomendado)
+  - [4. Permisos de ficheros](#4-permisos-de-ficheros)
+- [Flujo de uso resumido](#flujo-de-uso-resumido)
+- [Licencia](#licencia)
+
+---
+
 ## Finalidad del proyecto
 
 Este proyecto resuelve un escenario típico de almacenamiento compartido en una red local:
@@ -36,6 +60,90 @@ La interfaz incluye:
 - Previsualización de imágenes y vídeos.
 
 La documentación funcional más detallada se encuentra en `docs/base.md`.
+
+---
+
+## Arquitectura Agéntica
+
+Storify incluye un **sistema agéntico conversacional** que permite interactuar con el NAS mediante lenguaje natural. El sistema implementa un patrón **ReAct (Reasoning + Acting)** combinado con **Tool-Calling** y **memoria conversacional**.
+
+### Patrones Identificados
+
+El sistema utiliza los siguientes patrones agénticos:
+
+- **ReAct (Reasoning + Acting)**: El agente sigue un ciclo iterativo de razonamiento-acción-observación
+- **Tool-Calling Agent**: Utiliza llamadas a herramientas estructuradas para ejecutar acciones en el sistema
+- **Memory-Enhanced Agent**: Mantiene contexto conversacional durante la sesión
+
+### Ciclo Agéntico
+
+El agente implementa un ciclo completo de percepción, razonamiento, acción y observación:
+
+1. **Percepción**: Recibe mensajes del usuario a través del `ChatGateway` (WebSocket)
+2. **Razonamiento**: El LLM (`LlmService`) analiza el mensaje y decide si:
+   - Ejecutar una herramienta para obtener información adicional
+   - Proporcionar una respuesta final basada en el contexto disponible
+3. **Acción**: Si se requiere información, ejecuta herramientas como:
+   - `get_disk_usage`: Obtiene el uso actual del disco
+   - `get_recent_files`: Lista archivos recientes
+   - `create_incremental_backup`: Inicia un backup incremental
+   - `get_suspicious_activity`: Obtiene registros de actividad sospechosa
+   - `list_documents_by_name`: Busca documentos por nombre
+   - `summarize_document`: Resume el contenido de un documento
+4. **Observación**: Captura el resultado de la herramienta y lo convierte en contexto para la siguiente iteración
+5. **Iteración**: El proceso se repite hasta un máximo de 3 iteraciones, permitiendo múltiples pasos de razonamiento-acción
+
+### Autonomía y Decisión
+
+El sistema tiene **alto nivel de autonomía**: decide dinámicamente qué acción tomar basándose en:
+- El mensaje del usuario
+- El historial de conversación
+- Las herramientas disponibles
+
+No sigue instrucciones fijas, sino que razona sobre cada solicitud para determinar la mejor secuencia de acciones.
+
+### Memoria Conversacional
+
+El agente mantiene un **historial de conversación por sesión** que permite:
+- Mantener contexto durante la conversación
+- Referirse a mensajes anteriores
+- Entender referencias implícitas
+
+La memoria se mantiene durante la sesión WebSocket activa.
+
+### Controles y Seguridad
+
+El sistema incluye varios mecanismos de control:
+
+- **Límite de iteraciones**: Máximo de 3 iteraciones para prevenir bucles infinitos
+- **Manejo de errores**: Los errores en la ejecución de herramientas se convierten en observaciones que el agente puede procesar
+- **Validación de parámetros**: Verifica que los parámetros requeridos estén presentes antes de ejecutar herramientas
+- **Validación de respuestas**: Maneja casos donde el LLM no proporciona una respuesta válida
+
+### Herramientas Disponibles
+
+El agente puede utilizar las siguientes herramientas para interactuar con el NAS:
+
+| Herramienta | Descripción |
+|------------|-------------|
+| `get_disk_usage` | Obtiene el uso actual del disco del NAS |
+| `get_recent_files` | Lista archivos recientes (por defecto últimos 7 días) |
+| `create_incremental_backup` | Inicia un backup incremental del NAS |
+| `get_suspicious_activity` | Obtiene registros de actividad sospechosa |
+| `list_documents_by_name` | Busca documentos por nombre en el sistema |
+| `summarize_document` | Resume el contenido de un documento específico |
+
+### Uso del Agente
+
+El agente está disponible a través de la interfaz de chat (WebSocket) y puede responder preguntas como:
+
+- "¿Cuánto espacio tengo disponible?"
+- "Muéstrame los archivos recientes de esta semana"
+- "Crea un backup incremental"
+- "Busca documentos que contengan 'proyecto' en el nombre"
+- "Resume el contenido del documento 'informe.pdf'"
+
+Para más detalles sobre la implementación, consulta `src/agent/agent.service.ts` y `src/agent/llm/llm.service.ts`.
 
 ---
 
