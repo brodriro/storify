@@ -20,6 +20,10 @@ export class FileSystemService {
         if (!fs.existsSync(usersDir)) {
             fs.mkdirSync(usersDir, { recursive: true });
         }
+        const publicDir = path.join(this.baseStoragePath, 'public');
+        if (!fs.existsSync(publicDir)) {
+            fs.mkdirSync(publicDir, { recursive: true });
+        }
     }
 
     getUserPath(username: string): string {
@@ -38,17 +42,28 @@ export class FileSystemService {
         return usersRoot;
     }
 
-    private resolveRoot(username: string, isAdmin: boolean): string {
-        // All users (including non-admin) operate logically under the common
-        // "users" root. Access to specific user folders is enforced separately.
-        if (isAdmin) {
-            return this.getUsersRoot();
+    private resolveRoot(username: string, userRole: string): string {
+        if (userRole === 'guest') {
+            return path.join(this.baseStoragePath, 'public');
         }
         return this.getUsersRoot();
     }
 
-    private ensureUserAccess(username: string, relativePath: string, isAdmin: boolean): void {
-        if (isAdmin) {
+    private ensureUserAccess(username: string, relativePath: string, userRole: string): void {
+        const ADMIN_USERNAME = this.configService.get<string>('adminUsername', 'ADMIN');
+        const usersConfig = this.configService.get<any[]>('users') || [];
+        const knownUsernames = new Set<string>(usersConfig.map(u => u.username));
+
+        if (userRole === 'admin') {
+            return;
+        }
+
+        if (userRole === 'guest') {
+            const normalized = relativePath.replace(/\\/g, '/');
+            const segments = normalized.split('/').filter(Boolean);
+            if (segments.length > 0 && knownUsernames.has(segments[0])) {
+                throw new Error('Access denied: Guests cannot access user-specific folders.');
+            }
             return;
         }
 
@@ -62,28 +77,28 @@ export class FileSystemService {
             return;
         }
 
-        // If there is only one segment, we are operating on an item directly under
-        // the shared /users root (e.g. "file.txt"). This is allowed for
-        // non-admin users as long as they did not navigate into other users'
-        // folders.
-        if (segments.length === 1) {
+        const firstSegment = segments[0];
+
+        if (userRole === 'moderator') {
+            if (firstSegment === ADMIN_USERNAME) {
+                throw new Error('Access denied: Moderators cannot access admin folder.');
+            }
+            // Moderators can access other user folders, no further restriction needed here
             return;
         }
 
-        // When dealing with nested paths, enforce that the first directory
-        // segment matches the current username (e.g. "ALICE/..." ).
-        const firstSegment = segments[0];
+        // Default user (non-admin, non-moderator, non-guest) logic
         if (firstSegment !== username) {
             throw new Error('Access denied');
         }
     }
 
-    async listFiles(username: string, relativePath: string = '', isAdmin: boolean = false, sortBy: 'name' | 'date' = 'name', order: 'asc' | 'desc' = 'asc') {
-        const root = this.resolveRoot(username, isAdmin);
+    async listFiles(username: string, relativePath: string = '', userRole: string, sortBy: 'name' | 'date' = 'name', order: 'asc' | 'desc' = 'asc') {
+        const root = this.resolveRoot(username, userRole);
 
         // Enforce that non-admin users can only browse inside their own
         // user folder when specifying a relativePath.
-        this.ensureUserAccess(username, relativePath, isAdmin);
+        this.ensureUserAccess(username, relativePath, userRole);
 
         const target = path.join(root, relativePath);
 
@@ -118,22 +133,43 @@ export class FileSystemService {
         const knownUsernames = new Set<string>(usersConfig.map(u => u.username));
 
         const filteredItems = mappedItems.filter(item => {
-            // Admin can see everything
-            if (isAdmin) return true;
+            const ADMIN_USERNAME = this.configService.get<string>('adminUsername', 'ADMIN');
 
-            // If not at root level, show everything (user is in their own folder tree)
-            if (relativePath !== '') return true;
+            if (userRole === 'admin') return true;
 
-            // At root level: hide directories whose name matches a configured user
-            // different from the current user. Directories with names that are not
-            // configured usernames are considered global and are visible.
-            if (item.isDirectory) {
-                if (knownUsernames.has(item.name) && item.name !== username) {
+            if (userRole === 'moderator') {
+                // Moderators can see all user folders except admin's
+                if (item.isDirectory && item.name === ADMIN_USERNAME) {
                     return false;
                 }
+                return true;
             }
 
-            // Show files and allowed folders
+            if (userRole === 'guest') {
+                // Guests can only see items in 'public' directory or non-user-specific directories
+                // This logic assumes resolveRoot has already pointed them to the 'public' directory if no relativePath
+                // If they are in a subfolder of public, they should see everything
+                if (relativePath.startsWith('public') || root === path.join(this.baseStoragePath, 'public')) {
+                    return true;
+                }
+                // Otherwise, they cannot see user-specific folders
+                if (item.isDirectory && knownUsernames.has(item.name)) {
+                    return false;
+                }
+                return true;
+            }
+
+            // Default user (non-admin, non-moderator, non-guest) behavior - only see their own folder and non-user-specific items
+            if (relativePath === '') {
+                // At root level: hide directories whose name matches a configured user
+                // different from the current user. Directories with names that are not
+                // configured usernames are considered global and are visible.
+                if (item.isDirectory) {
+                    if (knownUsernames.has(item.name) && item.name !== username) {
+                        return false;
+                    }
+                }
+            }
             return true;
         });
 
@@ -152,11 +188,11 @@ export class FileSystemService {
         });
     }
 
-    async createFolder(username: string, relativePath: string, folderName: string, isAdmin: boolean = false) {
-        const root = this.resolveRoot(username, isAdmin);
+    async createFolder(username: string, relativePath: string, folderName: string, userRole: string) {
+        const root = this.resolveRoot(username, userRole);
 
         // Ensure non-admin users cannot create folders under other users' trees.
-        this.ensureUserAccess(username, path.join(relativePath || '', folderName), isAdmin);
+        this.ensureUserAccess(username, path.join(relativePath || '', folderName), userRole);
 
         const target = path.join(root, relativePath, folderName);
 
@@ -167,11 +203,11 @@ export class FileSystemService {
         }
     }
 
-    async handleUpload(username: string, file: any, relativePath: string, isAdmin: boolean = false) {
-        const root = this.resolveRoot(username, isAdmin);
+    async handleUpload(username: string, file: any, relativePath: string, userRole: string) {
+        const root = this.resolveRoot(username, userRole);
 
         // Ensure non-admin users cannot upload into other users' folders.
-        this.ensureUserAccess(username, relativePath, isAdmin);
+        this.ensureUserAccess(username, relativePath, userRole);
 
         let targetDir = path.join(root, relativePath);
 
@@ -197,11 +233,11 @@ export class FileSystemService {
         return finalName;
     }
 
-    async downloadFile(username: string, relativePath: string, isAdmin: boolean = false): Promise<string> {
-        const root = this.resolveRoot(username, isAdmin);
+    async downloadFile(username: string, relativePath: string, userRole: string): Promise<string> {
+        const root = this.resolveRoot(username, userRole);
 
         // Ensure non-admin users cannot download from other users' folders.
-        this.ensureUserAccess(username, relativePath, isAdmin);
+        this.ensureUserAccess(username, relativePath, userRole);
 
         const target = path.join(root, relativePath);
 
@@ -216,11 +252,11 @@ export class FileSystemService {
         return target;
     }
 
-    async deleteItem(username: string, relativePath: string, isAdmin: boolean = false) {
-        const root = this.resolveRoot(username, isAdmin);
+    async deleteItem(username: string, relativePath: string, userRole: string) {
+        const root = this.resolveRoot(username, userRole);
 
         // Ensure non-admin users cannot delete items from other users' folders.
-        this.ensureUserAccess(username, relativePath, isAdmin);
+        this.ensureUserAccess(username, relativePath, userRole);
 
         const target = path.join(root, relativePath);
 
@@ -235,11 +271,11 @@ export class FileSystemService {
         await fs.promises.rm(target, { recursive: true, force: true });
     }
 
-    async renameItem(username: string, currentPath: string, newName: string, isAdmin: boolean = false) {
-        const root = this.resolveRoot(username, isAdmin);
+    async renameItem(username: string, currentPath: string, newName: string, userRole: string) {
+        const root = this.resolveRoot(username, userRole);
 
         // Ensure non-admin users cannot rename items outside their folder.
-        this.ensureUserAccess(username, currentPath, isAdmin);
+        this.ensureUserAccess(username, currentPath, userRole);
 
         const oldTarget = path.join(root, currentPath);
         const dir = path.dirname(oldTarget);
@@ -260,13 +296,13 @@ export class FileSystemService {
         await fs.promises.rename(oldTarget, newTarget);
     }
 
-    async moveItem(username: string, currentPath: string, destinationPath: string, isAdmin: boolean = false) {
-        const root = this.resolveRoot(username, isAdmin);
+    async moveItem(username: string, currentPath: string, destinationPath: string, userRole: string) {
+        const root = this.resolveRoot(username, userRole);
 
         // Ensure non-admin users cannot move items between other users' folders
         // or into folders belonging to other users.
-        this.ensureUserAccess(username, currentPath, isAdmin);
-        this.ensureUserAccess(username, destinationPath, isAdmin);
+        this.ensureUserAccess(username, currentPath, userRole);
+        this.ensureUserAccess(username, destinationPath, userRole);
 
         const source = path.join(root, currentPath);
         // destinationPath is relative to root. If destinationPath is '..', we handle logical parent in UI or here? 

@@ -21,8 +21,8 @@ export class FileSystemController {
         if (currentPath && currentPath.includes('..')) currentPath = '';
         currentPath = currentPath || '';
 
-        const isAdmin = req.user.roles?.includes('admin');
-        const files = await this.filesystemService.listFiles(req.user.username, currentPath, isAdmin, sortBy, order);
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        const files = await this.filesystemService.listFiles(req.user.username, currentPath, userRole, sortBy, order);
 
         const parts = currentPath.split('/').filter(p => p);
         parts.pop();
@@ -33,7 +33,7 @@ export class FileSystemController {
             user: req.user,
             currentPath: currentPath ? currentPath.replace(/^\//, '') : '',
             parentPath,
-            isAdmin,
+            userRole,
             sortBy,
             order
         };
@@ -43,10 +43,10 @@ export class FileSystemController {
     @UseInterceptors(FilesInterceptor('files', 10, { dest: './temp_uploads' }))
     async uploadFile(@UploadedFiles() files: Array<any>, @Body() body, @Request() req) {
         const relativePath = body.path || '';
-        const isAdmin = req.user.roles?.includes('admin');
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
         const uploaded: { original: string, final: string }[] = [];
         for (const file of files) {
-            const finalName = await this.filesystemService.handleUpload(req.user.username, file, relativePath, isAdmin);
+            const finalName = await this.filesystemService.handleUpload(req.user.username, file, relativePath, userRole);
             uploaded.push({ original: file.originalname, final: finalName });
         }
         return { success: true, uploaded };
@@ -54,15 +54,15 @@ export class FileSystemController {
 
     @Post('mkdir')
     async createFolder(@Body() body, @Request() req) {
-        const isAdmin = req.user.roles?.includes('admin');
-        await this.filesystemService.createFolder(req.user.username, body.path, body.name, isAdmin);
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        await this.filesystemService.createFolder(req.user.username, body.path, body.name, userRole);
         return { success: true };
     }
 
     @Get('download')
     async download(@Query('path') filePath, @Request() req) {
-        const isAdmin = req.user.roles?.includes('admin');
-        const fullPath = await this.filesystemService.downloadFile(req.user.username, filePath, isAdmin);
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        const fullPath = await this.filesystemService.downloadFile(req.user.username, filePath, userRole);
         const file = createReadStream(fullPath);
         const filename = path.basename(fullPath);
         return new StreamableFile(file, {
@@ -72,22 +72,22 @@ export class FileSystemController {
 
     @Delete('delete')
     async deleteItem(@Body() body, @Request() req) {
-        const isAdmin = req.user.roles?.includes('admin');
-        await this.filesystemService.deleteItem(req.user.username, body.path, isAdmin);
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        await this.filesystemService.deleteItem(req.user.username, body.path, userRole);
         return { success: true };
     }
 
     @Post('rename')
     async renameItem(@Body() body, @Request() req) {
-        const isAdmin = req.user.roles?.includes('admin');
-        await this.filesystemService.renameItem(req.user.username, body.path, body.newName, isAdmin);
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        await this.filesystemService.renameItem(req.user.username, body.path, body.newName, userRole);
         return { success: true };
     }
 
     @Post('move')
     async moveItem(@Body() body, @Request() req) {
-        const isAdmin = req.user.roles?.includes('admin');
-        await this.filesystemService.moveItem(req.user.username, body.path, body.destination, isAdmin);
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        await this.filesystemService.moveItem(req.user.username, body.path, body.destination, userRole);
         return { success: true };
     }
 
