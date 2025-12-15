@@ -6,9 +6,9 @@ import configuration from './config/configuration';
 import { AuthModule } from './auth/auth.module';
 import { FileSystemModule } from './filesystem/filesystem.module';
 import { AdminModule } from './admin/admin.module';
-import { LlmModule } from './agent/modules/llm/llm.module';
-import { LogsModule } from './agent/modules/logs/logs.module';
-import { ChatModule } from './agent/modules/chat/chat.module';
+import { LlmModule } from './agent/llm/llm.module';
+import { LogsModule } from './agent/logs/logs.module';
+import { ChatModule } from './agent/chat/chat.module';
 
 @Module({
   imports: [

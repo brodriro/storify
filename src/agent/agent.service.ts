@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { LlmService } from '../llm/llm.service';
-import { FileSystemService } from '../../../filesystem/filesystem.service';
-import { AdminService } from '../../../admin/admin.service';
-import { LogsService } from '../logs/logs.service';
-import { FileReaderService } from '../file-reader/file-reader.service';
+import { LlmService } from './llm/llm.service';
+import { FileSystemService } from './../filesystem/filesystem.service';
+import { AdminService } from './../admin/admin.service';
+import { LogsService } from './logs/logs.service';
+import { FileReaderService } from './file-reader/file-reader.service';
 import { AgentResponseDto } from './dto/agent-response.dto';
 import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
 
@@ -97,6 +97,14 @@ export class AgentService {
         this.availableTools,
         history
       );
+
+      if (agentResponse === null || agentResponse === undefined) {
+        this.logger.warn('LLM Reasoner returned null or undefined agentResponse. Continuing to next iteration or handling as error.');
+        // Optionally, you might want to return an error or break the loop here.
+        // For now, I'll just skip the current iteration and log a warning.
+        iterations++; // Increment iterations to prevent infinite loop if LLM always returns null
+        continue; // Skip to the next iteration
+      }
 
       if (agentResponse.type === 'final') {
         this.logger.log('LLM Reasoner decided on final response.');

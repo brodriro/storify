@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notification/notification.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ensureDirectoryExists, resolveStoragePath } from '../shared/utils/path.utils';
 import archiver from 'archiver';
 
 @Injectable()
@@ -19,10 +20,7 @@ export class AdminService {
         private notificationService: NotificationService
     ) {
         this.baseStoragePath = this.configService.get<string>('STORAGE_PATH') ?? './public_storage';
-        this.backupDir = path.join(this.baseStoragePath, 'backups');
-        if (!fs.existsSync(this.backupDir)) {
-            fs.mkdirSync(this.backupDir, { recursive: true });
-        }
+        this.backupDir = resolveStoragePath(this.baseStoragePath, 'backups');
 
         // Initialize lastBackupTimestamp from a file if it exists
         const timestampFile = path.join(this.backupDir, 'last_backup_timestamp.json');
@@ -61,9 +59,7 @@ export class AdminService {
 
         this.isBackupRunning = true;
 
-        if (!fs.existsSync(this.backupDir)) {
-            fs.mkdirSync(this.backupDir, { recursive: true });
-        }
+        ensureDirectoryExists(this.backupDir);
 
         const timestamp = new Date().getTime();
         const backupFileName = isIncremental ? `incremental_backup-${timestamp}.zip` : `full_backup-${timestamp}.zip`;
