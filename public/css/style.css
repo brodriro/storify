@@ -1,14 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
 :root {
-    /* Color Palette - HSL for flexibility */
-    --hue: 220;
-    /* Blue-ish */
-    --primary: hsl(var(--hue), 90%, 55%);
-    --primary-hover: hsl(var(--hue), 90%, 45%);
-    --primary-light: hsl(var(--hue), 90%, 95%);
+    /* Color Palette - Design System */
+    --color-primary: #0F172A;
+    --color-secondary: #1E293B;
+    --color-cta: #22C55E;
+    --color-background: #020617;
+    --color-text: #F8FAFC;
+
+    /* Legacy Mappings */
+    --primary: var(--color-cta);
+    --primary-hover: #16a34a;
+    --primary-light: #dcfce7;
 
     --bg-color: #f8fafc;
-    --text-main: #1e293b;
+    /* Overridden in body */
+    --text-main: #334155;
     --text-muted: #64748b;
+
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    --space-3xl: 4rem;
 
     /* Glassmorphism Variables */
     --glass-bg: rgba(255, 255, 255, 0.7);
@@ -18,29 +35,39 @@
     --rounded-lg: 16px;
     --rounded-md: 10px;
 
+    /* Shadow Depths */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+
     /* Transitions */
     --transition-fast: 0.2s ease;
     --transition-medium: 0.3s ease;
 }
 
 body.dark {
-    --bg-color: #0f172a;
-    --text-main: #f1f5f9;
+    --bg-color: var(--color-background);
+    --text-main: var(--color-text);
     --text-muted: #94a3b8;
 
-    --glass-bg: rgba(30, 41, 59, 0.7);
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    /* Slate-900 with opacity */
     --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+
+    /* Re-map legacy */
+    --primary: var(--color-cta);
 }
 
 body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
     background-color: var(--bg-color);
-    /* Subtle mesh gradient background */
+    /* Deep Space Mesh Gradient */
     background-image:
-        radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
-        radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
-        radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+        radial-gradient(at 0% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%),
+        radial-gradient(at 50% 0%, hsla(222, 47%, 8%, 1) 0, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%);
     background-size: 100% 100%;
     background-attachment: fixed;
     color: var(--text-main);
@@ -49,8 +76,10 @@ body {
     transition: background-color var(--transition-medium), color var(--transition-medium);
 }
 
-/* Light mode specific background override to be softer */
+/* Light mode overrides */
 body:not(.dark) {
+    --bg-color: #F8FAFC;
+    --text-main: #0F172A;
     background-image:
         radial-gradient(at 0% 0%, hsla(210, 100%, 96%, 1) 0, transparent 50%),
         radial-gradient(at 50% 0%, hsla(220, 100%, 98%, 1) 0, transparent 50%),
@@ -60,15 +89,15 @@ body:not(.dark) {
 /* Utilities */
 .glass-panel {
     background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
     border-radius: var(--rounded-lg);
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 2rem;
 }
@@ -77,9 +106,11 @@ body:not(.dark) {
 h1,
 h2,
 h3 {
+    font-family: 'Fira Code', monospace;
     font-weight: 600;
     letter-spacing: -0.025em;
     margin-top: 0;
+    color: var(--text-main);
 }
 
 a {
@@ -97,10 +128,10 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.6rem 1.2rem;
-    font-weight: 500;
-    border-radius: var(--rounded-md);
-    transition: all var(--transition-fast);
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 200ms ease;
     cursor: pointer;
     border: none;
     font-size: 0.9rem;
@@ -108,15 +139,15 @@ a:hover {
 }
 
 .btn-primary {
-    background: var(--primary);
+    background: var(--color-cta);
     color: white;
-    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-primary:hover {
-    background: var(--primary-hover);
+    opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-secondary {
@@ -126,7 +157,8 @@ a:hover {
 }
 
 .btn-secondary:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--text-main);
 }
 
 .dark .btn-secondary:hover {
@@ -199,19 +231,23 @@ a:hover {
 .file-card {
     display: flex;
     flex-direction: column;
-    padding: 1.3rem;
+    padding: var(--space-md);
     text-align: left;
-    transition: all var(--transition-medium);
+    transition: all 200ms ease;
     cursor: pointer;
     position: relative;
     border: 1px solid transparent;
+    /* Use design system card bg if desired, or keep glass */
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
 }
 
 .file-card:hover {
-    transform: translateY(-4px);
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--primary);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-cta);
+    box-shadow: var(--shadow-lg);
 }
 
 .file-icon {
@@ -347,8 +383,9 @@ a:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -364,17 +401,17 @@ a:hover {
 }
 
 .modal-content {
-    background: var(--glass-bg);
+    background: rgba(15, 23, 42, 0.9);
     border: 1px solid var(--glass-border);
-    padding: 1rem;
+    padding: 2rem;
     border-radius: var(--rounded-lg);
-    max-width: 90%;
-    max-height: 90%;
+    max-width: 95%;
+    max-height: 95%;
     display: flex;
     flex-direction: column;
     gap: 1rem;
     position: relative;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: var(--shadow-xl);
 }
 
 .modal-header {
@@ -484,6 +521,81 @@ a:hover {
     background: rgba(239, 68, 68, 0.1);
     padding: 0.5rem;
     border-radius: var(--rounded-md);
+}
+
+/* Browser Layout & Sidebar */
+.browser-wrapper {
+    display: flex;
+    gap: var(--space-lg);
+    align-items: flex-start;
+}
+
+.browser-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 2rem;
+    height: calc(100vh - 4rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-weight: 500;
+    transition: all 200ms ease;
+    cursor: pointer;
+}
+
+.sidebar-link:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}
+
+.sidebar-link.active {
+    background: rgba(34, 197, 94, 0.1);
+    /* Green tint */
+    color: var(--color-cta);
+}
+
+.sidebar-section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 1.5rem 0 0.5rem 1rem;
+    font-weight: 600;
+}
+
+.browser-main {
+    flex: 1;
+    min-width: 0;
+    /* Prevent grid blowout */
+}
+
+@media (max-width: 768px) {
+    .browser-wrapper {
+        flex-direction: column;
+    }
+
+    .browser-sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        top: 0;
+    }
 }
 
 /* Browser Specific */
