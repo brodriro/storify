@@ -1,0 +1,165 @@
+/* Dropdown / Kebab Menu */
+.kebab-menu {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.file-card:hover .kebab-menu {
+    opacity: 1;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    min-width: 140px;
+    box-shadow: var(--shadow-lg);
+    z-index: 50;
+    border-radius: var(--rounded-md);
+    overflow: hidden;
+}
+
+.dropdown-content.show {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+.dropdown-item {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-item.danger {
+    color: #ef4444;
+}
+
+.dropdown-item.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Custom Prompt Modal styles already exist mostly in .modal-* classes */
+.prompt-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--rounded-md);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+    margin: 1rem 0;
+}
+
+.prompt-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* Toast Notification */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    padding: 12px 20px;
+    border-radius: var(--rounded-md);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+/* Breadcrumbs */
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.breadcrumb-link {
+    color: var(--primary);
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.breadcrumb-link:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.breadcrumb-separator {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+/* Bulk actions foundation */
+.bulk-checkbox {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.2s;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.file-card:hover .bulk-checkbox,
+.bulk-checkbox:checked {
+    opacity: 1;
+}
+
+.file-card.selected {
+    border-color: var(--primary);
+    background: rgba(34, 197, 94, 0.05);
+}

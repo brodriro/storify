@@ -26,14 +26,29 @@ export class FileSystemController {
         const files = await this.filesystemService.listFiles(req.user.username, currentPath, userRole, sortBy, order);
 
         const parts = currentPath.split('/').filter(p => p);
-        parts.pop();
-        const parentPath = parts.join('/');
+        const parentPath = parts.slice(0, -1).join('/');
+
+        const breadcrumbs: { name: string, path: string }[] = [];
+        let runningPath = '';
+        for (const p of parts) {
+            runningPath += (runningPath ? '/' : '') + p;
+            breadcrumbs.push({ name: p, path: runningPath });
+        }
+
+        const filesJson = JSON.stringify(files.map(f => ({
+            name: f.name,
+            isImage: !!f.isImage,
+            isVideo: !!f.isVideo,
+            isDir: !!f.isDirectory
+        })));
 
         return {
             files,
+            filesJson,
             user: req.user,
             currentPath: currentPath ? currentPath.replace(/^\//, '') : '',
             parentPath,
+            breadcrumbs,
             userRole,
             sortBy,
             order
@@ -104,6 +119,23 @@ export class FileSystemController {
         const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
         await this.filesystemService.moveItem(req.user.username, body.path, body.destination, userRole);
         return { success: true };
+    }
+
+    @Post('bulk-delete')
+    async bulkDelete(@Body() body, @Request() req) {
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        const paths: string[] = body.paths || [];
+        await Promise.all(paths.map(p => this.filesystemService.deleteItem(req.user.username, p, userRole)));
+        return { success: true, count: paths.length };
+    }
+
+    @Post('bulk-move')
+    async bulkMove(@Body() body, @Request() req) {
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        const paths: string[] = body.paths || [];
+        const destination = body.destination;
+        await Promise.all(paths.map(p => this.filesystemService.moveItem(req.user.username, p, destination, userRole)));
+        return { success: true, count: paths.length };
     }
 
     @Get('recent')
