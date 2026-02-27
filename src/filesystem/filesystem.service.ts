@@ -6,6 +6,7 @@ import { ensureDirectoryExists, resolveStoragePath } from '../shared/utils/path.
 
 import * as mammoth from 'mammoth';
 const PdfParse = require('pdf-parse');
+import sharp from 'sharp';
 
 @Injectable()
 export class FileSystemService {
@@ -236,6 +237,36 @@ export class FileSystemService {
         }
 
         return target;
+    }
+
+    async getThumbnail(username: string, relativePath: string, userRole: string): Promise<Buffer> {
+        const root = this.resolveRoot(username, userRole);
+
+        // Ensure non-admin users cannot download from other users' folders.
+        this.ensureUserAccess(username, relativePath, userRole);
+
+        const target = path.join(root, relativePath);
+
+        if (!target.startsWith(root)) {
+            throw new Error('Access denied');
+        }
+
+        if (!fs.existsSync(target) || fs.statSync(target).isDirectory()) {
+            throw new Error('File not found');
+        }
+
+        const ext = path.extname(target).toLowerCase();
+        if (!['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tiff', '.heic', '.bmp'].includes(ext)) {
+            throw new Error('Unsupported image format for thumbnail');
+        }
+
+        return await sharp(target)
+            .resize(300, 300, {
+                fit: sharp.fit.inside,
+                withoutEnlargement: true
+            })
+            .webp({ quality: 80 }) // Provide webp format for better compression/quality ratio generally, controllers can set content type, but it returns webp now or jpeg. Let's return JPEG as controller expects image/jpeg.
+            .toBuffer();
     }
 
     async deleteItem(username: string, relativePath: string, userRole: string) {

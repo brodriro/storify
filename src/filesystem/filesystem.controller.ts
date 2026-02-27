@@ -1,5 +1,6 @@
-import { Controller, Get, Query, Request, UseGuards, Render, Post, UploadedFiles, UseInterceptors, Body, StreamableFile, Delete } from '@nestjs/common';
+import { Controller, Get, Query, Request, UseGuards, Render, Post, UploadedFiles, UseInterceptors, Body, StreamableFile, Delete, Res } from '@nestjs/common';
 import { createReadStream } from 'fs';
+import { Response } from 'express';
 import * as path from 'path';
 import { FileSystemService } from './filesystem.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -68,6 +69,20 @@ export class FileSystemController {
         return new StreamableFile(file, {
             disposition: `attachment; filename="${filename}"`
         });
+    }
+
+    @Get('thumbnail')
+    async getThumbnail(@Query('path') filePath, @Request() req, @Res() res: Response) {
+        const userRole = req.user.roles?.includes('admin') ? 'admin' : req.user.roles?.includes('moderator') ? 'moderator' : 'guest';
+        try {
+            const buffer = await this.filesystemService.getThumbnail(req.user.username, filePath, userRole);
+            res.set('Content-Type', 'image/jpeg');
+            res.send(buffer);
+        } catch (error) {
+            // Fallback to full image if thumbnail generation fails or type is unsupported
+            const fullPath = await this.filesystemService.downloadFile(req.user.username, filePath, userRole);
+            res.sendFile(fullPath);
+        }
     }
 
     @Delete('delete')

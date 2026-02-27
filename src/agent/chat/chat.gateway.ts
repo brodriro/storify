@@ -2,7 +2,7 @@ import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, Conne
 import { Server } from 'socket.io';
 import { LogsService } from '../logs/logs.service';
 import { Logger } from '@nestjs/common';
-import { AgentService } from '../../agent/agent.service'; // Import AgentService
+import { AgentService } from '../agent.service'; // Import AgentService
 import { Socket } from 'socket.io';
 import { ChatMessage } from 'src/agent/interfaces/ChatMessage';
 
@@ -14,7 +14,7 @@ export class ChatGateway {
   constructor(
     private readonly logsService: LogsService,
     private readonly agentService: AgentService, // Inject AgentService
-  ) {}
+  ) { }
 
   @SubscribeMessage('chat')
   async handleMessage(@MessageBody() message: string, @ConnectedSocket() client: Socket): Promise<void> {
@@ -35,7 +35,7 @@ export class ChatGateway {
 
     // Store agent's response in history
     history.push({ role: 'assistant', content: agentResponse.response });
-   
+
     this.server.emit('chatResponse', { response: agentResponse.response }); // Emit the response back to the client
     this.logsService.log(`Sent chat response: ${JSON.stringify(agentResponse)}`, 'ChatGateway');
   }
