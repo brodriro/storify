@@ -164,7 +164,7 @@
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                         </svg>
                         {{else if this.isImage}}
-                        <img src="/files/download?path={{#if ../currentPath}}{{../currentPath}}/{{/if}}{{this.name}}"
+                        <img src="/files/thumbnail?path={{#if ../currentPath}}{{../currentPath}}/{{/if}}{{this.name}}"
                             alt="{{this.name}}" class="file-thumbnail" loading="lazy"
                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                         <svg class="icon-lg fallback-icon" style="color: var(--text-muted); display: none;"
@@ -437,7 +437,7 @@
         modalDownload.href = downloadUrl;
         modalBody.innerHTML = ''; // Clear previous
 
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(ext)) {
             const img = document.createElement('img');
             img.src = downloadUrl;
             modalBody.appendChild(img);

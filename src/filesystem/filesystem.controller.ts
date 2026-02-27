@@ -81,7 +81,7 @@ export class FileSystemController {
         } catch (error) {
             // Fallback to full image if thumbnail generation fails or type is unsupported
             const fullPath = await this.filesystemService.downloadFile(req.user.username, filePath, userRole);
-            res.sendFile(fullPath);
+            res.sendFile(path.resolve(fullPath));
         }
     }
 

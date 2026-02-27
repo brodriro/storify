@@ -97,23 +97,25 @@ export class FileSystemService {
         if (!fs.existsSync(target)) return [];
 
         const items = await fs.promises.readdir(target, { withFileTypes: true });
-        const mappedItems = items.map(item => {
-            const fullItemPath = path.join(target, item.name);
-            const ext = item.isDirectory() ? '' : path.extname(item.name).toLowerCase();
-            const stats = fs.statSync(fullItemPath);
-            const sizeBytes = item.isDirectory() ? 0 : stats.size;
-            const sizeMb = item.isDirectory() ? 0 : Math.max(1, Math.round(sizeBytes / (1024 * 1024)));
-            return {
-                name: item.name,
-                isDirectory: item.isDirectory(),
-                size: sizeBytes,
-                sizeMb,
-                modifiedAt: stats.mtime,
-                extension: ext,
-                isImage: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'].includes(ext),
-                isVideo: ['.mp4', '.webm', '.ogg', '.mov'].includes(ext)
-            };
-        });
+        const mappedItems = items
+            .filter(item => !item.name.startsWith('.'))
+            .map(item => {
+                const fullItemPath = path.join(target, item.name);
+                const ext = item.isDirectory() ? '' : path.extname(item.name).toLowerCase();
+                const stats = fs.statSync(fullItemPath);
+                const sizeBytes = item.isDirectory() ? 0 : stats.size;
+                const sizeMb = item.isDirectory() ? 0 : Math.max(1, Math.round(sizeBytes / (1024 * 1024)));
+                return {
+                    name: item.name,
+                    isDirectory: item.isDirectory(),
+                    size: sizeBytes,
+                    sizeMb,
+                    modifiedAt: stats.mtime,
+                    extension: ext,
+                    isImage: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.heic', '.heif'].includes(ext),
+                    isVideo: ['.mp4', '.webm', '.ogg', '.mov'].includes(ext)
+                };
+            });
 
         // Filter out other users' folders for non-admin users at root level
         const usersConfig = this.configService.get<any[]>('users') || [];
@@ -256,7 +258,7 @@ export class FileSystemService {
         }
 
         const ext = path.extname(target).toLowerCase();
-        if (!['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tiff', '.heic', '.bmp'].includes(ext)) {
+        if (!['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tiff', '.heic', '.heif', '.bmp'].includes(ext)) {
             throw new Error('Unsupported image format for thumbnail');
         }
 
@@ -406,6 +408,7 @@ export class FileSystemService {
             const items = await fs.promises.readdir(dirPath, { withFileTypes: true });
 
             for (const item of items) {
+                if (item.name.startsWith('.')) continue;
                 const fullPath = path.join(dirPath, item.name);
                 const stats = fs.statSync(fullPath);
 
