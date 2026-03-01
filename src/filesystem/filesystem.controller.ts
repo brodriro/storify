@@ -5,11 +5,15 @@ import * as path from 'path';
 import { FileSystemService } from './filesystem.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { ClassificationService } from '../agent/classification/classification.service';
 
 @Controller('files')
 @UseGuards(JwtAuthGuard)
 export class FileSystemController {
-    constructor(private filesystemService: FileSystemService) { }
+    constructor(
+        private filesystemService: FileSystemService,
+        private classificationService: ClassificationService,
+    ) { }
 
     @Get('/browser')
     @Render('browser')
@@ -148,5 +152,15 @@ export class FileSystemController {
     async getDiskUsage(@Request() req) {
         const diskUsage = await this.filesystemService.getDiskUsage();
         return { success: true, diskUsage };
+    }
+
+    @Post('classify')
+    async classifyFile(@Body() body, @Request() req) {
+        const relativePath = body.path;
+        if (!relativePath) {
+            return { success: false, error: 'Missing "path" in request body' };
+        }
+        const classification = await this.classificationService.classifyFile(relativePath);
+        return { success: true, classification };
     }
 }

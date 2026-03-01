@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv';
 import { AgentResponseDto } from '../dto/agent-response.dto';
 import { Tool } from 'openai/resources/responses/responses';
 import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
+import { FileClassificationResponse } from '../interfaces/classification.interface';
 dotenv.config();
 
 @Injectable()
@@ -128,6 +129,38 @@ export class LlmService {
     } catch (error) {
       this.logger.error(`Error summarizing text with LLM: ${error.message}`, error.stack);
       throw new InternalServerErrorException('Error summarizing text with LLM.');
+    }
+  }
+
+  async classifyFile(prompt: string): Promise<FileClassificationResponse> {
+    this.logger.log('Classifying file via LLM');
+    try {
+      const completion = await this.openai.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Eres un agente experto en clasificación automática de archivos dentro de un sistema NAS. Responde EXCLUSIVAMENTE con un JSON válido, sin texto adicional.',
+          },
+          { role: 'user', content: prompt },
+        ],
+        model: 'gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+      });
+
+      const content = completion.choices?.[0]?.message?.content;
+      if (!content) {
+        this.logger.error('LLM response content is null or undefined for classifyFile');
+        throw new InternalServerErrorException('LLM response content is null or undefined');
+      }
+
+      this.logger.log(`Classification result received`);
+      return JSON.parse(content) as FileClassificationResponse;
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) throw error;
+      this.logger.error(`Error classifying file with LLM: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Error classifying file with LLM.');
     }
   }
 }

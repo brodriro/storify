@@ -4,6 +4,7 @@ import { FileSystemService } from './../filesystem/filesystem.service';
 import { AdminService } from './../admin/admin.service';
 import { LogsService } from './logs/logs.service';
 import { FileReaderService } from './file-reader/file-reader.service';
+import { ClassificationService } from './classification/classification.service';
 import { AgentResponseDto } from './dto/agent-response.dto';
 import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
 
@@ -68,7 +69,18 @@ export class AgentService {
       parameters: {
         type: 'object',
         properties: {
-          filePath: { type: 'string', description: 'El nombre completo del documento a resumir.'},
+          filePath: { type: 'string', description: 'El nombre completo del documento a resumir.' },
+        },
+        required: ['filePath'],
+      },
+    },
+    {
+      name: 'classify_file',
+      description: 'Clasifica automáticamente un archivo del NAS. Analiza su contenido, metadata y estructura para determinar categoría, subcategoría, sensibilidad, etiquetas y acciones sugeridas.',
+      parameters: {
+        type: 'object',
+        properties: {
+          filePath: { type: 'string', description: 'Ruta relativa del archivo dentro del NAS (ej: ADMIN/docs/factura.pdf).' },
         },
         required: ['filePath'],
       },
@@ -81,6 +93,7 @@ export class AgentService {
     private readonly adminService: AdminService,
     private readonly logsService: LogsService,
     private readonly fileReaderService: FileReaderService,
+    private readonly classificationService: ClassificationService,
   ) { }
 
   async processMessage(userMessage: string, history: ChatMessage[]): Promise<{ response: string }> {
@@ -155,6 +168,11 @@ export class AgentService {
         }
         const fileContent = await this.fileReaderService.readFileContent(params.filePath);
         return this.llmService.summarizeText(fileContent);
+      case 'classify_file':
+        if (!params || !params.filePath) {
+          throw new Error('Missing parameter: filePath for classify_file');
+        }
+        return this.classificationService.classifyFile(params.filePath);
       default:
         throw new Error(`Unknown tool: ${action}`);
     }
