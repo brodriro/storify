@@ -11,7 +11,7 @@ import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
 @Injectable()
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
-  private maxIterations = 3;
+  private maxIterations = 6;
 
   private availableTools: ToolNas[] = [
     {

@@ -7,7 +7,7 @@ import { PDFParse } from 'pdf-parse';
 @Injectable()
 export class FileReaderService {
   async readFileContent(filePath: string): Promise<string> {
-  
+
     const ext = path.extname(filePath).toLowerCase();
     let content = '';
 
@@ -50,6 +50,8 @@ export class FileReaderService {
     }
   }
 
+  private static readonly SUPPORTED_EXTENSIONS = ['.txt', '.docx', '.pdf'];
+
   private async findDocumentsRecursively(directory: string, searchName: string, matchingDocuments: string[]): Promise<void> {
     const entries = await fs.readdir(directory, { withFileTypes: true });
 
@@ -57,7 +59,12 @@ export class FileReaderService {
       const fullPath = path.join(directory, entry.name);
       if (entry.isDirectory()) {
         await this.findDocumentsRecursively(fullPath, searchName, matchingDocuments);
-      } else if (entry.isFile() && entry.name.toLowerCase().includes(searchName.toLowerCase()) && !entry.name.startsWith('.')) {
+      } else if (
+        entry.isFile() &&
+        entry.name.toLowerCase().includes(searchName.toLowerCase()) &&
+        !entry.name.startsWith('.') &&
+        FileReaderService.SUPPORTED_EXTENSIONS.includes(path.extname(entry.name).toLowerCase())
+      ) {
         matchingDocuments.push(fullPath);
       }
     }
