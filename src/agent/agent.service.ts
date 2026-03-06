@@ -11,7 +11,7 @@ import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
 @Injectable()
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
-  private maxIterations = 6;
+  private maxIterations = 12;
 
   private availableTools: ToolNas[] = [
     {
@@ -83,6 +83,30 @@ export class AgentService {
           filePath: { type: 'string', description: 'Ruta relativa del archivo dentro del NAS (ej: ADMIN/docs/factura.pdf).' },
         },
         required: ['filePath'],
+      },
+    },
+    {
+      name: 'move_file',
+      description: 'Mueve un archivo o carpeta a una nueva ubicación dentro del NAS.',
+      parameters: {
+        type: 'object',
+        properties: {
+          filePath: { type: 'string', description: 'Ruta relativa actual del archivo (ej: ADMIN/docs/factura.pdf).' },
+          destination: { type: 'string', description: 'Ruta relativa de la carpeta destino (ej: ADMIN/finanzas/facturas).' },
+        },
+        required: ['filePath', 'destination'],
+      },
+    },
+    {
+      name: 'create_folder',
+      description: 'Crea una nueva carpeta dentro del NAS.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Ruta relativa del directorio padre donde se creará la carpeta (ej: ADMIN/finanzas).' },
+          name: { type: 'string', description: 'Nombre de la nueva carpeta a crear.' },
+        },
+        required: ['path', 'name'],
       },
     },
   ];
@@ -173,6 +197,25 @@ export class AgentService {
           throw new Error('Missing parameter: filePath for classify_file');
         }
         return this.classificationService.classifyFile(params.filePath);
+      case 'move_file':
+        if (!params || !params.filePath || !params.destination) {
+          throw new Error('Missing parameters: filePath and destination for move_file');
+        }
+        {
+          const normFile = params.filePath.replace(/^\.?\/?(?:public_storage\/)?users\//, '').replace(/^\.?\/?/, '');
+          const normDest = params.destination.replace(/^\.?\/?(?:public_storage\/)?users\//, '').replace(/^\.?\/?/, '');
+          await this.fileSystemService.moveItem('ADMIN', normFile, normDest, 'admin');
+          return { success: true, message: `Archivo movido de ${normFile} a ${normDest}` };
+        }
+      case 'create_folder':
+        if (!params || !params.path || !params.name) {
+          throw new Error('Missing parameters: path and name for create_folder');
+        }
+        {
+          const normPath = params.path.replace(/^\.?\/?(?:public_storage\/)?users\//, '').replace(/^\.?\/?/, '');
+          await this.fileSystemService.createFolder('ADMIN', normPath, params.name, 'admin');
+          return { success: true, message: `Carpeta '${params.name}' creada en ${normPath}` };
+        }
       default:
         throw new Error(`Unknown tool: ${action}`);
     }
