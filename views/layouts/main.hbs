@@ -13,25 +13,55 @@
     {{> header}}
 
     <div id="chat-button" class="chat-button">
-        💬
+        <svg viewBox="0 0 24 24">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
     </div>
 
     <div id="chat-sidebar" class="chat-sidebar">
         <div class="chat-header">
-            <h3>Chat with Storify AI</h3>
-            <button id="close-chat">X</button>
+            <div class="chat-header-info">
+                <div class="chat-header-icon">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                        <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                        <path d="M5 10h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"></path>
+                        <path d="M9 14v4"></path>
+                        <path d="M15 14v4"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3>Storify AI</h3>
+                    <p>NAS Assistant</p>
+                </div>
+            </div>
+            <button id="close-chat" title="Close Chat">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
         </div>
+        
         <div class="chat-history" id="chat-history">
-            <!-- Chat messages will be displayed here -->
+            <!-- Messages injected here -->
         </div>
-        <div class="typing-indicator" id="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
+
+        <div class="typing-indicator-wrapper" id="typing-indicator">
+            <div class="typing-dots">
+                <span></span><span></span><span></span>
+            </div>
         </div>
-        <div class="chat-input">
-            <input type="text" id="chat-message-input" placeholder="Type your message...">
-            <button id="send-chat-message">Send</button>
+
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <textarea id="chat-message-input" placeholder="Ask about your files, storage..." rows="1"></textarea>
+            </div>
+            <button id="send-chat-message" class="btn-send-chat" disabled>
+                <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -47,9 +77,9 @@
             document.body.classList.add('dark');
         }
     </script>
-    <script src="/js/chat.js"></script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/js/chat.js"></script>
 </body>
 
 </html>

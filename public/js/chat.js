@@ -9,17 +9,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isChatInitialized = false;
 
-    const socket = io({ 
+    const socket = io({
         transports: ['websocket'],
-        pingInterval: 25000, // Client pings server every 25 seconds
-        pingTimeout: 60000 // Server must respond within 60 seconds
-    }); // Connect to Socket.io server
+        pingInterval: 25000,
+        pingTimeout: 60000
+    });
+
+    // Auto-resize textarea
+    chatMessageInput.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+        sendChatMessageButton.disabled = this.value.trim() === '';
+    });
 
     chatButton.addEventListener('click', () => {
         chatSidebar.classList.toggle('open');
         if (chatSidebar.classList.contains('open') && !isChatInitialized) {
             displayWelcomeMessage();
             isChatInitialized = true;
+        }
+        if (chatSidebar.classList.contains('open')) {
+            setTimeout(() => chatMessageInput.focus(), 300);
         }
     });
 
@@ -29,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sendChatMessageButton.addEventListener('click', sendMessage);
     chatMessageInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
             sendMessage();
         }
     });
@@ -39,43 +50,68 @@ document.addEventListener('DOMContentLoaded', () => {
         if (message) {
             appendMessage(message, 'user');
             chatMessageInput.value = '';
+            chatMessageInput.style.height = 'auto'; // Reset height
+            sendChatMessageButton.disabled = true;
 
-            // Emit the message over Socket.io
             socket.emit('chat', message);
             toggleInputState(true);
             showTypingIndicator();
         }
     }
 
-    // Listen for incoming messages from the server
     socket.on('chatResponse', (data) => {
         hideTypingIndicator();
         toggleInputState(false);
-        appendMessage(data.response, 'ai'); // Assuming the server sends a 'response' field
+        appendMessage(data.response, 'ai');
+        chatMessageInput.focus();
     });
 
+    function getTimestamp() {
+        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
     function appendMessage(message, sender) {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('chat-message', sender);
-        
+        const wrapper = document.createElement('div');
+        wrapper.className = `msg-wrapper ${sender}`;
+
+        const meta = document.createElement('div');
+        meta.className = 'msg-meta';
+        const name = sender === 'user' ? 'You' : 'Storify AI';
+        meta.innerHTML = `<span>${name}</span> &middot; <span>${getTimestamp()}</span>`;
+
+        const msgBubble = document.createElement('div');
+        msgBubble.className = `chat-message ${sender}`;
+
         if (sender === 'ai') {
-            messageElement.innerHTML = marked.parse(message);
+            msgBubble.innerHTML = marked.parse(message);
         } else {
-            messageElement.textContent = message;
+            msgBubble.textContent = message;
         }
-        
-        chatHistory.appendChild(messageElement);
-        chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom
+
+        wrapper.appendChild(meta);
+        wrapper.appendChild(msgBubble);
+
+        chatHistory.appendChild(wrapper);
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        setTimeout(() => {
+            chatHistory.scrollTo({
+                top: chatHistory.scrollHeight,
+                behavior: 'smooth'
+            });
+        }, 50);
     }
 
     function toggleInputState(disabled) {
         chatMessageInput.disabled = disabled;
-        sendChatMessageButton.disabled = disabled;
+        if (disabled) sendChatMessageButton.disabled = true;
     }
 
     function showTypingIndicator() {
         typingIndicator.classList.add('visible');
-        chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom to show indicator
+        scrollToBottom();
     }
 
     function hideTypingIndicator() {
@@ -83,11 +119,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayWelcomeMessage() {
-        const welcomeMessage = 'Hola, So tu asistente NAS Storify. Puedo ayudarte con las siguientes operaciones:\n' +
-            '-   **Espacio disponible**\n' +
-            '-   **Archivos recientes**\n' +
-            '-   **Bakcups**\n' +
-            '-   **Actividad sospechosa**';
+        const welcomeMessage = 'Hi! I am your Storify NAS Assistant. I can help you with:\n' +
+            '-   **Available Space**\n' +
+            '-   **Recent Files**\n' +
+            '-   **System Backups**\n' +
+            '-   **General questions**\n\nHow can I help you today?';
         appendMessage(welcomeMessage, 'ai');
     }
 });
