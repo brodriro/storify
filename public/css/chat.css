@@ -32,32 +32,41 @@
     stroke-linejoin: round;
 }
 
-/* Sidebar Container */
+/* Widget Container */
 .chat-sidebar {
     position: fixed;
-    bottom: 0;
+    bottom: 6rem;
     right: -450px;
-    width: 400px;
-    height: 100vh;
+    width: 380px;
+    height: min(600px, calc(100vh - 8rem));
     background: var(--glass-bg);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    border-left: 1px solid var(--glass-border);
-    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3), var(--shadow-xl);
     z-index: 1001;
-    transition: right var(--transition-medium);
+    transition: right var(--transition-medium), opacity var(--transition-medium);
     display: flex;
     flex-direction: column;
+    opacity: 0;
 }
 
 .chat-sidebar.open {
-    right: 0;
+    right: 2rem;
+    opacity: 1;
 }
 
 @media (max-width: 640px) {
     .chat-sidebar {
-        width: 100%;
+        width: calc(100% - 2rem);
         right: -100%;
+        bottom: 5.5rem;
+        height: calc(100vh - 7rem);
+    }
+
+    .chat-sidebar.open {
+        right: 1rem;
     }
 }
 
@@ -135,9 +144,11 @@
 .chat-history::-webkit-scrollbar {
     width: 6px;
 }
+
 .chat-history::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .chat-history::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
@@ -200,11 +211,28 @@
 }
 
 /* Markdown Styling inside AI messages */
-.chat-message.ai p { margin: 0 0 0.75rem 0; }
-.chat-message.ai p:last-child { margin-bottom: 0; }
-.chat-message.ai strong { font-weight: 600; color: var(--color-cta); }
-.chat-message.ai ul, .chat-message.ai ol { margin: 0.5rem 0; padding-left: 1.5rem; }
-.chat-message.ai li { margin-bottom: 0.25rem; }
+.chat-message.ai p {
+    margin: 0 0 0.75rem 0;
+}
+
+.chat-message.ai p:last-child {
+    margin-bottom: 0;
+}
+
+.chat-message.ai strong {
+    font-weight: 600;
+    color: var(--color-cta);
+}
+
+.chat-message.ai ul,
+.chat-message.ai ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.chat-message.ai li {
+    margin-bottom: 0.25rem;
+}
 
 .chat-message.ai pre {
     background: rgba(0, 0, 0, 0.3);
@@ -344,5 +372,10 @@
     animation: bounce 1.4s infinite ease-in-out both;
 }
 
-.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
-.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+.typing-dots span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+    animation-delay: -0.16s;
+}
