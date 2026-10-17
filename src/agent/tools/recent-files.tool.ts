@@ -26,9 +26,6 @@ export class RecentFilesTool implements AgentTool<{ days: number }> {
   constructor(private readonly storage: StorageService) {}
 
   async run({ days }: { days: number }, { user }: ToolContext) {
-    const files = await this.storage.getRecentFiles(user, days > 0 ? days : 7);
-    return files
-      .sort((a, b) => b.modifiedAt.getTime() - a.modifiedAt.getTime())
-      .slice(0, MAX_RESULTS);
+    return this.storage.getRecentFiles(user, days > 0 ? days : 7, MAX_RESULTS);
   }
 }

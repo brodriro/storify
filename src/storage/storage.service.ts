@@ -15,7 +15,13 @@ import {
   ensureDirectoryExists,
   resolveStoragePath,
 } from '../common/path.utils';
+import { mapWithConcurrency } from '../common/concurrency';
 import { AccessPolicy, ResolvedPath } from './access-policy';
+
+/** Parallel fs calls per request; see mapWithConcurrency. */
+const FS_CONCURRENCY = 32;
+/** Default cap for tree searches (recent files, name search). */
+export const DEFAULT_FIND_LIMIT = 100;
 
 const IMAGE_EXTENSIONS = [
   '.jpg',
@@ -114,37 +120,37 @@ export class StorageService {
       throw error;
     }
 
-    const items = await Promise.all(
-      entries
-        .filter((entry) => this.policy.isVisible(user, dir, entry.name))
-        .map(async (entry): Promise<FileEntry | null> => {
-          try {
-            const stats = await fs.promises.stat(
-              path.join(dir.absolute, entry.name),
-            );
-            const isDirectory = stats.isDirectory();
-            const extension = isDirectory
-              ? ''
-              : path.extname(entry.name).toLowerCase();
-            const size = isDirectory ? 0 : stats.size;
-            return {
-              name: entry.name,
-              isDirectory,
-              size,
-              sizeMb: isDirectory
-                ? 0
-                : Math.max(1, Math.round(size / (1024 * 1024))),
-              modifiedAt: stats.mtime,
-              extension,
-              isImage: IMAGE_EXTENSIONS.includes(extension),
-              isVideo: VIDEO_EXTENSIONS.includes(extension),
-            };
-          } catch (error) {
-            // Entry vanished or is a dangling symlink: skip it.
-            if (isNotFound(error)) return null;
-            throw error;
-          }
-        }),
+    const items = await mapWithConcurrency(
+      entries.filter((entry) => this.policy.isVisible(user, dir, entry.name)),
+      FS_CONCURRENCY,
+      async (entry): Promise<FileEntry | null> => {
+        try {
+          const stats = await fs.promises.stat(
+            path.join(dir.absolute, entry.name),
+          );
+          const isDirectory = stats.isDirectory();
+          const extension = isDirectory
+            ? ''
+            : path.extname(entry.name).toLowerCase();
+          const size = isDirectory ? 0 : stats.size;
+          return {
+            name: entry.name,
+            isDirectory,
+            size,
+            sizeMb: isDirectory
+              ? 0
+              : Math.max(1, Math.round(size / (1024 * 1024))),
+            modifiedAt: stats.mtime,
+            extension,
+            isImage: IMAGE_EXTENSIONS.includes(extension),
+            isVideo: VIDEO_EXTENSIONS.includes(extension),
+          };
+        } catch (error) {
+          // Entry vanished or is a dangling symlink: skip it.
+          if (isNotFound(error)) return null;
+          throw error;
+        }
+      },
     );
 
     return items
@@ -327,10 +333,19 @@ export class StorageService {
     return { totalBytes: stats.totalSize };
   }
 
-  /** Files modified in the last `days` days that the user can read. */
-  async getRecentFiles(user: AuthUser, days = 7): Promise<FoundFile[]> {
+  /** Readable files modified in the last `days` days, newest first. */
+  async getRecentFiles(
+    user: AuthUser,
+    days = 7,
+    limit = DEFAULT_FIND_LIMIT,
+  ): Promise<FoundFile[]> {
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    return this.findFiles(user, (file) => file.modifiedAt.getTime() > cutoff);
+    const files = await this.findFiles(user, {
+      match: (file) => file.modifiedAt.getTime() > cutoff,
+    });
+    return files
+      .sort((a, b) => b.modifiedAt.getTime() - a.modifiedAt.getTime())
+      .slice(0, limit);
   }
 
   /** Readable files whose name contains `search` (case-insensitive). */
@@ -338,20 +353,31 @@ export class StorageService {
     user: AuthUser,
     search: string,
     extensions?: string[],
+    limit = DEFAULT_FIND_LIMIT,
   ): Promise<FoundFile[]> {
     const needle = search.toLowerCase();
-    return this.findFiles(
-      user,
-      (file) =>
-        file.name.toLowerCase().includes(needle) &&
-        (!extensions || extensions.includes(file.extension)),
-    );
+    return this.findFiles(user, {
+      matchName: (name, extension) =>
+        name.toLowerCase().includes(needle) &&
+        (!extensions || extensions.includes(extension)),
+      limit,
+    });
   }
 
+  /**
+   * Walks the user's readable tree. `matchName` filters before the stat call
+   * (cheap); `match` sees the stats. With `limit`, the walk stops once that
+   * many files matched.
+   */
   private async findFiles(
     user: AuthUser,
-    predicate: (file: FoundFile) => boolean,
+    options: {
+      matchName?: (name: string, extension: string) => boolean;
+      match?: (file: FoundFile) => boolean;
+      limit?: number;
+    },
   ): Promise<FoundFile[]> {
+    const { matchName, match, limit = Infinity } = options;
     const results: FoundFile[] = [];
     const walk = async (dir: ResolvedPath) => {
       let entries: fs.Dirent[];
@@ -363,6 +389,8 @@ export class StorageService {
         if (isNotFound(error)) return;
         throw error;
       }
+      const subdirs: ResolvedPath[] = [];
+      const files: { child: ResolvedPath; extension: string }[] = [];
       for (const entry of entries) {
         // Symlinks are skipped so the walk can't leave the user's root.
         if (entry.isSymbolicLink()) continue;
@@ -372,19 +400,41 @@ export class StorageService {
           relative: dir.relative ? `${dir.relative}/${entry.name}` : entry.name,
           segments: [...dir.segments, entry.name],
         };
-        if (entry.isDirectory()) {
-          await walk(child);
-        } else if (entry.isFile()) {
-          const stats = await fs.promises.stat(child.absolute);
-          const file: FoundFile = {
-            path: child.relative,
-            name: entry.name,
-            size: stats.size,
-            modifiedAt: stats.mtime,
-            extension: path.extname(entry.name).toLowerCase(),
-          };
-          if (predicate(file)) results.push(file);
-        }
+        const extension = path.extname(entry.name).toLowerCase();
+        if (entry.isDirectory()) subdirs.push(child);
+        else if (
+          entry.isFile() &&
+          (!matchName || matchName(entry.name, extension))
+        )
+          files.push({ child, extension });
+      }
+
+      const found = await mapWithConcurrency(
+        files,
+        FS_CONCURRENCY,
+        async ({ child, extension }): Promise<FoundFile | null> => {
+          try {
+            const stats = await fs.promises.stat(child.absolute);
+            return {
+              path: child.relative,
+              name: child.segments[child.segments.length - 1],
+              size: stats.size,
+              modifiedAt: stats.mtime,
+              extension,
+            };
+          } catch (error) {
+            if (isNotFound(error)) return null;
+            throw error;
+          }
+        },
+      );
+      for (const file of found) {
+        if (results.length >= limit) return;
+        if (file && (!match || match(file))) results.push(file);
+      }
+      for (const subdir of subdirs) {
+        if (results.length >= limit) return;
+        await walk(subdir);
       }
     };
     await walk(await this.policy.resolve(user, '', 'read'));

@@ -21,6 +21,13 @@ export class BrowserQueryDto {
   @IsOptional() @IsString() @MaxLength(MAX_PATH) path?: string;
   @IsOptional() @IsIn(['name', 'date']) sort?: 'name' | 'date';
   @IsOptional() @IsIn(['asc', 'desc']) order?: 'asc' | 'desc';
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined ? undefined : Number(value),
+  )
+  @IsInt()
+  @Min(1)
+  page?: number;
 }
 
 export class PathQueryDto {
@@ -71,4 +78,13 @@ export class RecentQueryDto {
   @Min(1)
   @Max(3650)
   days?: number;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined ? undefined : Number(value),
+  )
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  limit?: number;
 }

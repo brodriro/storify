@@ -32,6 +32,8 @@ import {
   UploadBodyDto,
 } from './files.dto';
 
+export const BROWSER_PAGE_SIZE = 200;
+
 /** Runs an operation per path and reports partial failures instead of a bare 500. */
 async function settleAll(
   list: string[],
@@ -90,7 +92,33 @@ export class FilesController {
       path: parts.slice(0, i + 1).join('/'),
     }));
 
-    const entries = files.map((f) => {
+    // Rendering is what blocks on big folders (~4 KB of markup per entry), so
+    // only one page of entries reaches the template.
+    const totalPages = Math.max(1, Math.ceil(files.length / BROWSER_PAGE_SIZE));
+    const page = Math.min(query.page ?? 1, totalPages);
+    const pageUrl = (n: number) => {
+      const params = new URLSearchParams();
+      if (currentPath) params.set('path', currentPath);
+      if (query.sort) params.set('sort', query.sort);
+      if (query.order) params.set('order', query.order);
+      if (n > 1) params.set('page', String(n));
+      const search = params.toString();
+      return search ? `/files/browser?${search}` : '/files/browser';
+    };
+    const pagination = {
+      page,
+      totalPages,
+      totalItems: files.length,
+      isPaged: totalPages > 1,
+      prevUrl: page > 1 ? pageUrl(page - 1) : null,
+      nextUrl: page < totalPages ? pageUrl(page + 1) : null,
+    };
+
+    const pageFiles = files.slice(
+      (page - 1) * BROWSER_PAGE_SIZE,
+      page * BROWSER_PAGE_SIZE,
+    );
+    const entries = pageFiles.map((f) => {
       const relPath = currentPath ? `${currentPath}/${f.name}` : f.name;
       const query = encodeURIComponent(relPath);
       return {
@@ -123,6 +151,7 @@ export class FilesController {
       user,
       currentPath,
       breadcrumbs,
+      pagination,
       userRole: user.role,
       canWrite: user.role !== 'guest',
       sortBy,
@@ -214,10 +243,14 @@ export class FilesController {
 
   @Get('recent')
   async getRecentFiles(
-    @Query() { days }: RecentQueryDto,
+    @Query() { days, limit }: RecentQueryDto,
     @CurrentUser() user: AuthUser,
   ) {
-    const files = await this.storageService.getRecentFiles(user, days ?? 7);
+    const files = await this.storageService.getRecentFiles(
+      user,
+      days ?? 7,
+      limit,
+    );
     return { success: true, files };
   }
 

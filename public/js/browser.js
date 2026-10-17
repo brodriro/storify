@@ -143,6 +143,8 @@
     function setQueryParam(key, value) {
         const url = new URL(window.location.href);
         url.searchParams.set(key, value);
+        // A different order means different pages: start again from the first.
+        url.searchParams.delete('page');
         window.location.href = url.toString();
     }
 

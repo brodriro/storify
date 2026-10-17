@@ -183,6 +183,43 @@ describe('Storify (e2e)', () => {
     );
   });
 
+  it('paginates big folders', async () => {
+    const dir = path.join(storage, 'users', 'ALICE', 'fotos');
+    fs.mkdirSync(dir, { recursive: true });
+    for (let i = 0; i < 201; i++) {
+      fs.writeFileSync(
+        path.join(dir, `f${String(i).padStart(3, '0')}.txt`),
+        '',
+      );
+    }
+    const { cookie } = await login('ADMIN', 'admin-pass');
+    const page = (query: Record<string, string>) =>
+      request(app.getHttpServer())
+        .get('/files/browser')
+        .query({ path: 'ALICE/fotos', ...query })
+        .set('Cookie', cookie!)
+        .expect(200);
+    const names = (html: string) =>
+      (
+        JSON.parse(/id="browserData">(.*?)<\/script>/s.exec(html)![1]) as {
+          files: { name: string }[];
+        }
+      ).files.map((f) => f.name);
+
+    const first = await page({});
+    expect(names(first.text)).toHaveLength(200);
+    expect(first.text).toContain('Página 1 de 2');
+    // hbs escapes '=' too; browsers decode it back.
+    expect(first.text).toMatch(
+      /href="\/files\/browser\?path(=|&#x3D;)ALICE%2Ffotos&amp;page(=|&#x3D;)2" rel="next"/,
+    );
+
+    // Out-of-range pages show the last one instead of an empty folder.
+    const last = await page({ page: '9' });
+    expect(names(last.text)).toEqual(['f200.txt']);
+    expect(last.text).toContain('Página 2 de 2');
+  });
+
   it('rate-limits repeated logins for one account', async () => {
     const statuses: number[] = [];
     for (let i = 0; i < 11; i++) {

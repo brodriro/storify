@@ -29,7 +29,8 @@ export class SearchDocumentsTool implements AgentTool<{ name: string }> {
       user,
       name,
       DOCUMENT_EXTENSIONS,
+      MAX_RESULTS,
     );
-    return files.slice(0, MAX_RESULTS).map((f) => f.path);
+    return files.map((f) => f.path);
   }
 }

@@ -233,5 +233,30 @@ describe('StorageService access control', () => {
       const recent = await service.getRecentFiles(ALICE, 1);
       expect(recent.map((f) => f.path)).not.toContain('BOB/private.txt');
     });
+
+    it('returns recent files newest first, up to the limit', async () => {
+      // Future mtimes so they sort ahead of the fixtures written "now".
+      const dir = path.join(usersRoot, 'ALICE');
+      for (const [name, minutesAhead] of [
+        ['old.txt', 10],
+        ['newest.txt', 30],
+        ['middle.txt', 20],
+      ] as const) {
+        const file = path.join(dir, name);
+        fs.writeFileSync(file, name);
+        const time = new Date(Date.now() + minutesAhead * 60_000);
+        fs.utimesSync(file, time, time);
+      }
+      const recent = await service.getRecentFiles(ALICE, 1, 2);
+      expect(recent.map((f) => f.path)).toEqual([
+        'ALICE/newest.txt',
+        'ALICE/middle.txt',
+      ]);
+    });
+
+    it('stops searching once the limit is reached', async () => {
+      const found = await service.searchFiles(ALICE, '.txt', undefined, 1);
+      expect(found).toHaveLength(1);
+    });
   });
 });
