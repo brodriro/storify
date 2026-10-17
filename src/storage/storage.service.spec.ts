@@ -5,9 +5,12 @@ import * as path from 'path';
 import type { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/auth-user';
 import type { AppConfig } from '../config/configuration';
+import { messages } from '../i18n';
 import { AccessPolicy } from './access-policy';
 import { StorageService } from './storage.service';
 import { ThumbnailService } from './thumbnail.service';
+
+const { errors } = messages;
 
 const ADMIN: AuthUser = { username: 'ADMIN', role: 'admin' };
 const ALICE: AuthUser = { username: 'ALICE', role: 'member' };
@@ -76,7 +79,7 @@ describe('StorageService access control', () => {
 
     it('cannot delete the users root', async () => {
       await expect(service.deleteItem(ADMIN, '.')).rejects.toThrow(
-        'storage root',
+        errors.storageRootImmutable,
       );
       expect(exists(usersRoot, 'ADMIN/secret.txt')).toBe(true);
     });
@@ -99,7 +102,7 @@ describe('StorageService access control', () => {
       'cannot read %s',
       async (target) => {
         await expect(service.downloadFile(ALICE, target)).rejects.toThrow(
-          'Access denied',
+          errors.accessDenied,
         );
       },
     );
@@ -138,27 +141,27 @@ describe('StorageService access control', () => {
     it('rejects NUL bytes', async () => {
       await expect(
         service.downloadFile(ALICE, 'ALICE/own.txt\0.png'),
-      ).rejects.toThrow('Invalid path');
+      ).rejects.toThrow(errors.invalidPath);
     });
 
     it('rejects symlinks that point outside the root', async () => {
       fs.symlinkSync('/etc', path.join(usersRoot, 'ALICE/escape'));
       await expect(
         service.downloadFile(ALICE, 'ALICE/escape/hostname'),
-      ).rejects.toThrow('Access denied');
+      ).rejects.toThrow(errors.accessDenied);
     });
 
     it('rejects renaming a file into another user folder', async () => {
       await expect(
         service.renameItem(ALICE, 'ALICE/own.txt', '../ADMIN/planted.txt'),
-      ).rejects.toThrow('Invalid name');
+      ).rejects.toThrow(errors.invalidName);
       expect(exists(usersRoot, 'ADMIN/planted.txt')).toBe(false);
     });
 
     it('rejects moving into another user folder', async () => {
       await expect(
         service.moveItem(ALICE, 'ALICE/own.txt', 'BOB'),
-      ).rejects.toThrow('Access denied');
+      ).rejects.toThrow(errors.accessDenied);
       expect(exists(usersRoot, 'ALICE/own.txt')).toBe(true);
     });
 
@@ -181,14 +184,14 @@ describe('StorageService access control', () => {
 
     it('does not let a member delete their own home folder', async () => {
       await expect(service.deleteItem(ALICE, 'ALICE')).rejects.toThrow(
-        'User folders',
+        errors.userFolderImmutable,
       );
     });
 
     it('rejects moving a folder into itself', async () => {
       await expect(
         service.moveItem(ALICE, 'Compartido', 'Compartido'),
-      ).rejects.toThrow('into itself');
+      ).rejects.toThrow(errors.moveIntoItself);
     });
   });
 
@@ -216,14 +219,14 @@ describe('StorageService access control', () => {
         (s: StorageService) => s.renameItem(GUEST, 'readme.txt', 'x.txt'),
       ],
     ])('cannot %s', async (_label, run) => {
-      await expect(run(service)).rejects.toThrow('Access denied');
+      await expect(run(service)).rejects.toThrow(errors.accessDenied);
       expect(exists(publicRoot, 'readme.txt')).toBe(true);
     });
 
     it('cannot reach users/ from public/', async () => {
       await expect(
         service.downloadFile(GUEST, '../users/ADMIN/secret.txt'),
-      ).rejects.toThrow('Access denied');
+      ).rejects.toThrow(errors.accessDenied);
     });
   });
 
@@ -262,6 +265,29 @@ describe('StorageService access control', () => {
       );
       expect(walksOfRoot).toHaveLength(1);
       readdir.mockRestore();
+    });
+
+    it('summarizes against TOTAL_STORAGE_GB when set, else the volume', async () => {
+      const volume = await service.getStorageSummary();
+      expect(volume.totalBytes).toBeGreaterThan(0);
+      expect(volume.percent).toBeGreaterThanOrEqual(0);
+
+      const config = new ConfigService({
+        storagePath: storage,
+        storageLimitBytes: 100,
+        users: [],
+      }) as unknown as ConfigService<AppConfig, true>;
+      const limited = new StorageService(
+        config,
+        new AccessPolicy(config, { recordEvent } as unknown as AuditService),
+        new ThumbnailService(config),
+      );
+      // Fixtures: 'admin-secret' + 'alice' + 'bob' + 'team' + 'shared' = 30 bytes
+      expect(await limited.getStorageSummary()).toEqual({
+        usedBytes: 30,
+        totalBytes: 100,
+        percent: 30,
+      });
     });
 
     it('reports the volume behind STORAGE_PATH', async () => {

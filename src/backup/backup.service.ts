@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import {
   Injectable,
   Logger,
@@ -185,7 +186,7 @@ export class BackupService implements OnModuleInit, OnApplicationShutdown {
     const match = name
       ? manifests.find((m) => m.name === name)
       : manifests.find((m) => m.kind === 'full');
-    if (!match) throw new NotFoundException('No backup available');
+    if (!match) throw new NotFoundException(t('errors.noBackup'));
     return path.join(this.backupDir, `${match.name}.zip`);
   }
 

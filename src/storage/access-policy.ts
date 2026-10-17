@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import {
   BadRequestException,
   ForbiddenException,
@@ -64,7 +65,7 @@ export class AccessPolicy {
   ): Promise<ResolvedPath> {
     if (relativePath === undefined || relativePath === null) relativePath = '';
     if (typeof relativePath !== 'string' || relativePath.includes('\0')) {
-      throw new BadRequestException('Invalid path');
+      throw new BadRequestException(t('errors.invalidPath'));
     }
 
     const root = this.rootFor(user);
@@ -86,14 +87,14 @@ export class AccessPolicy {
   /** Extra checks for deleting, renaming or moving the item itself. */
   assertMutable(user: AuthUser, target: ResolvedPath): void {
     if (target.segments.length === 0) {
-      this.deny(user, target.relative, 'The storage root cannot be modified');
+      this.deny(user, target.relative, t('errors.storageRootImmutable'));
     }
     if (
       target.segments.length === 1 &&
       user.role !== 'admin' &&
       this.isConfiguredUser(target.segments[0])
     ) {
-      this.deny(user, target.relative, 'User folders cannot be modified');
+      this.deny(user, target.relative, t('errors.userFolderImmutable'));
     }
   }
 
@@ -111,7 +112,7 @@ export class AccessPolicy {
       /[/\\\0]/.test(name) ||
       name.length > MAX_NAME_LENGTH
     ) {
-      throw new BadRequestException('Invalid name');
+      throw new BadRequestException(t('errors.invalidName'));
     }
     if (
       parent.segments.length === 0 &&
@@ -119,7 +120,7 @@ export class AccessPolicy {
       this.isConfiguredUser(name) &&
       name !== user.username
     ) {
-      this.deny(user, name, 'That name is reserved for a user folder');
+      this.deny(user, name, t('errors.reservedName'));
     }
     return name;
   }
@@ -193,6 +194,6 @@ export class AccessPolicy {
       username: user.username,
       detail: requested.slice(0, 512),
     });
-    throw new ForbiddenException(message ?? 'Access denied');
+    throw new ForbiddenException(message ?? t('errors.accessDenied'));
   }
 }

@@ -1,28 +1,27 @@
 {{#> main}}
 <div class="login-container animate-fade-in">
     <div class="login-card">
-        <h2 style="text-align: center; margin-bottom: 2rem; color: var(--primary);">Storify NAS</h2>
+        <h1 class="login-title">{{t "app.name"}}</h1>
 
         <form class="login-form" action="/auth/login" method="POST">
             <div class="form-group">
-                <label class="form-label">Username</label>
-                <input type="text" name="username" class="form-input" placeholder="e.g. Alice" required>
+                <label class="form-label" for="username">{{t "login.username"}}</label>
+                <input type="text" id="username" name="username" class="form-input" autocomplete="username"
+                    autocapitalize="none" spellcheck="false" required>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" name="password" class="form-input" placeholder="Enter password..." required>
+                <label class="form-label" for="password">{{t "login.password"}}</label>
+                <input type="password" id="password" name="password" class="form-input"
+                    autocomplete="current-password" required>
             </div>
 
-            <button type="submit" class="btn btn-submit">Login</button>
+            <button type="submit" class="btn btn-primary btn-block">{{t "login.submit"}}</button>
         </form>
 
         {{#if error}}
-        <div id="error-msg" class="error-msg" role="alert" style="display: block;">
-            Invalid credentials
-        </div>
+        <p id="error-msg" class="error-msg" role="alert">{{t "login.invalid"}}</p>
         {{/if}}
     </div>
 </div>
-
 {{/main}}

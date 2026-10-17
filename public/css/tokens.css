@@ -1,0 +1,149 @@
+/*
+ * Design tokens (D6: the dark "technical NAS" master, with a derived light
+ * theme). Components use only these semantic names, never raw colours.
+ *
+ * The theme is html[data-theme], set by theme.js before first paint from the
+ * saved choice or the system preference; without JavaScript the media query
+ * below applies the system preference.
+ *
+ * Contrast is checked by src/ui/contrast.spec.ts (WCAG 2.x AA): keep both
+ * themes in sync when changing a value.
+ */
+
+:root {
+    color-scheme: light;
+
+    --bg: #f8fafc;
+    --bg-glow-1: hsla(210, 100%, 96%, 1);
+    --bg-glow-2: hsla(220, 100%, 98%, 1);
+    --surface: #ffffff;
+    --surface-sunken: #f1f5f9;
+    --surface-hover: #f1f5f9;
+    --overlay: rgba(15, 23, 42, 0.6);
+    --border: #e2e8f0;
+    /* Borders that identify a control (inputs, checkboxes): 3:1 required. */
+    --border-strong: #64748b;
+
+    --text: #0f172a;
+    --text-muted: #475569;
+
+    /* The master's #22c55e fails with white text (2.28:1) on light: a darker
+       green per theme instead (U3). */
+    --accent: #15803d;
+    --accent-hover: #166534;
+    --on-accent: #ffffff;
+    --accent-text: #15803d;
+    --accent-soft: rgba(21, 128, 61, 0.1);
+
+    --danger: #b91c1c;
+    --danger-hover: #991b1b;
+    --on-danger: #ffffff;
+    --danger-text: #b91c1c;
+    --danger-soft: rgba(185, 28, 28, 0.08);
+
+    --code-text: #0369a1;
+    --focus-ring: #15803d;
+
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1);
+    --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.14);
+
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+
+    --rounded-sm: 6px;
+    --rounded-md: 10px;
+    --rounded-lg: 16px;
+
+    --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'Fira Code', ui-monospace, monospace;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-fast: 150ms var(--ease-out);
+    --transition-medium: 250ms var(--ease-out);
+
+    /* WCAG 2.5.8 minimum is 24px; 44px where space allows. */
+    --target-min: 44px;
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+
+    --bg: #020617;
+    --bg-glow-1: hsla(222, 47%, 11%, 1);
+    --bg-glow-2: hsla(222, 47%, 8%, 1);
+    --surface: #0f172a;
+    --surface-sunken: #020617;
+    --surface-hover: #1e293b;
+    --overlay: rgba(2, 6, 23, 0.8);
+    --border: #1e293b;
+    --border-strong: #64748b;
+
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+
+    --accent: #22c55e;
+    --accent-hover: #4ade80;
+    --on-accent: #052e16;
+    --accent-text: #4ade80;
+    --accent-soft: rgba(34, 197, 94, 0.12);
+
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
+    --on-danger: #ffffff;
+    --danger-text: #f87171;
+    --danger-soft: rgba(248, 113, 113, 0.12);
+
+    --code-text: #38bdf8;
+    --focus-ring: #4ade80;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+}
+
+/* No JavaScript: follow the system. Same values as [data-theme='dark']. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        color-scheme: dark;
+
+        --bg: #020617;
+        --bg-glow-1: hsla(222, 47%, 11%, 1);
+        --bg-glow-2: hsla(222, 47%, 8%, 1);
+        --surface: #0f172a;
+        --surface-sunken: #020617;
+        --surface-hover: #1e293b;
+        --overlay: rgba(2, 6, 23, 0.8);
+        --border: #1e293b;
+        --border-strong: #64748b;
+
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+
+        --accent: #22c55e;
+        --accent-hover: #4ade80;
+        --on-accent: #052e16;
+        --accent-text: #4ade80;
+        --accent-soft: rgba(34, 197, 94, 0.12);
+
+        --danger: #dc2626;
+        --danger-hover: #b91c1c;
+        --on-danger: #ffffff;
+        --danger-text: #f87171;
+        --danger-soft: rgba(248, 113, 113, 0.12);
+
+        --code-text: #38bdf8;
+        --focus-ring: #4ade80;
+
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.35);
+        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+        --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+    }
+}

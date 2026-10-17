@@ -1,32 +1,32 @@
 (function () {
     'use strict';
 
-    const toast = document.getElementById('backupToast');
+    const status = document.getElementById('backupToast');
+    let clearTimer = null;
 
-    function showBackupToast(message) {
-        if (!toast) return;
-        toast.textContent = message;
-        toast.style.display = 'block';
-        toast.style.opacity = '1';
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => (toast.style.display = 'none'), 300);
-        }, 3000);
+    function showStatus(message) {
+        if (!status) return;
+        status.textContent = message;
+        clearTimeout(clearTimer);
+        clearTimer = setTimeout(() => (status.textContent = ''), 5000);
     }
 
     const button = document.getElementById('createBackupBtn');
     if (!button) return;
 
     button.addEventListener('click', async () => {
+        button.disabled = true;
         try {
             const res = await fetch('/admin/backup', { method: 'POST' });
             const data = await res.json().catch(() => ({}));
-            if (data.inProgress) showBackupToast('Ya hay un backup ejecutándose.');
-            else if (res.ok && data.success) showBackupToast('Backup iniciado. Se generará en segundo plano.');
-            else showBackupToast('No se pudo iniciar el backup.');
+            if (data.inProgress) showStatus(t('dashboard.inProgress'));
+            else if (res.ok && data.success) showStatus(t('dashboard.started'));
+            else showStatus(t('dashboard.failed'));
         } catch (e) {
-            showBackupToast('Error al iniciar el backup.');
+            showStatus(t('dashboard.error'));
             console.error(e);
+        } finally {
+            button.disabled = false;
         }
     });
 })();

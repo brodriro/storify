@@ -6,6 +6,7 @@ import { existsSync } from 'fs';
 import hbs from 'hbs';
 import helmet from 'helmet';
 import { dirname, join } from 'path';
+import { clientMessagesJson, format, lookup } from './i18n';
 import { ViewExceptionFilter } from './common/view-exception.filter';
 
 /**
@@ -37,13 +38,11 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
           defaultSrc: ["'self'"],
           // No inline scripts anywhere: views load /js/*.js only.
           scriptSrc: ["'self'"],
-          // Inline style attributes remain in the views (plan U11).
-          styleSrc: [
-            "'self'",
-            "'unsafe-inline'",
-            'https://fonts.googleapis.com',
-          ],
-          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          // No inline styles either (U11): views use classes only. Scripts may
+          // still set element.style through the CSSOM, which CSP allows.
+          styleSrc: ["'self'"],
+          // Fonts are self-hosted (/vendor/fira-*): no Google Fonts.
+          fontSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
           mediaSrc: ["'self'", 'blob:'],
           connectSrc: ["'self'"],
@@ -67,6 +66,15 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
   app.useStaticAssets(dirname(require.resolve('dompurify')), {
     prefix: '/vendor/dompurify/',
   });
+  for (const font of ['fira-sans', 'fira-code']) {
+    app.useStaticAssets(
+      join(
+        dirname(require.resolve(`@fontsource/${font}/package.json`)),
+        'files',
+      ),
+      { prefix: `/vendor/${font}/`, maxAge: '30d', immutable: true },
+    );
+  }
   app.setBaseViewsDir(viewsPath);
   app.setViewEngine('hbs');
 
@@ -84,6 +92,21 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
     ) {
       return arg1 == arg2 ? options.fn(this) : options.inverse(this);
     },
+  );
+
+  // {{t "browser.title"}} or {{t "browser.usedOf" used=a total=b}} (escaped).
+  hbs.registerHelper(
+    't',
+    function (key: string, options: Handlebars.HelperOptions) {
+      const template = lookup(key);
+      if (template === undefined)
+        throw new Error(`Unknown message key: ${key}`);
+      return format(template, options.hash as Record<string, unknown>);
+    },
+  );
+  hbs.registerHelper(
+    'clientMessages',
+    () => new hbs.handlebars.SafeString(clientMessagesJson()),
   );
 
   app.use(cookieParser());

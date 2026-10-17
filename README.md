@@ -35,8 +35,10 @@ Storify resuelve un escenario típico de almacenamiento compartido en una red lo
 - Cada usuario tiene **su propia carpeta** (`users/<USUARIO>`), creada al iniciar sesión, donde puede crear subcarpetas, subir, mover, renombrar y borrar archivos.
 - Las carpetas y archivos de la raíz que no se llaman como un usuario son **compartidos** entre todos los usuarios normales.
 - El administrador ve y gestiona todo, y dispone de un **dashboard** con uso de disco global, uso por usuario (más `OTROS` para lo compartido), tipos de archivo y gestión de backups.
+- La interfaz está en español, sigue el tema claro u oscuro del sistema (con un botón para cambiarlo) y se puede usar entera con el teclado o en una pantalla táctil.
+- Funciona **sin acceso a Internet**: fuentes y librerías se sirven desde el propio servidor (la única excepción es el proveedor de IA si es remoto).
 
-La especificación funcional original está en `docs/base.md`.
+La especificación funcional original está en `docs/base.md`; el sistema de diseño, en `design-system/storify-nas/DESIGN.md`.
 
 ---
 

@@ -25,19 +25,30 @@ document.addEventListener('DOMContentLoaded', () => {
         sendChatMessageButton.disabled = this.value.trim() === '';
     });
 
-    chatButton.addEventListener('click', () => {
-        chatSidebar.classList.toggle('open');
-        if (chatSidebar.classList.contains('open') && !isChatInitialized) {
-            displayWelcomeMessage();
-            isChatInitialized = true;
+    // Closed, the panel is off-screen and inert, so Tab never lands inside it.
+    function setChatOpen(open) {
+        chatSidebar.classList.toggle('open', open);
+        chatSidebar.inert = !open;
+        chatButton.setAttribute('aria-expanded', String(open));
+        if (open) {
+            if (!isChatInitialized) {
+                displayWelcomeMessage();
+                isChatInitialized = true;
+            }
+            chatMessageInput.focus();
         }
-        if (chatSidebar.classList.contains('open')) {
-            setTimeout(() => chatMessageInput.focus(), 300);
-        }
-    });
+    }
 
+    chatButton.addEventListener('click', () => setChatOpen(!chatSidebar.classList.contains('open')));
     closeChatButton.addEventListener('click', () => {
-        chatSidebar.classList.remove('open');
+        setChatOpen(false);
+        chatButton.focus();
+    });
+    chatSidebar.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            setChatOpen(false);
+            chatButton.focus();
+        }
     });
 
     sendChatMessageButton.addEventListener('click', sendMessage);
@@ -67,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(responseTimer);
         responseTimer = setTimeout(() => {
             finishWaiting();
-            appendMessage('No he recibido respuesta del asistente. Inténtalo de nuevo.', 'ai');
+            appendMessage(t('chat.noResponse'), 'ai');
         }, RESPONSE_TIMEOUT_MS);
     }
 
@@ -100,12 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmBtn = document.createElement('button');
         confirmBtn.type = 'button';
         confirmBtn.className = 'btn btn-primary btn-sm';
-        confirmBtn.textContent = 'Confirmar';
+        confirmBtn.textContent = t('chat.confirm');
         confirmBtn.addEventListener('click', () => decide(true));
         const cancelBtn = document.createElement('button');
         cancelBtn.type = 'button';
         cancelBtn.className = 'btn btn-secondary btn-sm';
-        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.textContent = t('chat.cancel');
         cancelBtn.addEventListener('click', () => decide(false));
         bar.append(confirmBtn, cancelBtn);
         chatHistory.appendChild(bar);
@@ -123,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('disconnect', () => {
         if (!typingIndicator.classList.contains('visible')) return;
         finishWaiting();
-        appendMessage('Se ha perdido la conexión con el asistente.', 'ai');
+        appendMessage(t('chat.disconnected'), 'ai');
     });
 
     function getTimestamp() {
@@ -136,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const meta = document.createElement('div');
         meta.className = 'msg-meta';
-        const name = sender === 'user' ? 'You' : 'Storify AI';
+        const name = sender === 'user' ? t('chat.you') : t('chat.assistant');
         const nameEl = document.createElement('span');
         nameEl.textContent = name;
         const timeEl = document.createElement('span');
@@ -164,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             chatHistory.scrollTo({
                 top: chatHistory.scrollHeight,
-                behavior: 'smooth'
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
             });
         }, 50);
     }
@@ -184,18 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayWelcomeMessage() {
-        const welcomeMessage = 'Hi! I am your Storify NAS Assistant. I can help you with:\n' +
-            '-   **Available Space**\n' +
-            '-   **Recent Files**\n' +
-            '-   **System Backups**\n' +
-            '-   **General questions**\n\nHow can I help you today?';
-        appendMessage(welcomeMessage, 'ai');
+        appendMessage(t('chat.welcome'), 'ai');
         if (chatInfo && !chatInfo.enabled) {
-            appendNotice('El asistente no está configurado en este servidor.');
+            appendNotice(t('chat.disabled'));
         } else if (chatInfo) {
-            appendNotice(
-                `Tus mensajes, y el contenido de los documentos que me pidas resumir o clasificar, se envían a ${chatInfo.provider} para procesarlos. Las acciones que modifican archivos siempre te pedirán confirmación.`,
-            );
+            appendNotice(t('chat.providerNotice', { provider: chatInfo.provider }));
         }
     }
 });

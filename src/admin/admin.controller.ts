@@ -1,3 +1,5 @@
+import { formatSize } from '../common/file-types';
+import { t } from '../i18n';
 import {
   Body,
   Controller,
@@ -37,27 +39,32 @@ export class AdminController {
     const totalStorageGb = this.configService.get('totalStorageGb', {
       infer: true,
     });
-    const totalBytesLimit = totalStorageGb * 1024 * 1024 * 1024;
-    const totalSizeMb = Math.round(stats.totalSize / (1024 * 1024));
+    const totalBytesLimit = totalStorageGb * 1024 ** 3;
     const usagePercent =
       totalBytesLimit > 0
         ? Math.min(100, Math.round((stats.totalSize / totalBytesLimit) * 100))
         : 0;
 
-    const userUsageMb: Record<string, number> = {};
-    for (const [key, value] of Object.entries(stats.userUsage)) {
-      userUsageMb[key] = Math.round(value / (1024 * 1024));
-    }
+    // Same adaptive units as the browser (a 2 KB total used to read "0 MB").
+    const userUsage = Object.fromEntries(
+      Object.entries(stats.userUsage).map(([key, bytes]) => [
+        key,
+        formatSize(bytes),
+      ]),
+    );
 
     return {
+      pageTitle: t('dashboard.title'),
       user,
       userRole: user.role,
       stats,
-      userUsageMb,
+      userUsage,
       config: { totalStorageGb },
+      limitEnforced:
+        this.configService.get('storageLimitBytes', { infer: true }) !== null,
       isAdmin: true,
       usagePercent,
-      totalSizeMb,
+      totalSizeLabel: formatSize(stats.totalSize),
     };
   }
 

@@ -149,12 +149,49 @@ describe('Storify (e2e)', () => {
     expect(res.text).not.toMatch(/<script>|onclick=/);
     expect(res.text).not.toContain('chat.js');
 
+    // Works without Internet access: no third-party origins at all (U8).
+    expect(res.headers['content-security-policy']).not.toMatch(/https?:/);
+    expect(res.text).not.toMatch(/https?:\/\/(?!www\.w3\.org)/);
+
     for (const url of [
       '/vendor/marked/marked.umd.js',
       '/vendor/dompurify/purify.min.js',
       '/js/browser.js',
+      '/css/fonts.css',
+      '/vendor/fira-sans/fira-sans-latin-400-normal.woff2',
+      '/vendor/fira-code/fira-code-latin-600-normal.woff2',
     ]) {
       await request(app.getHttpServer()).get(url).expect(200);
+    }
+    // Every font the stylesheet references exists.
+    const fontsCss = (
+      await request(app.getHttpServer()).get('/css/fonts.css').expect(200)
+    ).text;
+    for (const [, url] of fontsCss.matchAll(/url\((\/vendor\/[^)]+)\)/g)) {
+      await request(app.getHttpServer()).get(url).expect(200);
+    }
+  });
+
+  it('renders accessible pages without inline styles (U2, U11)', async () => {
+    const { cookie } = await login('ADMIN', 'admin-pass');
+    const pages = [
+      await request(app.getHttpServer()).get('/').expect(200),
+      await request(app.getHttpServer())
+        .get('/files/browser')
+        .set('Cookie', cookie!)
+        .expect(200),
+      await request(app.getHttpServer())
+        .get('/admin/dashboard')
+        .set('Cookie', cookie!)
+        .expect(200),
+    ];
+    for (const res of pages) {
+      expect(res.headers['content-security-policy']).toContain(
+        "style-src 'self';",
+      );
+      expect(res.text).not.toMatch(/\sstyle="|<style[\s>]/);
+      expect(res.text.match(/<h1[\s>]/g)).toHaveLength(1);
+      expect(res.text).toContain('<main id="main"');
     }
   });
 
