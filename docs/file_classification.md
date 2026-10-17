@@ -16,17 +16,17 @@ El resultado es un JSON estructurado con categoría, subcategoría, nivel de sen
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                  FileSystemController                │
+│              ClassificationController                │
 │                POST /files/classify                  │
 └──────────────┬───────────────────────────────────────┘
                │
                ▼
 ┌──────────────────────────────────────────────────────┐
 │              ClassificationService                   │
-│  1. Resuelve archivo en disco                        │
+│  1. Resuelve el archivo vía AccessPolicy (ACL)       │
 │  2. Obtiene metadata (stat, MIME)                    │
-│  3. Extrae texto (FileReaderService)                 │
-│  4. Obtiene estructura de carpetas del NAS           │
+│  3. Extrae texto (DocumentReaderService)             │
+│  4. Estructura de carpetas visible para el usuario   │
 │  5. Construye prompt de clasificación                │
 │  6. Llama a LlmService.classifyFile()               │
 └──────────────┬───────────────────────────────────────┘
@@ -34,11 +34,15 @@ El resultado es un JSON estructurado con categoría, subcategoría, nivel de sen
                ▼
 ┌──────────────────────────────────────────────────────┐
 │                    LlmService                        │
-│  classifyFile() → OpenAI GPT (JSON mode)             │
+│  classifyFile() → LLM configurado (JSON mode)        │
 └──────────────────────────────────────────────────────┘
 ```
 
 El feature también está integrado como **herramienta del agente chat** (`classify_file`), para que el asistente NAS pueda clasificar archivos por solicitud en lenguaje natural.
+
+**Permisos:** solo se pueden clasificar archivos que el usuario puede leer (mismas reglas que el navegador de archivos). La estructura de carpetas enviada al LLM incluye únicamente las carpetas visibles para ese usuario. La clasificación solo **sugiere**: no mueve ni renombra nada.
+
+**Privacidad:** el texto extraído (hasta 4000 caracteres) se envía al proveedor configurado (`OPENAI_API_KEY` / `LLM_BASE_URL`). Sin proveedor configurado, el endpoint responde `503`.
 
 ---
 
@@ -50,11 +54,13 @@ El feature también está integrado como **herramienta del agente chat** (`class
 POST /files/classify
 ```
 
-### Headers
+### Autenticación
+
+La sesión va en la cookie `jwt` (httpOnly) que establece `POST /auth/login`; no se admite cabecera `Authorization`.
 
 | Header          | Valor                  |
 |-----------------|------------------------|
-| Authorization   | Bearer `<JWT_TOKEN>`   |
+| Cookie          | `jwt=<token de sesión>` |
 | Content-Type    | application/json       |
 
 ### Request Body
@@ -65,7 +71,7 @@ POST /files/classify
 }
 ```
 
-> `path` es la ruta **relativa** del archivo dentro de `public_storage/users/`.
+> `path` es la ruta **relativa** a la raíz del usuario (`<STORAGE_PATH>/users/`, o `public/` para el invitado).
 
 ### Response (éxito)
 
@@ -100,14 +106,17 @@ POST /files/classify
 }
 ```
 
-### Response (error)
+### Errores
 
-```json
-{
-  "success": false,
-  "error": "Missing \"path\" in request body"
-}
-```
+Errores HTTP estándar de NestJS (`{ "statusCode", "message", "error" }`):
+
+| Código | Causa |
+|--------|-------|
+| `400` | Falta `path` o no es un string |
+| `401` | Sin sesión |
+| `403` | El usuario no puede leer ese archivo |
+| `404` | El archivo no existe |
+| `503` | No hay proveedor de IA configurado |
 
 ---
 
@@ -190,23 +199,22 @@ El agente puede asignar categorías como:
 | `src/agent/interfaces/classification.interface.ts` | Interfaces TypeScript para request/response |
 | `src/agent/classification/classification.service.ts` | Servicio orquestador de clasificación |
 | `src/agent/classification/classification.module.ts` | Módulo NestJS del feature |
+| `src/agent/classification/classification.controller.ts` | Endpoint `POST /files/classify` |
+| `src/agent/classification/classification.dto.ts` | Validación del body |
 | `src/agent/llm/llm.service.ts` | Método `classifyFile()` (llamada LLM) |
-| `src/filesystem/filesystem.controller.ts` | Endpoint `POST /files/classify` |
-| `src/agent/agent.service.ts` | Tool `classify_file` para el agente chat |
+| `src/agent/tools/classify-file.tool.ts` | Tool `classify_file` para el agente chat |
 
 ---
 
 ## Ejemplo cURL
 
 ```bash
-# 1. Obtener token JWT
-TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"ADMIN","password":"123456"}' | jq -r '.access_token')
+# 1. Iniciar sesión (guarda la cookie de sesión en cookies.txt)
+curl -s -c cookies.txt -o /dev/null -X POST http://localhost:3000/auth/login \
+  --data-urlencode "username=ADMIN" --data-urlencode "password=<tu contraseña>"
 
 # 2. Clasificar un archivo
-curl -X POST http://localhost:3000/files/classify \
-  -H "Authorization: Bearer $TOKEN" \
+curl -b cookies.txt -X POST http://localhost:3000/files/classify \
   -H "Content-Type: application/json" \
   -d '{"path": "ADMIN/mi_documento.pdf"}'
 ```

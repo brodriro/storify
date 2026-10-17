@@ -78,4 +78,6 @@ AI is optional. It is enabled by `OPENAI_API_KEY` and/or `LLM_BASE_URL` (any Ope
 
 ## Docs
 
-`docs/base.md` is the original functional spec (roles, visibility rules, dashboard). `docs/file_classification.md` documents the classification tool. `docs/build_agent.md`, `docs/evaluate_agent.md` and `analysis_result.json` describe the agentic-pattern analysis. The README overstates some things (e.g. 3 agent iterations — code uses 12; per-user quotas are displayed, not enforced) and still describes the old role model.
+`README.md` documents roles, configuration, deployment, backups and the agent for users; keep it in sync when behaviour changes. `docs/base.md` is the original functional spec (roles, visibility rules, dashboard). `docs/file_classification.md` documents the classification endpoint/tool. `docs/build_agent.md`, `docs/evaluate_agent.md` and `analysis_result.json` are a historical agentic-pattern analysis of an earlier version (e.g. 3 iterations, no confirmation); don't treat them as current.
+
+A local, git-ignored improvement plan lives in `plan-mejoras/` (audit findings S*/A*/C*/U*/Q*, decisions D1-D7, phase roadmap with status). Finding IDs in commits and tests refer to it.
