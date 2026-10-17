@@ -1,16 +1,19 @@
 import {
+  Body,
   Controller,
   Get,
   Post,
-  UseGuards,
+  Query,
   Render,
   StreamableFile,
-  NotFoundException,
-  Body,
+  UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream } from 'fs';
-import { AdminService } from './admin.service';
+import * as path from 'path';
+import { BackupService } from '../backup/backup.service';
+import { CreateBackupDto, DownloadBackupQueryDto } from './admin.dto';
+import { StorageService } from '../storage/storage.service';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -22,14 +25,15 @@ import type { AppConfig } from '../config/configuration';
 @Roles('admin')
 export class AdminController {
   constructor(
-    private readonly adminService: AdminService,
+    private readonly storageService: StorageService,
+    private readonly backupService: BackupService,
     private readonly configService: ConfigService<AppConfig, true>,
   ) {}
 
   @Get('dashboard')
   @Render('dashboard')
   async dashboard(@CurrentUser() user: AuthUser) {
-    const stats = await this.adminService.getStats();
+    const stats = await this.storageService.getGlobalStats();
     const totalStorageGb = this.configService.get('totalStorageGb', {
       infer: true,
     });
@@ -42,7 +46,7 @@ export class AdminController {
 
     const userUsageMb: Record<string, number> = {};
     for (const [key, value] of Object.entries(stats.userUsage)) {
-      userUsageMb[key] = Math.round((value as number) / (1024 * 1024));
+      userUsageMb[key] = Math.round(value / (1024 * 1024));
     }
 
     return {
@@ -58,33 +62,35 @@ export class AdminController {
   }
 
   @Post('backup')
-  async createBackup(@Body('isIncremental') isIncremental: unknown) {
-    const started = await this.adminService.createBackup(
-      isIncremental === true || isIncremental === 'true',
+  async createBackup(@Body() body: CreateBackupDto) {
+    const started = await this.backupService.start(
+      body.isIncremental ? 'incremental' : 'full',
     );
-    if (!started) {
-      return { success: false, inProgress: true };
-    }
-    return { success: true, inProgress: false };
+    return { success: started, inProgress: !started };
+  }
+
+  @Get('backup/list')
+  async listBackups() {
+    return { backups: await this.backupService.list() };
   }
 
   @Get('backup/last-timestamp')
-  getLastBackupTimestamp() {
-    return { timestamp: this.adminService.getLastBackupTimestamp() };
+  async getLastBackupTimestamp() {
+    return { timestamp: await this.backupService.lastBackupTimestamp() };
   }
 
   @Get('backup/in-progress')
   isBackupInProgress() {
-    return { inProgress: this.adminService.isBackupInProgress() };
+    return { inProgress: this.backupService.isRunning() };
   }
 
+  /** Newest full backup by default, or a specific one from the list. */
   @Get('backup/download')
-  async downloadBackup() {
-    const backupPath = this.adminService.getLatestBackupPath();
-    if (!backupPath) {
-      throw new NotFoundException('No backup available');
-    }
-    const file = createReadStream(backupPath);
-    return new StreamableFile(file);
+  async downloadBackup(@Query() { name }: DownloadBackupQueryDto) {
+    const zip = await this.backupService.zipPath(name || undefined);
+    return new StreamableFile(createReadStream(zip), {
+      type: 'application/zip',
+      disposition: `attachment; filename="${path.basename(zip)}"`,
+    });
   }
 }

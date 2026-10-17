@@ -660,6 +660,15 @@ a:hover {
     opacity: 0.5;
 }
 
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    color: var(--text-muted);
+}
+
 /* Dashboard Specific */
 .dashboard-title {
     margin-bottom: 2rem;

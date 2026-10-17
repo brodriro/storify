@@ -2,16 +2,14 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import * as path from 'path';
-import { LogsModule } from '../agent/logs/logs.module';
 import type { AppConfig } from '../config/configuration';
-import { ensureDirectoryExists } from '../shared/utils/path.utils';
-import { AccessPolicy } from './access-policy';
-import { FileSystemController } from './filesystem.controller';
-import { FileSystemService } from './filesystem.service';
+import { ensureDirectoryExists } from '../common/path.utils';
+import { FilesController } from './files.controller';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
-    LogsModule,
+    StorageModule,
     MulterModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<AppConfig, true>) => {
@@ -33,8 +31,6 @@ import { FileSystemService } from './filesystem.service';
       },
     }),
   ],
-  controllers: [FileSystemController],
-  providers: [FileSystemService, AccessPolicy],
-  exports: [FileSystemService, AccessPolicy],
+  controllers: [FilesController],
 })
-export class FileSystemModule {}
+export class FilesModule {}

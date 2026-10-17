@@ -9,11 +9,11 @@ import * as mammoth from 'mammoth';
 import { PDFParse } from 'pdf-parse';
 
 @Injectable()
-export class FileReaderService {
+export class DocumentReaderService {
   /**
    * Extracts plain text from .txt/.docx/.pdf. `filePath` must be an absolute
    * path already authorized through the access policy
-   * (FileSystemService.resolveReadableFile); this service does no ACL checks.
+   * (StorageService.resolveReadableFile); this service does no ACL checks.
    */
   async readFileContent(filePath: string): Promise<string> {
     const ext = path.extname(filePath).toLowerCase();
@@ -36,10 +36,11 @@ export class FileReaderService {
 
       return this.cleanText(content);
     } catch (error) {
+      const err = error as Error;
       Logger.error(
-        `Error reading file ${filePath}: ${error.message}`,
-        error.stack,
-        'FileReaderService',
+        `Error reading file ${filePath}: ${err.message}`,
+        err.stack,
+        'DocumentReaderService',
       );
       throw new InternalServerErrorException(
         `Failed to read file ${path.basename(filePath)}`,

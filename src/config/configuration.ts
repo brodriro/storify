@@ -10,15 +10,56 @@ export interface AppConfig {
   port: number;
   storagePath: string;
   totalStorageGb: number;
+  /** Upload limit in bytes: only when TOTAL_STORAGE_GB is set explicitly. */
+  storageLimitBytes: number | null;
   adminEmail: string;
   jwtSecret: string;
   cookieSecure: boolean;
-  openaiApiKey: string | null;
+  llm: LlmConfig;
   upload: { maxFileSizeMb: number; maxFiles: number };
+  /** Ideally on another disk than storagePath (default: <storagePath>/backups). */
+  backup: { path: string; keepFull: number };
   users: UserConfig[];
 }
 
+export interface LlmConfig {
+  /** AI features are off when neither an API key nor a base URL is set. */
+  enabled: boolean;
+  apiKey: string | null;
+  /** OpenAI-compatible endpoint (e.g. Ollama, vLLM); null = api.openai.com. */
+  baseUrl: string | null;
+  model: string;
+  /** Who receives the data, shown to users before they use the assistant. */
+  providerLabel: string;
+}
+
 const MIN_JWT_SECRET_LENGTH = 32;
+const DEFAULT_LLM_MODEL = 'gpt-5-mini';
+
+function loadLlmConfig(env: NodeJS.ProcessEnv, errors: string[]): LlmConfig {
+  const apiKey = env.OPENAI_API_KEY?.trim() || null;
+  const rawBaseUrl = env.LLM_BASE_URL?.trim() || null;
+  let baseUrl: string | null = null;
+  let providerLabel = 'OpenAI';
+  if (rawBaseUrl) {
+    try {
+      const url = new URL(rawBaseUrl);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:')
+        throw new Error();
+      baseUrl = rawBaseUrl;
+      providerLabel = url.host;
+    } catch {
+      errors.push(`LLM_BASE_URL must be an http(s) URL (got "${rawBaseUrl}")`);
+    }
+  }
+  return {
+    enabled: apiKey !== null || baseUrl !== null,
+    apiKey,
+    baseUrl,
+    model: env.LLM_MODEL?.trim() || DEFAULT_LLM_MODEL,
+    providerLabel,
+  };
+}
 
 /** Role is derived from the username by convention: ADMIN and INVITADO are reserved. */
 export function roleForUsername(username: string): Role {
@@ -84,19 +125,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     );
   }
 
+  const storagePath = env.STORAGE_PATH?.trim() || './public_storage';
+  const totalStorageGb = parsePositiveInt(
+    'TOTAL_STORAGE_GB',
+    env.TOTAL_STORAGE_GB,
+    10,
+    errors,
+  );
   const config: AppConfig = {
     port: parsePositiveInt('PORT', env.PORT, 3000, errors),
-    storagePath: env.STORAGE_PATH?.trim() || './public_storage',
-    totalStorageGb: parsePositiveInt(
-      'TOTAL_STORAGE_GB',
-      env.TOTAL_STORAGE_GB,
-      10,
-      errors,
-    ),
+    storagePath,
+    totalStorageGb,
+    storageLimitBytes: env.TOTAL_STORAGE_GB?.trim()
+      ? totalStorageGb * 1024 ** 3
+      : null,
     adminEmail: env.ADMIN_EMAIL?.trim() || 'admin@storify.local',
     jwtSecret,
     cookieSecure: env.NODE_ENV === 'production',
-    openaiApiKey: env.OPENAI_API_KEY?.trim() || null,
+    llm: loadLlmConfig(env, errors),
     upload: {
       maxFileSizeMb: parsePositiveInt(
         'UPLOAD_MAX_FILE_SIZE_MB',
@@ -108,6 +154,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         'UPLOAD_MAX_FILES',
         env.UPLOAD_MAX_FILES,
         10,
+        errors,
+      ),
+    },
+    backup: {
+      path: env.BACKUP_PATH?.trim() || `${storagePath}/backups`,
+      keepFull: parsePositiveInt(
+        'BACKUP_KEEP_FULL',
+        env.BACKUP_KEEP_FULL,
+        3,
         errors,
       ),
     },

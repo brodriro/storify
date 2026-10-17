@@ -2,10 +2,12 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import type { LogsService } from '../agent/logs/logs.service';
+import type { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/auth-user';
+import type { AppConfig } from '../config/configuration';
 import { AccessPolicy } from './access-policy';
-import { FileSystemService } from './filesystem.service';
+import { StorageService } from './storage.service';
+import { ThumbnailService } from './thumbnail.service';
 
 const ADMIN: AuthUser = { username: 'ADMIN', role: 'admin' };
 const ALICE: AuthUser = { username: 'ALICE', role: 'member' };
@@ -16,11 +18,11 @@ const GUEST: AuthUser = { username: 'INVITADO', role: 'guest' };
  * Runs against a real temp directory so path normalization and symlinks are
  * exercised for real.
  */
-describe('FileSystemService access control', () => {
+describe('StorageService access control', () => {
   let storage: string;
   let usersRoot: string;
   let publicRoot: string;
-  let service: FileSystemService;
+  let service: StorageService;
   let recordEvent: jest.Mock;
 
   const write = (root: string, rel: string, content = 'x') => {
@@ -44,10 +46,14 @@ describe('FileSystemService access control', () => {
         { username: 'BOB', role: 'member' },
         { username: 'INVITADO', role: 'guest' },
       ],
-    });
+    }) as unknown as ConfigService<AppConfig, true>;
     recordEvent = jest.fn().mockResolvedValue(undefined);
-    const logs = { recordEvent } as unknown as LogsService;
-    service = new FileSystemService(config, new AccessPolicy(config, logs));
+    const logs = { recordEvent } as unknown as AuditService;
+    service = new StorageService(
+      config,
+      new AccessPolicy(config, logs),
+      new ThumbnailService(config),
+    );
 
     write(usersRoot, 'ADMIN/secret.txt', 'admin-secret');
     write(usersRoot, 'ALICE/own.txt', 'alice');
@@ -198,16 +204,16 @@ describe('FileSystemService access control', () => {
     it.each([
       [
         'delete a file',
-        (s: FileSystemService) => s.deleteItem(GUEST, 'readme.txt'),
+        (s: StorageService) => s.deleteItem(GUEST, 'readme.txt'),
       ],
-      ['delete the root', (s: FileSystemService) => s.deleteItem(GUEST, '')],
+      ['delete the root', (s: StorageService) => s.deleteItem(GUEST, '')],
       [
         'create a folder',
-        (s: FileSystemService) => s.createFolder(GUEST, '', 'x'),
+        (s: StorageService) => s.createFolder(GUEST, '', 'x'),
       ],
       [
         'rename a file',
-        (s: FileSystemService) => s.renameItem(GUEST, 'readme.txt', 'x.txt'),
+        (s: StorageService) => s.renameItem(GUEST, 'readme.txt', 'x.txt'),
       ],
     ])('cannot %s', async (_label, run) => {
       await expect(run(service)).rejects.toThrow('Access denied');
@@ -221,6 +227,130 @@ describe('FileSystemService access control', () => {
     });
   });
 
+  describe('storage statistics (P2)', () => {
+    it('attributes usage to top-level folders', async () => {
+      const stats = await service.getGlobalStats();
+      expect(stats.totalFiles).toBe(5);
+      expect(stats.userUsage).toMatchObject({
+        ADMIN: 'admin-secret'.length,
+        ALICE: 'alice'.length,
+        OTROS: 'shared'.length,
+      });
+    });
+
+    it('caches the walk until a write goes through the service', async () => {
+      const before = await service.getGlobalStats();
+      // Written behind the service's back: not seen until the cache expires.
+      write(usersRoot, 'ALICE/external.txt', 'external');
+      expect(await service.getGlobalStats()).toBe(before);
+
+      await service.deleteItem(ALICE, 'ALICE/own.txt');
+      const after = await service.getGlobalStats();
+      expect(after.totalFiles).toBe(before.totalFiles); // -own +external
+      expect(after.userUsage.ALICE).toBe('external'.length);
+    });
+
+    it('shares one walk between concurrent callers', async () => {
+      const readdir = jest.spyOn(fs.promises, 'readdir');
+      const [a, b] = await Promise.all([
+        service.getGlobalStats(),
+        service.getGlobalStats(),
+      ]);
+      expect(a).toBe(b);
+      const walksOfRoot = readdir.mock.calls.filter(
+        ([dir]) => dir === usersRoot,
+      );
+      expect(walksOfRoot).toHaveLength(1);
+      readdir.mockRestore();
+    });
+
+    it('reports the volume behind STORAGE_PATH', async () => {
+      const usage = await service.getDiskUsage();
+      expect(usage.totalBytes).toBeGreaterThan(0);
+      expect(usage.volume.sizeBytes).toBeGreaterThan(0);
+      expect(usage.volume.freeBytes).toBeLessThanOrEqual(
+        usage.volume.sizeBytes,
+      );
+    });
+  });
+
+  describe('upload storage limit (TOTAL_STORAGE_GB)', () => {
+    const fixturesBytes =
+      'admin-secret'.length +
+      'alice'.length +
+      'bob'.length +
+      'team'.length +
+      'shared'.length;
+    const withLimit = (limit: number | null) => {
+      const config = new ConfigService({
+        storagePath: storage,
+        storageLimitBytes: limit,
+        users: [{ username: 'ALICE', role: 'member' }],
+      }) as unknown as ConfigService<AppConfig, true>;
+      const logs = { recordEvent } as unknown as AuditService;
+      return new StorageService(
+        config,
+        new AccessPolicy(config, logs),
+        new ThumbnailService(config),
+      );
+    };
+    const tempFile = (name: string, bytes: number) => {
+      const file = path.join(storage, `${name}.upload`);
+      fs.writeFileSync(file, Buffer.alloc(bytes));
+      return { path: file, originalname: name, size: bytes };
+    };
+
+    it('accepts uploads up to the limit', async () => {
+      const limited = withLimit(fixturesBytes + 10);
+      await expect(
+        limited.handleUpload(ALICE, tempFile('ten.bin', 10), 'ALICE'),
+      ).resolves.toBe('ten.bin');
+      expect(exists(usersRoot, 'ALICE/ten.bin')).toBe(true);
+    });
+
+    it('rejects an upload that would exceed it with 507 and drops the temp file', async () => {
+      const limited = withLimit(fixturesBytes + 10);
+      const file = tempFile('big.bin', 11);
+      await expect(
+        limited.handleUpload(ALICE, file, 'ALICE'),
+      ).rejects.toMatchObject({
+        status: 507,
+      });
+      expect(fs.existsSync(file.path)).toBe(false);
+      expect(exists(usersRoot, 'ALICE/big.bin')).toBe(false);
+    });
+
+    it('counts concurrent uploads against each other', async () => {
+      const limited = withLimit(fixturesBytes + 10);
+      const results = await Promise.allSettled([
+        limited.handleUpload(ALICE, tempFile('a.bin', 6), 'ALICE'),
+        limited.handleUpload(ALICE, tempFile('b.bin', 6), 'ALICE'),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([
+        'fulfilled',
+        'rejected',
+      ]);
+    });
+
+    it('sees space freed by a delete', async () => {
+      const limited = withLimit(fixturesBytes);
+      await expect(
+        limited.handleUpload(ALICE, tempFile('one.bin', 1), 'ALICE'),
+      ).rejects.toMatchObject({ status: 507 });
+      await limited.deleteItem(ALICE, 'ALICE/own.txt');
+      await expect(
+        limited.handleUpload(ALICE, tempFile('one.bin', 1), 'ALICE'),
+      ).resolves.toBe('one.bin');
+    });
+
+    it('does not limit uploads when TOTAL_STORAGE_GB is unset', async () => {
+      const unlimited = withLimit(null);
+      await expect(
+        unlimited.handleUpload(ALICE, tempFile('huge.bin', 1000), 'ALICE'),
+      ).resolves.toBe('huge.bin');
+    });
+  });
+
   describe('search and recent files', () => {
     it('only returns files the user can read, as relative paths', async () => {
       const found = await service.searchFiles(ALICE, '.txt');
@@ -231,6 +361,31 @@ describe('FileSystemService access control', () => {
       ]);
       const recent = await service.getRecentFiles(ALICE, 1);
       expect(recent.map((f) => f.path)).not.toContain('BOB/private.txt');
+    });
+
+    it('returns recent files newest first, up to the limit', async () => {
+      // Future mtimes so they sort ahead of the fixtures written "now".
+      const dir = path.join(usersRoot, 'ALICE');
+      for (const [name, minutesAhead] of [
+        ['old.txt', 10],
+        ['newest.txt', 30],
+        ['middle.txt', 20],
+      ] as const) {
+        const file = path.join(dir, name);
+        fs.writeFileSync(file, name);
+        const time = new Date(Date.now() + minutesAhead * 60_000);
+        fs.utimesSync(file, time, time);
+      }
+      const recent = await service.getRecentFiles(ALICE, 1, 2);
+      expect(recent.map((f) => f.path)).toEqual([
+        'ALICE/newest.txt',
+        'ALICE/middle.txt',
+      ]);
+    });
+
+    it('stops searching once the limit is reached', async () => {
+      const found = await service.searchFiles(ALICE, '.txt', undefined, 1);
+      expect(found).toHaveLength(1);
     });
   });
 });

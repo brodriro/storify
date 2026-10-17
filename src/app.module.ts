@@ -3,10 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import configuration from './config/configuration';
 import { AuthModule } from './auth/auth.module';
-import { FileSystemModule } from './filesystem/filesystem.module';
+import { FilesModule } from './files/files.module';
 import { AdminModule } from './admin/admin.module';
 import { LlmModule } from './agent/llm/llm.module';
-import { LogsModule } from './agent/logs/logs.module';
+import { AuditModule } from './audit/audit.module';
 import { ChatModule } from './agent/chat/chat.module';
 
 @Module({
@@ -16,10 +16,10 @@ import { ChatModule } from './agent/chat/chat.module';
       load: [configuration],
     }),
     AuthModule,
-    FileSystemModule,
+    FilesModule,
     AdminModule,
     LlmModule,
-    LogsModule,
+    AuditModule,
     ChatModule,
   ],
   controllers: [AppController],

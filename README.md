@@ -1,11 +1,11 @@
 # Storify - File Manager NAS (NestJS)
 
-Aplicación construida con NestJS para gestionar un "mini NAS" multiusuario:
+Aplicación construida con NestJS para gestionar un "mini NAS" multiusuario en una red local:
 
-- Navegador de archivos web.
-- Carga, previsualización y descarga de archivos.
-- Cuotas por usuario y estadísticas globales de almacenamiento.
-- Panel de administración con backups.
+- Navegador de archivos web: subida (drag & drop), previsualización, descarga, mover, renombrar y borrar.
+- Carpeta privada por usuario y espacio compartido, con control de acceso por rol.
+- Panel de administración con estadísticas de uso y backups ZIP completos e incrementales.
+- Asistente conversacional (opcional) que consulta y organiza archivos mediante un LLM compatible con OpenAI.
 
 El backend está escrito con NestJS y renderiza vistas Handlebars.
 
@@ -14,287 +14,231 @@ El backend está escrito con NestJS y renderiza vistas Handlebars.
 ## Índice
 
 - [Finalidad del proyecto](#finalidad-del-proyecto)
-- [Arquitectura Agéntica](#arquitectura-agéntica)
-  - [Patrones Identificados](#patrones-identificados)
-  - [Ciclo Agéntico](#ciclo-agéntico)
-  - [Autonomía y Decisión](#autonomía-y-decisión)
-  - [Memoria Conversacional](#memoria-conversacional)
-  - [Controles y Seguridad](#controles-y-seguridad)
-  - [Herramientas Disponibles](#herramientas-disponibles)
-  - [Uso del Agente](#uso-del-agente)
+- [Roles y permisos](#roles-y-permisos)
+- [Arquitectura agéntica](#arquitectura-agéntica)
 - [Requisitos](#requisitos)
 - [Configuración de entorno](#configuración-de-entorno)
 - [Puesta en marcha en desarrollo](#puesta-en-marcha-en-desarrollo)
+- [Calidad: tests, lint y CI](#calidad-tests-lint-y-ci)
 - [Despliegue en producción](#despliegue-en-producción)
-  - [1. Build](#1-build)
-  - [2. Arranque en modo producción](#2-arranque-en-modo-producción)
-  - [3. Servir detrás de un reverse proxy (opcional, recomendado)](#3-servir-detrás-de-un-reverse-proxy-opcional-recomendado)
-  - [4. Permisos de ficheros](#4-permisos-de-ficheros)
-- [Flujo de uso resumido](#flujo-de-uso-resumido)
+- [Backups](#backups)
+- [Seguridad](#seguridad)
 - [Licencia](#licencia)
 
 ---
 
 ## Finalidad del proyecto
 
-Este proyecto resuelve un escenario típico de almacenamiento compartido en una red local:
+Storify resuelve un escenario típico de almacenamiento compartido en una red local:
 
-- Todos los usuarios comparten un **directorio raíz común** bajo `users/`.
-- Cada usuario tiene **su propia carpeta** (`users/<username>`) donde puede crear subcarpetas, subir, mover, renombrar y borrar archivos.
-- Los usuarios **no admin**:
-  - Pueden ver el contenido general del root (archivos sueltos y carpetas "globales").
-  - No pueden entrar en carpetas cuyo nombre coincida con otro usuario registrado.
-  - Pueden ver y gestionar completamente su propia carpeta de usuario.
-- El usuario **admin** puede ver y gestionar **todo**.
+- Todos los usuarios comparten un directorio raíz común, `<STORAGE_PATH>/users/`.
+- Cada usuario tiene **su propia carpeta** (`users/<USUARIO>`), creada al iniciar sesión, donde puede crear subcarpetas, subir, mover, renombrar y borrar archivos.
+- Las carpetas y archivos de la raíz que no se llaman como un usuario son **compartidos** entre todos los usuarios normales.
+- El administrador ve y gestiona todo, y dispone de un **dashboard** con uso de disco global, uso por usuario (más `OTROS` para lo compartido), tipos de archivo y gestión de backups.
 
-Además, el admin dispone de un **dashboard** donde puede:
-
-- Ver estadísticas de uso global (tamaño total, número de archivos, uso por usuario, tipos de archivo) en MB.
-- Ver un desglose de archivos que no pertenecen a ningún usuario directo bajo la categoría `OTROS`.
-- Lanzar la creación de un backup ZIP único del árbol `users/` (en segundo plano, sin bloquear) y descargar el último backup disponible.
-
-La interfaz incluye:
-
-- Navegador de archivos con drag & drop para subir archivos.
-- Movimiento de archivos arrastrando sobre carpetas o sobre una "card" especial para subir de nivel.
-- Previsualización de imágenes y vídeos.
-
-La documentación funcional más detallada se encuentra en `docs/base.md`.
+La especificación funcional original está en `docs/base.md`.
 
 ---
 
-## Arquitectura Agéntica
+## Roles y permisos
 
-Storify incluye un **sistema agéntico conversacional** que permite interactuar con el NAS mediante lenguaje natural. El sistema implementa un patrón **ReAct (Reasoning + Acting)** combinado con **Tool-Calling** y **memoria conversacional**.
+El rol se deduce del nombre de usuario:
+
+| Usuario | Rol | Puede |
+|---|---|---|
+| `ADMIN` | admin | Todo bajo `users/`, dashboard y backups |
+| `INVITADO` | invitado | **Solo lectura** sobre `<STORAGE_PATH>/public/` |
+| Cualquier otro | miembro | Su carpeta y el espacio compartido de la raíz. No ve ni accede a las carpetas de otros usuarios |
+
+Reglas adicionales, comunes a la web y al asistente:
+
+- Nadie puede borrar, renombrar ni mover una raíz de almacenamiento; un miembro tampoco puede hacerlo con su propia carpeta de usuario.
+- Un miembro no puede crear en la raíz una carpeta con el nombre de otro usuario.
+- Las rutas se normalizan antes de comprobar permisos (`ALICE/../BOB` se evalúa como `BOB`), y se rechazan los enlaces simbólicos que salen de la raíz.
+
+Toda esta lógica vive en `src/storage/access-policy.ts`.
+
+---
+
+## Arquitectura agéntica
+
+Storify incluye un asistente conversacional que interactúa con el NAS mediante lenguaje natural. Sigue un patrón **ReAct (Reasoning + Acting)** con **tool-calling** y memoria conversacional por sesión.
 
 ![Diagrama de Arquitectura Agéntica](docs/diagram.png)
 
-### Patrones Identificados
+### Ciclo agéntico
 
-El sistema utiliza los siguientes patrones agénticos:
+1. **Percepción**: el `ChatGateway` (Socket.IO) recibe el mensaje. El socket se autentica con la misma cookie de sesión que la web.
+2. **Razonamiento**: el LLM decide si responder o llamar a una o varias herramientas.
+3. **Acción**: las herramientas se ejecutan **como el usuario de la sesión**, con los mismos permisos que en el navegador de archivos.
+4. **Observación**: los resultados se añaden a la conversación y el LLM continúa.
+5. **Iteración**: hasta 12 pasos o 75 segundos por petición.
 
-- **ReAct (Reasoning + Acting)**: El agente sigue un ciclo iterativo de razonamiento-acción-observación
-- **Tool-Calling Agent**: Utiliza llamadas a herramientas estructuradas para ejecutar acciones en el sistema
-- **Memory-Enhanced Agent**: Mantiene contexto conversacional durante la sesión
+### Confirmación humana
 
-### Ciclo Agéntico
+Las herramientas que **modifican datos** (mover, crear carpetas, iniciar un backup) nunca se ejecutan directamente. El asistente propone la acción y el chat muestra los botones **Confirmar / Cancelar**. Esto protege frente a instrucciones maliciosas escondidas dentro de documentos (prompt injection). Una propuesta caduca a los 5 minutos y se anula si el usuario escribe otro mensaje.
 
-El agente implementa un ciclo completo de percepción, razonamiento, acción y observación:
+### Herramientas disponibles
 
-1. **Percepción**: Recibe mensajes del usuario a través del `ChatGateway` (WebSocket)
-2. **Razonamiento**: El LLM (`LlmService`) analiza el mensaje y decide si:
-   - Ejecutar una herramienta para obtener información adicional
-   - Proporcionar una respuesta final basada en el contexto disponible
-3. **Acción**: Si se requiere información, ejecuta herramientas como:
-   - `get_disk_usage`: Obtiene el uso actual del disco
-   - `get_recent_files`: Lista archivos recientes
-   - `create_incremental_backup`: Inicia un backup incremental
-   - `get_suspicious_activity`: Obtiene registros de actividad sospechosa
-   - `list_documents_by_name`: Busca documentos por nombre
-   - `summarize_document`: Resume el contenido de un documento
-4. **Observación**: Captura el resultado de la herramienta y lo convierte en contexto para la siguiente iteración
-5. **Iteración**: El proceso se repite hasta un máximo de 3 iteraciones, permitiendo múltiples pasos de razonamiento-acción
+| Herramienta | Descripción | Notas |
+|---|---|---|
+| `get_disk_usage` | Lo que ocupan los archivos y el tamaño y espacio libre del disco | |
+| `get_recent_files` | Archivos modificados recientemente | Solo los visibles para el usuario, máx. 50 |
+| `list_documents_by_name` | Busca documentos `.txt`, `.docx`, `.pdf` por nombre | Solo los visibles para el usuario |
+| `summarize_document` | Resume un documento | |
+| `classify_file` | Clasifica un archivo y sugiere organización | Ver `docs/file_classification.md` |
+| `move_file` | Mueve un archivo o carpeta | Requiere confirmación |
+| `create_folder` | Crea una carpeta | Requiere confirmación |
+| `create_incremental_backup` | Inicia un backup incremental | Solo admin; requiere confirmación |
+| `get_suspicious_activity` | Ráfagas de logins fallidos y accesos denegados | Solo admin |
 
-### Autonomía y Decisión
+Las herramientas de administrador ni siquiera se ofrecen al modelo cuando el usuario no es admin.
 
-El sistema tiene **alto nivel de autonomía**: decide dinámicamente qué acción tomar basándose en:
-- El mensaje del usuario
-- El historial de conversación
-- Las herramientas disponibles
+### Proveedor de IA y privacidad
 
-No sigue instrucciones fijas, sino que razona sobre cada solicitud para determinar la mejor secuencia de acciones.
+El asistente es **opcional**. Funciona con OpenAI (`OPENAI_API_KEY`) o con cualquier servidor compatible con la API de OpenAI, por ejemplo Ollama o vLLM en la propia red (`LLM_BASE_URL`). El modelo debe admitir tool calling. Al abrir el chat se informa al usuario de a qué proveedor se envían sus mensajes y el contenido de los documentos que pida resumir o clasificar.
 
-### Memoria Conversacional
+Sin proveedor configurado, el resto de la aplicación funciona con normalidad y el chat indica que el asistente está desactivado.
 
-El agente mantiene un **historial de conversación por sesión** que permite:
-- Mantener contexto durante la conversación
-- Referirse a mensajes anteriores
-- Entender referencias implícitas
-
-La memoria se mantiene durante la sesión WebSocket activa.
-
-### Controles y Seguridad
-
-El sistema incluye varios mecanismos de control:
-
-- **Límite de iteraciones**: Máximo de 3 iteraciones para prevenir bucles infinitos
-- **Manejo de errores**: Los errores en la ejecución de herramientas se convierten en observaciones que el agente puede procesar
-- **Validación de parámetros**: Verifica que los parámetros requeridos estén presentes antes de ejecutar herramientas
-- **Validación de respuestas**: Maneja casos donde el LLM no proporciona una respuesta válida
-
-### Herramientas Disponibles
-
-El agente puede utilizar las siguientes herramientas para interactuar con el NAS:
-
-| Herramienta | Descripción |
-|------------|-------------|
-| `get_disk_usage` | Obtiene el uso actual del disco del NAS |
-| `get_recent_files` | Lista archivos recientes (por defecto últimos 7 días) |
-| `create_incremental_backup` | Inicia un backup incremental del NAS |
-| `get_suspicious_activity` | Obtiene registros de actividad sospechosa |
-| `list_documents_by_name` | Busca documentos por nombre en el sistema |
-| `summarize_document` | Resume el contenido de un documento específico |
-
-### Uso del Agente
-
-El agente está disponible a través de la interfaz de chat (WebSocket) y puede responder preguntas como:
-
-- "¿Cuánto espacio tengo disponible?"
-- "Muéstrame los archivos recientes de esta semana"
-- "Crea un backup incremental"
-- "Busca documentos que contengan 'proyecto' en el nombre"
-- "Resume el contenido del documento 'informe.pdf'"
-
-Para más detalles sobre la implementación, consulta `src/agent/agent.service.ts` y `src/agent/llm/llm.service.ts`.
+Implementación: `src/agent/` (bucle en `agent.service.ts`, una herramienta por archivo en `tools/`).
 
 ---
 
 ## Requisitos
 
-- Node.js 18+ (recomendado).
-- pnpm como gestor de paquetes.
+- Node.js 22 o superior (la versión usada en CI).
+- pnpm (la versión exacta está fijada en `package.json` → `packageManager`; tras `corepack enable`, Node usa esa versión automáticamente).
 
 ---
 
 ## Configuración de entorno
 
-El proyecto se configura principalmente mediante variables de entorno:
+Copia `.env.example` a `.env` y ajústalo. La aplicación **valida la configuración al arrancar** y se niega a iniciar si hay valores inseguros o mal formados, mostrando qué falta.
+
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `JWT_SECRET` | Sí | Secreto de sesión, mínimo 32 caracteres (`openssl rand -hex 32`) |
+| `USERS` | Sí | Lista separada por comas, p. ej. `"ADMIN,ALICE,INVITADO"` |
+| `USER_<NOMBRE>` | Sí, una por usuario | Contraseña de cada usuario. Recomendado: hash bcrypt (ver abajo) |
+| `STORAGE_PATH` | No | Raíz del almacenamiento (por defecto `./public_storage`) |
+| `TOTAL_STORAGE_GB` | No | Límite de almacenamiento en GB. Si se define, las subidas que lo superarían se rechazan (507); sin definir, se muestran 10 GB en el dashboard solo como referencia |
+| `UPLOAD_MAX_FILE_SIZE_MB` / `UPLOAD_MAX_FILES` | No | Límites de subida (2048 MB por archivo, 10 archivos por petición) |
+| `BACKUP_PATH` | No | Carpeta de backups (por defecto `<STORAGE_PATH>/backups`); idealmente en otro disco |
+| `BACKUP_KEEP_FULL` | No | Backups completos que se conservan (por defecto 3) |
+| `ADMIN_EMAIL` | No | Destinatario de los avisos de backup (de momento solo se registran en el log) |
+| `OPENAI_API_KEY` | No | Activa el asistente con OpenAI |
+| `LLM_BASE_URL` | No | Endpoint compatible con OpenAI, p. ej. `http://localhost:11434/v1` |
+| `LLM_MODEL` | No | Modelo (por defecto `gpt-5-mini`) |
+| `PORT` | No | Puerto HTTP (por defecto 3000) |
+| `NODE_ENV` | No | Con `production`, la cookie de sesión se marca `Secure` (requiere HTTPS) |
+
+Los nombres de usuario solo pueden contener letras, dígitos, `_` y `-`.
+
+### Contraseñas con hash
 
 ```bash
-USERS="ADMIN,usuario1,usuario2"     # lista separada por comas
-USER_ADMIN="admin_password"        # contraseña del usuario ADMIN
-USER_usuario1="password1"          # ejemplo de usuario normal
-USER_usuario2="password2"
-
-STORAGE_PATH="./public"           # raíz física donde se creará la carpeta users/
-TOTAL_STORAGE_GB="5"               # tamaño total de almacenamiento para el dashboard
-ADMIN_EMAIL="admin@storify.local" # usado para notificaciones de backup
-
-JWT_SECRET="cambia_esto_en_prod"  # secreto para las cookies JWT
-PORT="3000"                        # puerto HTTP
+pnpm hash-password        # escribe la contraseña (no se muestra) y pulsa Enter
 ```
 
-Notas importantes:
+Copia el resultado **con las comillas simples** en `.env`, p. ej. `USER_ALICE='$2b$12$...'`. Las contraseñas en texto plano siguen funcionando, pero la aplicación avisa al arrancar.
 
-- El árbol de almacenamiento efectivo queda como: `<STORAGE_PATH>/users/...`.
-- Bajo ese directorio se crean:
-  - `users/<username>` para cada usuario configurado.
-  - Carpetas adicionales "globales" que no correspondan a ningún usuario.
-  - Carpeta `backups/` para los ZIP generados por el panel de admin.
+### Estructura del almacenamiento
+
+```
+<STORAGE_PATH>/
+├── users/<USUARIO>/   carpetas privadas
+├── users/<otras>/     carpetas y archivos compartidos
+├── public/            espacio del invitado (solo lectura)
+├── backups/           backups ZIP + manifiestos (si no se define BACKUP_PATH)
+├── .tmp/              subidas en curso
+├── .thumbs/           caché de miniaturas (se regenera sola; se puede borrar)
+└── .audit/            registro de eventos de seguridad
+```
 
 ---
 
 ## Puesta en marcha en desarrollo
 
-1. Instalar dependencias:
+```bash
+pnpm install
+cp .env.example .env      # y edítalo
+pnpm run start:dev
+```
 
-   ```bash
-   pnpm install
-   ```
+- Login: `http://localhost:3000/`
+- Navegador de archivos: `http://localhost:3000/files/browser`
+- Dashboard (solo admin): `http://localhost:3000/admin/dashboard`
 
-2. Crear un fichero `.env` en la raíz del proyecto (opcional pero recomendado) con las variables del apartado anterior.
+---
 
-3. Arrancar en modo desarrollo (watch):
+## Calidad: tests, lint y CI
 
-   ```bash
-   pnpm run start:dev
-   ```
+```bash
+pnpm test             # tests unitarios
+pnpm run test:e2e     # e2e contra la aplicación completa y un almacenamiento temporal
+pnpm run typecheck    # tsc --noEmit
+pnpm run lint:check   # ESLint (con reglas de tipos)
+```
 
-4. Acceder a la aplicación:
+GitHub Actions (`.github/workflows/ci.yml`) ejecuta build, typecheck, lint, formato y ambas suites de tests en cada push a `master` y en cada pull request.
 
-   - Navegador de archivos: `http://localhost:3000/files/browser`
-   - Login: `http://localhost:3000/auth/login`
-   - Dashboard admin (solo usuario con rol `admin`): `http://localhost:3000/admin/dashboard`
+pnpm está configurado para no instalar versiones de dependencias publicadas hace menos de 14 días (`minimumReleaseAge` en `pnpm-workspace.yaml`).
 
 ---
 
 ## Despliegue en producción
 
-### 1. Build
-
-Generar el código compilado en `dist/`:
-
 ```bash
+pnpm install --frozen-lockfile
 pnpm run build
+NODE_ENV=production pnpm run start:prod
 ```
 
-### 2. Arranque en modo producción
+Recomendaciones:
 
-Una vez compilado:
+- **Reverse proxy con HTTPS** (Nginx, Traefik, Caddy). Con `NODE_ENV=production` la cookie de sesión solo viaja por HTTPS. Si el NAS se usa solo por HTTP en la LAN, no definas `NODE_ENV=production`.
+- El proxy debe permitir WebSockets (para el chat) y un tamaño de subida acorde a `UPLOAD_MAX_FILE_SIZE_MB`:
 
-```bash
-pnpm run start:prod
-```
+  ```nginx
+  location / {
+      proxy_pass         http://127.0.0.1:3000;
+      proxy_http_version 1.1;
+      proxy_set_header   Upgrade $http_upgrade;
+      proxy_set_header   Connection 'upgrade';
+      proxy_set_header   Host $host;
+      proxy_cache_bypass $http_upgrade;
+      client_max_body_size 2g;
+  }
+  ```
 
-o, si prefieres usar directamente Node sobre el build:
-
-```bash
-node dist/main.js
-```
-
-Asegúrate de que las mismas variables de entorno usadas en desarrollo estén presentes en el entorno de producción (por ejemplo, mediante un `.env` gestionado por tu sistema de procesos o variables del sistema).
-
-### 3. Servir detrás de un reverse proxy (opcional, recomendado)
-
-En un entorno real se recomienda colocar la app detrás de un proxy como Nginx o Traefik que:
-
-- Termine TLS (HTTPS).
-- Redirija el tráfico a `http://localhost:3000` (o el puerto configurado en `PORT`).
-- Aplique límites de tamaño de subida acordes a los ficheros que esperas manejar.
-
-Ejemplo simplificado de `location` en Nginx:
-
-```nginx
-location / {
-    proxy_pass         http://127.0.0.1:3000;
-    proxy_http_version 1.1;
-    proxy_set_header   Upgrade $http_upgrade;
-    proxy_set_header   Connection 'upgrade';
-    proxy_set_header   Host $host;
-    proxy_cache_bypass $http_upgrade;
-}
-```
-
-### 4. Permisos de ficheros
-
-Asegúrate de que el usuario del sistema que ejecuta Node tenga permisos de lectura/escritura sobre `STORAGE_PATH`, incluyendo:
-
-- `STORAGE_PATH/users/**`
-- `STORAGE_PATH/backups/**`
-
-En caso contrario, las operaciones de subida, borrado o backup fallarán.
+- El usuario del sistema que ejecuta Node necesita lectura y escritura sobre `STORAGE_PATH` y `BACKUP_PATH`.
+- La aplicación no necesita salida a Internet salvo que uses OpenAI: las librerías del cliente se sirven localmente. Solo las tipografías se cargan todavía desde Google Fonts.
+- Al recibir `SIGTERM`/`SIGINT`, un backup en curso se cancela y su archivo parcial se elimina.
 
 ---
 
-## Flujo de uso resumido
+## Backups
 
-1. El admin configura usuarios mediante las variables `USERS` y `USER_<username>`.
-2. Cada usuario inicia sesión con su `username` y contraseña.
-3. Desde el navegador de archivos puede:
-   - Ver su carpeta de usuario y otros ficheros globales permitidos.
-   - Subir y gestionar archivos con drag & drop.
-   - Mover archivos entre carpetas (incluyendo subir de nivel arrastrando a la card de puntos suspensivos).
-4. El admin entra al dashboard para:
-   - Revisar estadísticas de uso.
-   - Generar y descargar backups.
+Desde el dashboard (o el asistente, con confirmación) el administrador puede lanzar backups ZIP de `users/`:
+
+- **Completos** e **incrementales**. Los incrementales incluyen los archivos nuevos o modificados desde el backup anterior y un `DELETED.txt` con los archivos borrados.
+- **Escritura atómica**: el ZIP se escribe como `.zip.partial` y solo se renombra al terminar. Un backup fallido nunca sustituye ni borra los anteriores.
+- **Retención**: tras cada backup completo correcto, se conservan los `BACKUP_KEEP_FULL` completos más recientes y sus incrementales.
+- Cada backup tiene un manifiesto JSON con el estado de los archivos.
+- "Download Latest Backup" descarga el **último backup completo**. `GET /admin/backup/list` lista todos.
+
+---
+
+## Seguridad
+
+- Sesión con JWT en cookie `httpOnly` y `SameSite=strict`; el rol se recalcula desde la configuración en cada petición.
+- Login limitado a 10 intentos por minuto por IP y usuario; intentos fallidos y accesos denegados quedan registrados en `.audit/events.jsonl`.
+- Content-Security-Policy estricta (sin JavaScript inline) y cabeceras de seguridad con `helmet`.
+- Todas las entradas de la API se validan; las rutas se comprueban siempre contra la política de acceso.
+- La salida del asistente se sanea antes de mostrarse.
 
 ---
 
 ## Licencia
 
-Este proyecto está basado en el starter de NestJS y se distribuye bajo la **MIT License**.
-
-### Términos de la Licencia
-
-La licencia MIT es una licencia de software libre permisiva que permite:
-
-- ✅ Usar, copiar, modificar, fusionar, publicar, distribuir, sublicenciar y vender copias del software
-- ✅ Usar el software para fines comerciales o privados
-- ✅ Crear trabajos derivados basados en este proyecto
-
-### Requisitos
-
-- ⚠️ **Atribución requerida**: Debes incluir el aviso de copyright y el texto de la licencia en todas las copias o porciones sustanciales del software
-
-El texto completo de la licencia se encuentra en el archivo [LICENSE](LICENSE) en la raíz del proyecto.
-
+Este proyecto se distribuye bajo la **MIT License**. El texto completo está en [LICENSE](LICENSE).

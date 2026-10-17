@@ -3,41 +3,54 @@ import {
   Controller,
   Delete,
   Get,
-  Header,
   Post,
   Query,
   Render,
+  Req,
+  Res,
   StreamableFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import type { Request, Response } from 'express';
 import { createReadStream } from 'fs';
 import * as path from 'path';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { FileSystemService, UploadedTempFile } from './filesystem.service';
+import { StorageService, UploadedTempFile } from '../storage/storage.service';
+import {
+  BrowserQueryDto,
+  BulkDeleteDto,
+  BulkMoveDto,
+  MkdirDto,
+  MoveDto,
+  PathBodyDto,
+  PathQueryDto,
+  RecentQueryDto,
+  RenameDto,
+  UploadBodyDto,
+} from './files.dto';
 
-type PathBody = { path?: unknown };
+export const BROWSER_PAGE_SIZE = 200;
 
 /** Runs an operation per path and reports partial failures instead of a bare 500. */
 async function settleAll(
-  paths: unknown,
-  run: (p: unknown) => Promise<void>,
+  list: string[],
+  run: (p: string) => Promise<void>,
 ): Promise<{
   success: boolean;
   count: number;
   failed: { path: string; error: string }[];
 }> {
-  const list = Array.isArray(paths) ? (paths as unknown[]) : [];
   const results = await Promise.allSettled(list.map((p) => run(p)));
   const failed = results.flatMap((result, i) =>
     result.status === 'rejected'
       ? [
           {
-            path: String(list[i]),
+            path: list[i],
             error:
               result.reason instanceof Error
                 ? result.reason.message
@@ -55,25 +68,20 @@ async function settleAll(
 
 @Controller('files')
 @UseGuards(JwtAuthGuard)
-export class FileSystemController {
-  constructor(private readonly filesystemService: FileSystemService) {}
+export class FilesController {
+  constructor(private readonly storageService: StorageService) {}
 
   @Get('/browser')
   @Render('browser')
   async browser(
     @CurrentUser() user: AuthUser,
-    @Query('path') requestedPath: unknown,
-    @Query('sort') sort: unknown,
-    @Query('order') orderParam: unknown,
+    @Query() query: BrowserQueryDto,
   ) {
-    const sortBy = sort === 'date' ? 'date' : 'name';
-    const order = orderParam === 'desc' ? 'desc' : 'asc';
-    const currentPath =
-      typeof requestedPath === 'string'
-        ? requestedPath.replace(/^\/+/, '')
-        : '';
+    const sortBy = query.sort ?? 'name';
+    const order = query.order ?? 'asc';
+    const currentPath = (query.path ?? '').replace(/^\/+/, '');
 
-    const files = await this.filesystemService.listFiles(
+    const files = await this.storageService.listFiles(
       user,
       currentPath,
       sortBy,
@@ -86,7 +94,33 @@ export class FileSystemController {
       path: parts.slice(0, i + 1).join('/'),
     }));
 
-    const entries = files.map((f) => {
+    // Rendering is what blocks on big folders (~4 KB of markup per entry), so
+    // only one page of entries reaches the template.
+    const totalPages = Math.max(1, Math.ceil(files.length / BROWSER_PAGE_SIZE));
+    const page = Math.min(query.page ?? 1, totalPages);
+    const pageUrl = (n: number) => {
+      const params = new URLSearchParams();
+      if (currentPath) params.set('path', currentPath);
+      if (query.sort) params.set('sort', query.sort);
+      if (query.order) params.set('order', query.order);
+      if (n > 1) params.set('page', String(n));
+      const search = params.toString();
+      return search ? `/files/browser?${search}` : '/files/browser';
+    };
+    const pagination = {
+      page,
+      totalPages,
+      totalItems: files.length,
+      isPaged: totalPages > 1,
+      prevUrl: page > 1 ? pageUrl(page - 1) : null,
+      nextUrl: page < totalPages ? pageUrl(page + 1) : null,
+    };
+
+    const pageFiles = files.slice(
+      (page - 1) * BROWSER_PAGE_SIZE,
+      page * BROWSER_PAGE_SIZE,
+    );
+    const entries = pageFiles.map((f) => {
       const relPath = currentPath ? `${currentPath}/${f.name}` : f.name;
       const query = encodeURIComponent(relPath);
       return {
@@ -119,6 +153,7 @@ export class FileSystemController {
       user,
       currentPath,
       breadcrumbs,
+      pagination,
       userRole: user.role,
       canWrite: user.role !== 'guest',
       sortBy,
@@ -130,12 +165,12 @@ export class FileSystemController {
   @UseInterceptors(FilesInterceptor('files'))
   async uploadFile(
     @UploadedFiles() files: UploadedTempFile[] = [],
-    @Body() body: PathBody,
+    @Body() body: UploadBodyDto,
     @CurrentUser() user: AuthUser,
   ) {
     const uploaded: { original: string; final: string }[] = [];
     for (const file of files) {
-      const finalName = await this.filesystemService.handleUpload(
+      const finalName = await this.storageService.handleUpload(
         user,
         file,
         body.path ?? '',
@@ -146,89 +181,85 @@ export class FileSystemController {
   }
 
   @Post('mkdir')
-  async createFolder(
-    @Body() body: PathBody & { name?: unknown },
-    @CurrentUser() user: AuthUser,
-  ) {
-    await this.filesystemService.createFolder(user, body.path ?? '', body.name);
+  async createFolder(@Body() body: MkdirDto, @CurrentUser() user: AuthUser) {
+    await this.storageService.createFolder(user, body.path ?? '', body.name);
     return { success: true };
   }
 
   @Get('download')
   async download(
-    @Query('path') filePath: unknown,
+    @Query() { path: filePath }: PathQueryDto,
     @CurrentUser() user: AuthUser,
   ) {
-    const fullPath = await this.filesystemService.downloadFile(user, filePath);
+    const fullPath = await this.storageService.downloadFile(user, filePath);
     return new StreamableFile(createReadStream(fullPath), {
       disposition: `attachment; filename*=UTF-8''${encodeURIComponent(path.basename(fullPath))}`,
     });
   }
 
   @Get('thumbnail')
-  @Header('Content-Type', 'image/webp')
-  @Header('Cache-Control', 'private, max-age=300')
   async getThumbnail(
-    @Query('path') filePath: unknown,
+    @Query() { path: filePath }: PathQueryDto,
     @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
     // No fallback to serving the original inline: user-uploaded SVG/HTML on
     // this origin would be a stored XSS vector.
-    return new StreamableFile(
-      await this.filesystemService.getThumbnail(user, filePath),
-    );
+    const thumbnail = await this.storageService.getThumbnail(user, filePath);
+    // The ETag changes with the file, so the browser may keep it but must
+    // revalidate after max-age; a match costs one stat, not a resize.
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('ETag', thumbnail.etag);
+    if (req.headers['if-none-match'] === thumbnail.etag) {
+      res.status(304);
+      return;
+    }
+    res.setHeader('Content-Type', 'image/webp');
+    return new StreamableFile(createReadStream(thumbnail.path));
   }
 
   @Delete('delete')
-  async deleteItem(@Body() body: PathBody, @CurrentUser() user: AuthUser) {
-    await this.filesystemService.deleteItem(user, body.path);
+  async deleteItem(@Body() body: PathBodyDto, @CurrentUser() user: AuthUser) {
+    await this.storageService.deleteItem(user, body.path);
     return { success: true };
   }
 
   @Post('rename')
-  async renameItem(
-    @Body() body: PathBody & { newName?: unknown },
-    @CurrentUser() user: AuthUser,
-  ) {
-    await this.filesystemService.renameItem(user, body.path, body.newName);
+  async renameItem(@Body() body: RenameDto, @CurrentUser() user: AuthUser) {
+    await this.storageService.renameItem(user, body.path, body.newName);
     return { success: true };
   }
 
   @Post('move')
-  async moveItem(
-    @Body() body: PathBody & { destination?: unknown },
-    @CurrentUser() user: AuthUser,
-  ) {
-    await this.filesystemService.moveItem(user, body.path, body.destination);
+  async moveItem(@Body() body: MoveDto, @CurrentUser() user: AuthUser) {
+    await this.storageService.moveItem(user, body.path, body.destination);
     return { success: true };
   }
 
   @Post('bulk-delete')
-  bulkDelete(@Body() body: { paths?: unknown }, @CurrentUser() user: AuthUser) {
+  bulkDelete(@Body() body: BulkDeleteDto, @CurrentUser() user: AuthUser) {
     return settleAll(body.paths, (p) =>
-      this.filesystemService.deleteItem(user, p),
+      this.storageService.deleteItem(user, p),
     );
   }
 
   @Post('bulk-move')
-  bulkMove(
-    @Body() body: { paths?: unknown; destination?: unknown },
-    @CurrentUser() user: AuthUser,
-  ) {
+  bulkMove(@Body() body: BulkMoveDto, @CurrentUser() user: AuthUser) {
     return settleAll(body.paths, (p) =>
-      this.filesystemService.moveItem(user, p, body.destination),
+      this.storageService.moveItem(user, p, body.destination),
     );
   }
 
   @Get('recent')
   async getRecentFiles(
-    @Query('days') days: unknown,
+    @Query() { days, limit }: RecentQueryDto,
     @CurrentUser() user: AuthUser,
   ) {
-    const parsed = Number(days);
-    const files = await this.filesystemService.getRecentFiles(
+    const files = await this.storageService.getRecentFiles(
       user,
-      Number.isFinite(parsed) && parsed > 0 ? parsed : 7,
+      days ?? 7,
+      limit,
     );
     return { success: true, files };
   }
@@ -237,7 +268,7 @@ export class FileSystemController {
   async getDiskUsage() {
     return {
       success: true,
-      diskUsage: await this.filesystemService.getDiskUsage(),
+      diskUsage: await this.storageService.getDiskUsage(),
     };
   }
 }

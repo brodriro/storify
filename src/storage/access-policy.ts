@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import { LogsService } from '../agent/logs/logs.service';
+import { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/auth-user';
 import type { AppConfig } from '../config/configuration';
 
@@ -43,7 +43,7 @@ export class AccessPolicy {
 
   constructor(
     private readonly configService: ConfigService<AppConfig, true>,
-    private readonly logsService: LogsService,
+    private readonly auditService: AuditService,
   ) {
     const storage = path.resolve(
       configService.get('storagePath', { infer: true }),
@@ -189,7 +189,7 @@ export class AccessPolicy {
   }
 
   private deny(user: AuthUser, requested: string, message?: string): never {
-    void this.logsService.recordEvent('access_denied', {
+    void this.auditService.recordEvent('access_denied', {
       username: user.username,
       detail: requested.slice(0, 512),
     });

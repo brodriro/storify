@@ -36,8 +36,8 @@ const MAX_EVENTS_READ = 5000;
  * (dot-prefixed so the file browser hides it).
  */
 @Injectable()
-export class LogsService {
-  private readonly logger = new Logger(LogsService.name);
+export class AuditService {
+  private readonly logger = new Logger(AuditService.name);
   private readonly eventsFile: string;
 
   constructor(configService: ConfigService) {

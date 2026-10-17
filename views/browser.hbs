@@ -214,7 +214,7 @@
                     <div class="file-name">{{this.name}}</div>
 
                     {{#unless this.isDirectory}}
-                    <div class="file-meta">{{this.sizeMb}} MB</div>
+                    <div class="file-meta">{{this.sizeLabel}}</div>
                     {{/unless}}
 
                     {{#if ../canWrite}}
@@ -275,6 +275,18 @@
                 </li>
                 {{/each}}
             </ul>
+
+            {{#if pagination.isPaged}}
+            <nav class="pagination" aria-label="Paginación">
+                {{#if pagination.prevUrl}}
+                <a class="btn btn-secondary btn-sm" href="{{pagination.prevUrl}}" rel="prev">Anterior</a>
+                {{/if}}
+                <span class="pagination-status">Página {{pagination.page}} de {{pagination.totalPages}} · {{pagination.totalItems}} elementos</span>
+                {{#if pagination.nextUrl}}
+                <a class="btn btn-secondary btn-sm" href="{{pagination.nextUrl}}" rel="next">Siguiente</a>
+                {{/if}}
+            </nav>
+            {{/if}}
         </div>
     </main>
 

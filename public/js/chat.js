@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let isChatInitialized = false;
     let responseTimer = null;
+    let chatInfo = null; // { enabled, provider } sent by the server on connect
     const RESPONSE_TIMEOUT_MS = 90000;
 
     const socket = io({
@@ -55,15 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
             chatMessageInput.style.height = 'auto'; // Reset height
             sendChatMessageButton.disabled = true;
 
-            socket.emit('chat', message);
-            toggleInputState(true);
-            showTypingIndicator();
-            clearTimeout(responseTimer);
-            responseTimer = setTimeout(() => {
-                finishWaiting();
-                appendMessage('No he recibido respuesta del asistente. Inténtalo de nuevo.', 'ai');
-            }, RESPONSE_TIMEOUT_MS);
+            emitAndWait('chat', message);
         }
+    }
+
+    function emitAndWait(event, payload) {
+        socket.emit(event, payload);
+        toggleInputState(true);
+        showTypingIndicator();
+        clearTimeout(responseTimer);
+        responseTimer = setTimeout(() => {
+            finishWaiting();
+            appendMessage('No he recibido respuesta del asistente. Inténtalo de nuevo.', 'ai');
+        }, RESPONSE_TIMEOUT_MS);
     }
 
     function finishWaiting() {
@@ -72,11 +77,48 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleInputState(false);
     }
 
+    socket.on('chatInfo', (info) => {
+        chatInfo = info;
+    });
+
     socket.on('chatResponse', (data) => {
         finishWaiting();
         appendMessage(String((data && data.response) || ''), 'ai');
+        if (data && data.confirmation) appendConfirmation(data.confirmation);
         chatMessageInput.focus();
     });
+
+    /** Confirm / cancel buttons for actions that change files (server waits for this). */
+    function appendConfirmation(confirmation) {
+        const bar = document.createElement('div');
+        bar.className = 'chat-confirm';
+        const decide = (approved) => {
+            bar.querySelectorAll('button').forEach((b) => (b.disabled = true));
+            bar.dataset.decided = approved ? 'approved' : 'declined';
+            emitAndWait('confirmAction', { id: confirmation.id, approved });
+        };
+        const confirmBtn = document.createElement('button');
+        confirmBtn.type = 'button';
+        confirmBtn.className = 'btn btn-primary btn-sm';
+        confirmBtn.textContent = 'Confirmar';
+        confirmBtn.addEventListener('click', () => decide(true));
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn btn-secondary btn-sm';
+        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.addEventListener('click', () => decide(false));
+        bar.append(confirmBtn, cancelBtn);
+        chatHistory.appendChild(bar);
+        scrollToBottom();
+    }
+
+    /** Plain-text notice (no Markdown/HTML), e.g. where data is sent. */
+    function appendNotice(text) {
+        const notice = document.createElement('p');
+        notice.className = 'chat-notice';
+        notice.textContent = text;
+        chatHistory.appendChild(notice);
+    }
 
     socket.on('disconnect', () => {
         if (!typingIndicator.classList.contains('visible')) return;
@@ -148,5 +190,12 @@ document.addEventListener('DOMContentLoaded', () => {
             '-   **System Backups**\n' +
             '-   **General questions**\n\nHow can I help you today?';
         appendMessage(welcomeMessage, 'ai');
+        if (chatInfo && !chatInfo.enabled) {
+            appendNotice('El asistente no está configurado en este servidor.');
+        } else if (chatInfo) {
+            appendNotice(
+                `Tus mensajes, y el contenido de los documentos que me pidas resumir o clasificar, se envían a ${chatInfo.provider} para procesarlos. Las acciones que modifican archivos siempre te pedirán confirmación.`,
+            );
+        }
     }
 });
