@@ -2,6 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { AuthUser } from '../../auth/auth-user';
+import {
+  formatSize,
+  mimeTypeFor,
+  TEXT_EXTENSIONS,
+} from '../../common/file-types';
 import { StorageService } from '../../storage/storage.service';
 import { LlmService } from '../llm/llm.service';
 import { DocumentReaderService } from '../documents/document-reader.service';
@@ -9,52 +14,6 @@ import {
   FileClassificationRequest,
   FileClassificationResponse,
 } from '../interfaces/classification.interface';
-
-const MIME_MAP: Record<string, string> = {
-  '.txt': 'text/plain',
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'application/javascript',
-  '.json': 'application/json',
-  '.xml': 'application/xml',
-  '.csv': 'text/csv',
-  '.pdf': 'application/pdf',
-  '.doc': 'application/msword',
-  '.docx':
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  '.xls': 'application/vnd.ms-excel',
-  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  '.ppt': 'application/vnd.ms-powerpoint',
-  '.pptx':
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
-  '.bmp': 'image/bmp',
-  '.heic': 'image/heic',
-  '.heif': 'image/heif',
-  '.mp4': 'video/mp4',
-  '.webm': 'video/webm',
-  '.ogg': 'video/ogg',
-  '.mov': 'video/quicktime',
-  '.mp3': 'audio/mpeg',
-  '.wav': 'audio/wav',
-  '.flac': 'audio/flac',
-  '.zip': 'application/zip',
-  '.tar': 'application/x-tar',
-  '.gz': 'application/gzip',
-  '.rar': 'application/vnd.rar',
-  '.7z': 'application/x-7z-compressed',
-  '.iso': 'application/x-iso9660-image',
-  '.ts': 'text/typescript',
-  '.py': 'text/x-python',
-  '.java': 'text/x-java',
-  '.sh': 'application/x-sh',
-  '.sql': 'application/sql',
-};
 
 @Injectable()
 export class ClassificationService {
@@ -82,12 +41,11 @@ export class ClassificationService {
     const stats = await fs.promises.stat(fullPath);
     const filename = path.basename(fullPath);
     const ext = path.extname(fullPath).toLowerCase();
-    const mimeType = MIME_MAP[ext] || 'application/octet-stream';
+    const mimeType = mimeTypeFor(ext);
 
     // Attempt text extraction for supported document types
     let extractedText = '';
-    const textExtractable = ['.txt', '.docx', '.pdf'];
-    if (textExtractable.includes(ext)) {
+    if (TEXT_EXTENSIONS.includes(ext)) {
       try {
         extractedText = await this.documentReader.readFileContent(fullPath);
         // Truncate to avoid exceeding token limits
@@ -107,12 +65,6 @@ export class ClassificationService {
 
     // Folder structure the user can see (top 2 levels)
     const folderStructure = await this.getFolderStructure(user, '', 2);
-
-    const formatSize = (bytes: number): string => {
-      if (bytes < 1024) return `${bytes} B`;
-      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-    };
 
     const request: FileClassificationRequest = {
       filename,

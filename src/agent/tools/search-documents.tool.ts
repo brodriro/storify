@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { TEXT_EXTENSIONS } from '../../common/file-types';
 import { StorageService } from '../../storage/storage.service';
 import type { AgentTool, ToolContext } from './agent-tool';
 
-const DOCUMENT_EXTENSIONS = ['.txt', '.docx', '.pdf'];
 const MAX_RESULTS = 50;
 
 @Injectable()
@@ -28,7 +28,7 @@ export class SearchDocumentsTool implements AgentTool<{ name: string }> {
     const files = await this.storage.searchFiles(
       user,
       name,
-      DOCUMENT_EXTENSIONS,
+      TEXT_EXTENSIONS,
       MAX_RESULTS,
     );
     return files.map((f) => f.path);

@@ -15,6 +15,12 @@ import {
   resolveStoragePath,
 } from '../common/path.utils';
 import { mapWithConcurrency } from '../common/concurrency';
+import {
+  formatSize,
+  IMAGE_EXTENSIONS,
+  THUMBNAIL_EXTENSIONS,
+  VIDEO_EXTENSIONS,
+} from '../common/file-types';
 import { AccessPolicy, ResolvedPath } from './access-policy';
 import { Thumbnail, ThumbnailService } from './thumbnail.service';
 
@@ -24,36 +30,12 @@ const FS_CONCURRENCY = 32;
 export const DEFAULT_FIND_LIMIT = 100;
 const STATS_TTL_MS = 5 * 60 * 1000;
 
-const IMAGE_EXTENSIONS = [
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.gif',
-  '.webp',
-  '.bmp',
-  '.svg',
-  '.heic',
-  '.heif',
-];
-const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov'];
-/** Raster formats sharp can turn into thumbnails (SVG is excluded on purpose). */
-const THUMBNAIL_EXTENSIONS = [
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.webp',
-  '.gif',
-  '.tiff',
-  '.heic',
-  '.heif',
-  '.bmp',
-];
-
 export interface FileEntry {
   name: string;
   isDirectory: boolean;
   size: number;
-  sizeMb: number;
+  /** Human-readable size ('' for folders). */
+  sizeLabel: string;
   modifiedAt: Date;
   extension: string;
   isImage: boolean;
@@ -157,9 +139,7 @@ export class StorageService {
             name: entry.name,
             isDirectory,
             size,
-            sizeMb: isDirectory
-              ? 0
-              : Math.max(1, Math.round(size / (1024 * 1024))),
+            sizeLabel: isDirectory ? '' : formatSize(size),
             modifiedAt: stats.mtime,
             extension,
             isImage: IMAGE_EXTENSIONS.includes(extension),
