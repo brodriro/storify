@@ -82,12 +82,57 @@ describe('Storify (e2e)', () => {
       .expect(200);
   });
 
-  // S4 in the improvement plan: backup endpoints have no admin check.
-  it.failing('forbids backup download for non-admin users', async () => {
-    const { cookie } = await login('INVITADO', 'guest-pass');
+  // S4: backup endpoints are admin-only.
+  it.each([
+    ['get', '/admin/dashboard'],
+    ['get', '/admin/backup/download'],
+    ['post', '/admin/backup'],
+  ] as const)('forbids %s %s for non-admin users', async (method, url) => {
+    for (const [username, password] of [
+      ['INVITADO', 'guest-pass'],
+      ['ALICE', 'alice-pass'],
+    ]) {
+      const { cookie } = await login(username, password);
+      await request(app.getHttpServer())
+        [method](url)
+        .set('Cookie', cookie!)
+        .expect(403);
+    }
+  });
+
+  it('opens the dashboard for the admin', async () => {
+    const { cookie } = await login('ADMIN', 'admin-pass');
     await request(app.getHttpServer())
-      .get('/admin/backup/download')
+      .get('/admin/dashboard')
+      .set('Cookie', cookie!)
+      .expect(200);
+  });
+
+  it('returns 403 (not 500) for a member reaching another user folder', async () => {
+    fs.mkdirSync(path.join(storage, 'users', 'ADMIN'), { recursive: true });
+    fs.writeFileSync(path.join(storage, 'users', 'ADMIN', 'secret.txt'), 's');
+    const { cookie } = await login('ALICE', 'alice-pass');
+    await request(app.getHttpServer())
+      .get('/files/download')
+      .query({ path: 'ALICE/../ADMIN/secret.txt' })
       .set('Cookie', cookie!)
       .expect(403);
+  });
+
+  it('does not let the guest write', async () => {
+    const { cookie } = await login('INVITADO', 'guest-pass');
+    await request(app.getHttpServer())
+      .post('/files/mkdir')
+      .set('Cookie', cookie!)
+      .send({ path: '', name: 'nope' })
+      .expect(403);
+  });
+
+  it('rejects a login without password field', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/auth/login')
+      .type('form')
+      .send({ username: 'ALICE' });
+    expect(res.headers.location).toBe('/?error=invalid');
   });
 });

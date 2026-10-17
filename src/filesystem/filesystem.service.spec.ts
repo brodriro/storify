@@ -2,27 +2,34 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import type { LogsService } from '../agent/logs/logs.service';
+import type { AuthUser } from '../auth/auth-user';
+import { AccessPolicy } from './access-policy';
 import { FileSystemService } from './filesystem.service';
 
+const ADMIN: AuthUser = { username: 'ADMIN', role: 'admin' };
+const ALICE: AuthUser = { username: 'ALICE', role: 'member' };
+const GUEST: AuthUser = { username: 'INVITADO', role: 'guest' };
+
 /**
- * Access-control behaviour of FileSystemService.
- *
- * Tests marked `it.failing` document known vulnerabilities / spec gaps from the
- * improvement plan (S9, S9b and decision D1). They pass while the bug exists;
- * once the access policy is fixed Jest will report them as unexpectedly
- * passing, which is the signal to turn them into plain `it`.
+ * Access control of the file API (plan: A1, S9, S9b, D1 = spec roles).
+ * Runs against a real temp directory so path normalization and symlinks are
+ * exercised for real.
  */
 describe('FileSystemService access control', () => {
   let storage: string;
   let usersRoot: string;
   let publicRoot: string;
   let service: FileSystemService;
+  let recordEvent: jest.Mock;
 
   const write = (root: string, rel: string, content = 'x') => {
     const full = path.join(root, rel);
     fs.mkdirSync(path.dirname(full), { recursive: true });
     fs.writeFileSync(full, content);
   };
+  const exists = (root: string, rel: string) =>
+    fs.existsSync(path.join(root, rel));
 
   beforeEach(() => {
     storage = fs.mkdtempSync(path.join(os.tmpdir(), 'storify-fs-'));
@@ -32,17 +39,20 @@ describe('FileSystemService access control', () => {
     const config = new ConfigService({
       storagePath: storage,
       users: [
-        { username: 'ADMIN', roles: ['admin'] },
-        { username: 'ALICE', roles: ['moderator'] },
-        { username: 'BOB', roles: ['moderator'] },
-        { username: 'INVITADO', roles: ['public'] },
+        { username: 'ADMIN', role: 'admin' },
+        { username: 'ALICE', role: 'member' },
+        { username: 'BOB', role: 'member' },
+        { username: 'INVITADO', role: 'guest' },
       ],
     });
-    service = new FileSystemService(config);
+    recordEvent = jest.fn().mockResolvedValue(undefined);
+    const logs = { recordEvent } as unknown as LogsService;
+    service = new FileSystemService(config, new AccessPolicy(config, logs));
 
     write(usersRoot, 'ADMIN/secret.txt', 'admin-secret');
     write(usersRoot, 'ALICE/own.txt', 'alice');
     write(usersRoot, 'BOB/private.txt', 'bob');
+    write(usersRoot, 'Compartido/team.txt', 'team');
     write(usersRoot, 'shared.txt', 'shared');
     write(publicRoot, 'readme.txt', 'public');
   });
@@ -51,99 +61,176 @@ describe('FileSystemService access control', () => {
     fs.rmSync(storage, { recursive: true, force: true });
   });
 
-  describe('behaviour that is already correct', () => {
-    it('lets admin download any user file', async () => {
+  describe('admin', () => {
+    it('downloads any user file', async () => {
       await expect(
-        service.downloadFile('ADMIN', 'BOB/private.txt', 'admin'),
+        service.downloadFile(ADMIN, 'BOB/private.txt'),
       ).resolves.toBe(path.join(usersRoot, 'BOB/private.txt'));
     });
 
-    it('lets a member download their own file', async () => {
-      await expect(
-        service.downloadFile('ALICE', 'ALICE/own.txt', 'moderator'),
-      ).resolves.toBe(path.join(usersRoot, 'ALICE/own.txt'));
-    });
-
-    it('blocks a member from the ADMIN folder by direct path', async () => {
-      await expect(
-        service.downloadFile('ALICE', 'ADMIN/secret.txt', 'moderator'),
-      ).rejects.toThrow();
-    });
-
-    it('blocks escaping the storage root', async () => {
-      await expect(
-        service.downloadFile('ALICE', '../../etc/passwd', 'moderator'),
-      ).rejects.toThrow();
-    });
-
-    it('hides other users folders from a guest listing', async () => {
-      const items = await service.listFiles('INVITADO', '', 'guest');
-      expect(items.map((i) => i.name)).toEqual(['readme.txt']);
+    it('cannot delete the users root', async () => {
+      await expect(service.deleteItem(ADMIN, '.')).rejects.toThrow(
+        'storage root',
+      );
+      expect(exists(usersRoot, 'ADMIN/secret.txt')).toBe(true);
     });
   });
 
-  describe('S9: ACL bypass with ".." inside the path', () => {
-    it.failing(
-      'blocks a member reaching ADMIN through their own folder',
-      async () => {
-        await expect(
-          service.downloadFile(
-            'ALICE',
-            'ALICE/../ADMIN/secret.txt',
-            'moderator',
-          ),
-        ).rejects.toThrow();
-      },
-    );
-
-    it.failing('blocks renaming a file into the ADMIN folder', async () => {
+  describe('member (spec: own folder + shared root)', () => {
+    it('reads their own files, the shared root and global folders', async () => {
       await expect(
-        service.renameItem(
-          'ALICE',
-          'ALICE/own.txt',
-          '../ADMIN/planted.txt',
-          'moderator',
-        ),
-      ).rejects.toThrow();
+        service.downloadFile(ALICE, 'ALICE/own.txt'),
+      ).resolves.toBeDefined();
+      await expect(
+        service.downloadFile(ALICE, 'shared.txt'),
+      ).resolves.toBeDefined();
+      await expect(
+        service.downloadFile(ALICE, 'Compartido/team.txt'),
+      ).resolves.toBeDefined();
     });
-  });
 
-  describe('S9b: deleting a storage root', () => {
-    it.failing.each(['', '.', './', 'ALICE/..'])(
-      'never lets a member delete the users root via %j',
+    it.each(['BOB/private.txt', 'ADMIN/secret.txt'])(
+      'cannot read %s',
       async (target) => {
-        await service
-          .deleteItem('ALICE', target, 'moderator')
-          .catch(() => undefined);
-        expect(fs.existsSync(path.join(usersRoot, 'ADMIN/secret.txt'))).toBe(
-          true,
+        await expect(service.downloadFile(ALICE, target)).rejects.toThrow(
+          'Access denied',
         );
       },
     );
 
-    it.failing('rejects a guest deleting the public root', async () => {
-      await expect(
-        service.deleteItem('INVITADO', '', 'guest'),
-      ).rejects.toThrow();
+    it('only sees their own user folder at the root', async () => {
+      const names = (await service.listFiles(ALICE, '')).map((i) => i.name);
+      expect(names).toEqual(['ALICE', 'Compartido', 'shared.txt']);
+    });
+
+    it('records denied accesses as security events', async () => {
+      await service.downloadFile(ALICE, 'BOB/private.txt').catch(() => null);
+      expect(recordEvent).toHaveBeenCalledWith('access_denied', {
+        username: 'ALICE',
+        detail: 'BOB/private.txt',
+      });
     });
   });
 
-  describe('D1: members only see their own folder (spec)', () => {
-    it.failing('blocks a member reading another member folder', async () => {
-      await expect(
-        service.downloadFile('ALICE', 'BOB/private.txt', 'moderator'),
-      ).rejects.toThrow();
+  describe('path traversal (S9)', () => {
+    it.each([
+      'ALICE/../ADMIN/secret.txt',
+      'ALICE/../BOB/private.txt',
+      './ALICE/../../users/BOB/private.txt',
+      '../../etc/passwd',
+      '..\\..\\etc\\passwd',
+    ])('rejects %j', async (target) => {
+      await expect(service.downloadFile(ALICE, target)).rejects.toThrow();
     });
 
-    it.failing('hides other members folders at the root', async () => {
-      const items = await service.listFiles('ALICE', '', 'moderator');
-      expect(items.map((i) => i.name)).not.toContain('BOB');
+    it('treats a leading slash as relative to the user root', async () => {
+      await expect(service.downloadFile(ALICE, '/ALICE/own.txt')).resolves.toBe(
+        path.join(usersRoot, 'ALICE/own.txt'),
+      );
     });
 
-    it.failing('treats the guest as read-only', async () => {
+    it('rejects NUL bytes', async () => {
       await expect(
-        service.deleteItem('INVITADO', 'readme.txt', 'guest'),
-      ).rejects.toThrow();
+        service.downloadFile(ALICE, 'ALICE/own.txt\0.png'),
+      ).rejects.toThrow('Invalid path');
+    });
+
+    it('rejects symlinks that point outside the root', async () => {
+      fs.symlinkSync('/etc', path.join(usersRoot, 'ALICE/escape'));
+      await expect(
+        service.downloadFile(ALICE, 'ALICE/escape/hostname'),
+      ).rejects.toThrow('Access denied');
+    });
+
+    it('rejects renaming a file into another user folder', async () => {
+      await expect(
+        service.renameItem(ALICE, 'ALICE/own.txt', '../ADMIN/planted.txt'),
+      ).rejects.toThrow('Invalid name');
+      expect(exists(usersRoot, 'ADMIN/planted.txt')).toBe(false);
+    });
+
+    it('rejects moving into another user folder', async () => {
+      await expect(
+        service.moveItem(ALICE, 'ALICE/own.txt', 'BOB'),
+      ).rejects.toThrow('Access denied');
+      expect(exists(usersRoot, 'ALICE/own.txt')).toBe(true);
+    });
+
+    it('rejects squatting another user folder name at the root', async () => {
+      await expect(
+        service.createFolder(ALICE, '', 'CAROL'),
+      ).resolves.toBeUndefined();
+      await expect(service.createFolder(ALICE, '', 'BOB')).rejects.toThrow();
+    });
+  });
+
+  describe('storage roots (S9b)', () => {
+    it.each(['', '.', './', 'ALICE/..', '/'])(
+      'never lets a member delete the users root via %j',
+      async (target) => {
+        await expect(service.deleteItem(ALICE, target)).rejects.toThrow();
+        expect(exists(usersRoot, 'ADMIN/secret.txt')).toBe(true);
+      },
+    );
+
+    it('does not let a member delete their own home folder', async () => {
+      await expect(service.deleteItem(ALICE, 'ALICE')).rejects.toThrow(
+        'User folders',
+      );
+    });
+
+    it('rejects moving a folder into itself', async () => {
+      await expect(
+        service.moveItem(ALICE, 'Compartido', 'Compartido'),
+      ).rejects.toThrow('into itself');
+    });
+  });
+
+  describe('guest (spec: read-only public/)', () => {
+    it('lists and downloads public files', async () => {
+      const names = (await service.listFiles(GUEST, '')).map((i) => i.name);
+      expect(names).toEqual(['readme.txt']);
+      await expect(service.downloadFile(GUEST, 'readme.txt')).resolves.toBe(
+        path.join(publicRoot, 'readme.txt'),
+      );
+    });
+
+    it.each([
+      [
+        'delete a file',
+        (s: FileSystemService) => s.deleteItem(GUEST, 'readme.txt'),
+      ],
+      ['delete the root', (s: FileSystemService) => s.deleteItem(GUEST, '')],
+      [
+        'create a folder',
+        (s: FileSystemService) => s.createFolder(GUEST, '', 'x'),
+      ],
+      [
+        'rename a file',
+        (s: FileSystemService) => s.renameItem(GUEST, 'readme.txt', 'x.txt'),
+      ],
+    ])('cannot %s', async (_label, run) => {
+      await expect(run(service)).rejects.toThrow('Access denied');
+      expect(exists(publicRoot, 'readme.txt')).toBe(true);
+    });
+
+    it('cannot reach users/ from public/', async () => {
+      await expect(
+        service.downloadFile(GUEST, '../users/ADMIN/secret.txt'),
+      ).rejects.toThrow('Access denied');
+    });
+  });
+
+  describe('search and recent files', () => {
+    it('only returns files the user can read, as relative paths', async () => {
+      const found = await service.searchFiles(ALICE, '.txt');
+      expect(found.map((f) => f.path).sort()).toEqual([
+        'ALICE/own.txt',
+        'Compartido/team.txt',
+        'shared.txt',
+      ]);
+      const recent = await service.getRecentFiles(ALICE, 1);
+      expect(recent.map((f) => f.path)).not.toContain('BOB/private.txt');
     });
   });
 });

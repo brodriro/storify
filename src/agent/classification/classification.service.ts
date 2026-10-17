@@ -1,7 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { AuthUser } from '../../auth/auth-user';
+import { FileSystemService } from '../../filesystem/filesystem.service';
 import { LlmService } from '../llm/llm.service';
 import { FileReaderService } from '../file-reader/file-reader.service';
 import {
@@ -58,36 +59,27 @@ const MIME_MAP: Record<string, string> = {
 @Injectable()
 export class ClassificationService {
   private readonly logger = new Logger(ClassificationService.name);
-  private baseStoragePath: string;
 
   constructor(
     private readonly llmService: LlmService,
     private readonly fileReaderService: FileReaderService,
-    private readonly configService: ConfigService,
-  ) {
-    this.baseStoragePath =
-      this.configService.get<string>('storagePath') ?? './public_storage';
-  }
+    private readonly fileSystemService: FileSystemService,
+  ) {}
 
   /**
-   * Classify a single file within the NAS.
-   * @param relativePath - path relative to public_storage/users/, e.g. "ADMIN/docs/invoice.pdf"
+   * Classify a single file the user is allowed to read.
+   * @param relativePath - path relative to the user's root, e.g. "ADMIN/docs/invoice.pdf"
    */
   async classifyFile(
-    relativePath: string,
+    user: AuthUser,
+    relativePath: unknown,
   ): Promise<FileClassificationResponse> {
-    // Normalize: strip common prefixes that tools like list_documents_by_name may include
-    relativePath = relativePath
-      .replace(/^\.?\/?(public_storage\/)?users\//, '')
-      .replace(/^\.?\//, '');
-
-    const fullPath = path.join(this.baseStoragePath, 'users', relativePath);
-
-    if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
-      throw new NotFoundException(`File not found: ${relativePath}`);
-    }
-
-    const stats = fs.statSync(fullPath);
+    const target = await this.fileSystemService.resolveReadableFile(
+      user,
+      relativePath,
+    );
+    const fullPath = target.absolute;
+    const stats = await fs.promises.stat(fullPath);
     const filename = path.basename(fullPath);
     const ext = path.extname(fullPath).toLowerCase();
     const mimeType = MIME_MAP[ext] || 'application/octet-stream';
@@ -105,7 +97,7 @@ export class ClassificationService {
         }
       } catch (error) {
         this.logger.warn(
-          `Could not extract text from ${relativePath}: ${error.message}`,
+          `Could not extract text from ${target.relative}: ${(error as Error).message}`,
         );
         extractedText = '[No se pudo extraer texto]';
       }
@@ -113,11 +105,8 @@ export class ClassificationService {
       extractedText = '[Tipo de archivo no soportado para extracción de texto]';
     }
 
-    // Get current folder structure (top 2 levels)
-    const folderStructure = this.getFolderStructure(
-      path.join(this.baseStoragePath, 'users'),
-      2,
-    );
+    // Folder structure the user can see (top 2 levels)
+    const folderStructure = await this.getFolderStructure(user, '', 2);
 
     const formatSize = (bytes: number): string => {
       if (bytes < 1024) return `${bytes} B`;
@@ -127,7 +116,7 @@ export class ClassificationService {
 
     const request: FileClassificationRequest = {
       filename,
-      current_path: relativePath,
+      current_path: target.relative,
       size: formatSize(stats.size),
       created_at: stats.birthtime.toISOString(),
       modified_at: stats.mtime.toISOString(),
@@ -140,7 +129,7 @@ export class ClassificationService {
       existing_folder_structure: folderStructure,
     };
 
-    this.logger.log(`Classifying file: ${relativePath}`);
+    this.logger.log(`Classifying file: ${target.relative}`);
     return this.llmService.classifyFile(this.buildPrompt(request));
   }
 
@@ -214,35 +203,33 @@ Devuelve respuesta en este formato exacto:
   }
 
   /**
-   * Returns a textual representation of the folder structure up to maxDepth levels deep.
+   * Textual tree of the folders visible to the user, up to maxDepth levels deep.
    */
-  private getFolderStructure(
-    dirPath: string,
+  private async getFolderStructure(
+    user: AuthUser,
+    relativePath: string,
     maxDepth: number,
-    currentDepth: number = 0,
-  ): string {
-    if (!fs.existsSync(dirPath) || currentDepth >= maxDepth) return '';
-
-    try {
-      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-      const indent = '  '.repeat(currentDepth);
-      let result = '';
-
-      for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
-        if (entry.isDirectory()) {
-          result += `${indent}📁 ${entry.name}/\n`;
-          result += this.getFolderStructure(
-            path.join(dirPath, entry.name),
-            maxDepth,
-            currentDepth + 1,
-          );
-        }
-      }
-
-      return result;
-    } catch {
-      return '';
+    currentDepth = 0,
+  ): Promise<string> {
+    if (currentDepth >= maxDepth) return '';
+    const entries = await this.fileSystemService
+      .listFiles(user, relativePath)
+      .catch(() => []);
+    const indent = '  '.repeat(currentDepth);
+    let result = '';
+    for (const entry of entries) {
+      if (!entry.isDirectory) continue;
+      const childPath = relativePath
+        ? `${relativePath}/${entry.name}`
+        : entry.name;
+      result += `${indent}📁 ${entry.name}/\n`;
+      result += await this.getFolderStructure(
+        user,
+        childPath,
+        maxDepth,
+        currentDepth + 1,
+      );
     }
+    return result;
   }
 }

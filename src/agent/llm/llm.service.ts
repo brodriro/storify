@@ -1,30 +1,43 @@
 import {
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import * as dotenv from 'dotenv';
+import type { AppConfig } from '../../config/configuration';
 import { AgentResponseDto } from '../dto/agent-response.dto';
 import { Tool } from 'openai/resources/responses/responses';
 import { ChatMessage, ToolNas } from '../interfaces/ChatMessage';
 import { FileClassificationResponse } from '../interfaces/classification.interface';
-dotenv.config();
 
 @Injectable()
 export class LlmService {
-  private openai: OpenAI;
+  private readonly client: OpenAI | null;
   private readonly logger = new Logger(LlmService.name);
 
-  constructor() {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new InternalServerErrorException(
-        'OPENAI_API_KEY is not set in environment variables',
+  constructor(configService: ConfigService<AppConfig, true>) {
+    const apiKey = configService.get('openaiApiKey', { infer: true });
+    this.client = apiKey ? new OpenAI({ apiKey }) : null;
+    if (!this.client) {
+      this.logger.warn('OPENAI_API_KEY is not set: AI features are disabled');
+    }
+  }
+
+  isEnabled(): boolean {
+    return this.client !== null;
+  }
+
+  /** The OpenAI client, or a 503 when AI features are disabled. */
+  private get openai(): OpenAI {
+    if (!this.client) {
+      throw new ServiceUnavailableException(
+        'AI features are disabled (OPENAI_API_KEY is not configured)',
       );
     }
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    return this.client;
   }
 
   async getAgentAction(
@@ -84,6 +97,7 @@ export class LlmService {
         };
       }
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `Error getting agent action from LLM: ${error.message}`,
         error.stack,
@@ -127,6 +141,7 @@ export class LlmService {
       this.logger.log(`Generated response: ${content}`);
       return content.trim();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `Error generating response from LLM: ${error.message}`,
         error.stack,
@@ -164,6 +179,7 @@ export class LlmService {
       this.logger.log(`Generated summary: ${content}`);
       return content.trim();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `Error summarizing text with LLM: ${error.message}`,
         error.stack,
@@ -204,7 +220,7 @@ export class LlmService {
       this.logger.log(`Classification result received`);
       return JSON.parse(content) as FileClassificationResponse;
     } catch (error) {
-      if (error instanceof InternalServerErrorException) throw error;
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `Error classifying file with LLM: ${error.message}`,
         error.stack,

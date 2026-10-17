@@ -4,7 +4,6 @@ import {
   Post,
   UseGuards,
   Render,
-  Request,
   StreamableFile,
   NotFoundException,
   Body,
@@ -12,27 +11,28 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createReadStream } from 'fs';
 import { AdminService } from './admin.service';
+import type { AuthUser } from '../auth/auth-user';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles, RolesGuard } from '../auth/roles.guard';
+import type { AppConfig } from '../config/configuration';
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 export class AdminController {
   constructor(
-    private adminService: AdminService,
-    private configService: ConfigService,
+    private readonly adminService: AdminService,
+    private readonly configService: ConfigService<AppConfig, true>,
   ) {}
 
   @Get('dashboard')
   @Render('dashboard')
-  async dashboard(@Request() req) {
-    const roles = req.user.roles || [];
-    if (!roles.includes('admin')) {
-      // Ideally use ExceptionFilter to redirect, but returning error for view
-      return { user: req.user, error: 'Access Denied: Admins only' };
-    }
+  async dashboard(@CurrentUser() user: AuthUser) {
     const stats = await this.adminService.getStats();
-    const totalStorageGb =
-      this.configService.get<number>('TOTAL_STORAGE_GB') ?? 10;
+    const totalStorageGb = this.configService.get('totalStorageGb', {
+      infer: true,
+    });
     const totalBytesLimit = totalStorageGb * 1024 * 1024 * 1024;
     const totalSizeMb = Math.round(stats.totalSize / (1024 * 1024));
     const usagePercent =
@@ -46,7 +46,8 @@ export class AdminController {
     }
 
     return {
-      user: req.user,
+      user,
+      userRole: user.role,
       stats,
       userUsageMb,
       config: { totalStorageGb },
@@ -57,8 +58,10 @@ export class AdminController {
   }
 
   @Post('backup')
-  async createBackup(@Body('isIncremental') isIncremental: boolean = false) {
-    const started = await this.adminService.createBackup(isIncremental);
+  async createBackup(@Body('isIncremental') isIncremental: unknown) {
+    const started = await this.adminService.createBackup(
+      isIncremental === true || isIncremental === 'true',
+    );
     if (!started) {
       return { success: false, inProgress: true };
     }

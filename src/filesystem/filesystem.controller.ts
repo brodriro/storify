@@ -1,110 +1,125 @@
 import {
-  Controller,
-  Get,
-  Query,
-  Request,
-  UseGuards,
-  Render,
-  Post,
-  UploadedFiles,
-  UseInterceptors,
   Body,
-  StreamableFile,
+  Controller,
   Delete,
-  Res,
+  Get,
+  Header,
+  Post,
+  Query,
+  Render,
+  StreamableFile,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { createReadStream } from 'fs';
-import { Response } from 'express';
-import * as path from 'path';
-import { FileSystemService } from './filesystem.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ClassificationService } from '../agent/classification/classification.service';
+import { createReadStream } from 'fs';
+import * as path from 'path';
+import type { AuthUser } from '../auth/auth-user';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { FileSystemService, UploadedTempFile } from './filesystem.service';
+
+type PathBody = { path?: unknown };
+
+/** Runs an operation per path and reports partial failures instead of a bare 500. */
+async function settleAll(
+  paths: unknown,
+  run: (p: unknown) => Promise<void>,
+): Promise<{
+  success: boolean;
+  count: number;
+  failed: { path: string; error: string }[];
+}> {
+  const list = Array.isArray(paths) ? (paths as unknown[]) : [];
+  const results = await Promise.allSettled(list.map((p) => run(p)));
+  const failed = results.flatMap((result, i) =>
+    result.status === 'rejected'
+      ? [
+          {
+            path: String(list[i]),
+            error:
+              result.reason instanceof Error
+                ? result.reason.message
+                : 'Unknown error',
+          },
+        ]
+      : [],
+  );
+  return {
+    success: failed.length === 0,
+    count: list.length - failed.length,
+    failed,
+  };
+}
 
 @Controller('files')
 @UseGuards(JwtAuthGuard)
 export class FileSystemController {
-  constructor(
-    private filesystemService: FileSystemService,
-    private classificationService: ClassificationService,
-  ) {}
+  constructor(private readonly filesystemService: FileSystemService) {}
 
   @Get('/browser')
   @Render('browser')
   async browser(
-    @Request() req,
-    @Query('path') currentPath = '',
-    @Query('sort') sortBy: 'name' | 'date' = 'name',
-    @Query('order') order: 'asc' | 'desc' = 'asc',
+    @CurrentUser() user: AuthUser,
+    @Query('path') requestedPath: unknown,
+    @Query('sort') sort: unknown,
+    @Query('order') orderParam: unknown,
   ) {
-    if (currentPath && currentPath.includes('..')) currentPath = '';
-    currentPath = currentPath || '';
+    const sortBy = sort === 'date' ? 'date' : 'name';
+    const order = orderParam === 'desc' ? 'desc' : 'asc';
+    const currentPath =
+      typeof requestedPath === 'string'
+        ? requestedPath.replace(/^\/+/, '')
+        : '';
 
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
     const files = await this.filesystemService.listFiles(
-      req.user.username,
+      user,
       currentPath,
-      userRole,
       sortBy,
       order,
     );
 
     const parts = currentPath.split('/').filter((p) => p);
-    const parentPath = parts.slice(0, -1).join('/');
-
-    const breadcrumbs: { name: string; path: string }[] = [];
-    let runningPath = '';
-    for (const p of parts) {
-      runningPath += (runningPath ? '/' : '') + p;
-      breadcrumbs.push({ name: p, path: runningPath });
-    }
-
-    const filesJson = JSON.stringify(
-      files.map((f) => ({
-        name: f.name,
-        isImage: !!f.isImage,
-        isVideo: !!f.isVideo,
-        isDir: !!f.isDirectory,
-      })),
-    );
+    const breadcrumbs = parts.map((name, i) => ({
+      name,
+      path: parts.slice(0, i + 1).join('/'),
+    }));
 
     return {
       files,
-      filesJson,
-      user: req.user,
-      currentPath: currentPath ? currentPath.replace(/^\//, '') : '',
-      parentPath,
+      filesJson: JSON.stringify(
+        files.map((f) => ({
+          name: f.name,
+          isImage: f.isImage,
+          isVideo: f.isVideo,
+          isDir: f.isDirectory,
+        })),
+      ),
+      user,
+      currentPath,
+      parentPath: parts.slice(0, -1).join('/'),
       breadcrumbs,
-      userRole,
+      userRole: user.role,
+      canWrite: user.role !== 'guest',
       sortBy,
       order,
     };
   }
 
   @Post('upload')
-  @UseInterceptors(FilesInterceptor('files', 10, { dest: './temp_uploads' }))
+  @UseInterceptors(FilesInterceptor('files'))
   async uploadFile(
-    @UploadedFiles() files: Array<any>,
-    @Body() body,
-    @Request() req,
+    @UploadedFiles() files: UploadedTempFile[] = [],
+    @Body() body: PathBody,
+    @CurrentUser() user: AuthUser,
   ) {
-    const relativePath = body.path || '';
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
     const uploaded: { original: string; final: string }[] = [];
     for (const file of files) {
       const finalName = await this.filesystemService.handleUpload(
-        req.user.username,
+        user,
         file,
-        relativePath,
-        userRole,
+        body.path ?? '',
       );
       uploaded.push({ original: file.originalname, final: finalName });
     }
@@ -112,175 +127,98 @@ export class FileSystemController {
   }
 
   @Post('mkdir')
-  async createFolder(@Body() body, @Request() req) {
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
-    await this.filesystemService.createFolder(
-      req.user.username,
-      body.path,
-      body.name,
-      userRole,
-    );
+  async createFolder(
+    @Body() body: PathBody & { name?: unknown },
+    @CurrentUser() user: AuthUser,
+  ) {
+    await this.filesystemService.createFolder(user, body.path ?? '', body.name);
     return { success: true };
   }
 
   @Get('download')
-  async download(@Query('path') filePath, @Request() req) {
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
-    const fullPath = await this.filesystemService.downloadFile(
-      req.user.username,
-      filePath,
-      userRole,
-    );
-    const file = createReadStream(fullPath);
-    const filename = path.basename(fullPath);
-    return new StreamableFile(file, {
-      disposition: `attachment; filename="${filename}"`,
+  async download(
+    @Query('path') filePath: unknown,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const fullPath = await this.filesystemService.downloadFile(user, filePath);
+    return new StreamableFile(createReadStream(fullPath), {
+      disposition: `attachment; filename*=UTF-8''${encodeURIComponent(path.basename(fullPath))}`,
     });
   }
 
   @Get('thumbnail')
+  @Header('Content-Type', 'image/webp')
+  @Header('Cache-Control', 'private, max-age=300')
   async getThumbnail(
-    @Query('path') filePath,
-    @Request() req,
-    @Res() res: Response,
+    @Query('path') filePath: unknown,
+    @CurrentUser() user: AuthUser,
   ) {
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
-    try {
-      const buffer = await this.filesystemService.getThumbnail(
-        req.user.username,
-        filePath,
-        userRole,
-      );
-      res.set('Content-Type', 'image/jpeg');
-      res.send(buffer);
-    } catch (error) {
-      // Fallback to full image if thumbnail generation fails or type is unsupported
-      const fullPath = await this.filesystemService.downloadFile(
-        req.user.username,
-        filePath,
-        userRole,
-      );
-      res.sendFile(path.resolve(fullPath));
-    }
+    // No fallback to serving the original inline: user-uploaded SVG/HTML on
+    // this origin would be a stored XSS vector.
+    return new StreamableFile(
+      await this.filesystemService.getThumbnail(user, filePath),
+    );
   }
 
   @Delete('delete')
-  async deleteItem(@Body() body, @Request() req) {
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
-    await this.filesystemService.deleteItem(
-      req.user.username,
-      body.path,
-      userRole,
-    );
+  async deleteItem(@Body() body: PathBody, @CurrentUser() user: AuthUser) {
+    await this.filesystemService.deleteItem(user, body.path);
     return { success: true };
   }
 
   @Post('rename')
-  async renameItem(@Body() body, @Request() req) {
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
-    await this.filesystemService.renameItem(
-      req.user.username,
-      body.path,
-      body.newName,
-      userRole,
-    );
+  async renameItem(
+    @Body() body: PathBody & { newName?: unknown },
+    @CurrentUser() user: AuthUser,
+  ) {
+    await this.filesystemService.renameItem(user, body.path, body.newName);
     return { success: true };
   }
 
   @Post('move')
-  async moveItem(@Body() body, @Request() req) {
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
-    await this.filesystemService.moveItem(
-      req.user.username,
-      body.path,
-      body.destination,
-      userRole,
-    );
+  async moveItem(
+    @Body() body: PathBody & { destination?: unknown },
+    @CurrentUser() user: AuthUser,
+  ) {
+    await this.filesystemService.moveItem(user, body.path, body.destination);
     return { success: true };
   }
 
   @Post('bulk-delete')
-  async bulkDelete(@Body() body, @Request() req) {
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
-    const paths: string[] = body.paths || [];
-    await Promise.all(
-      paths.map((p) =>
-        this.filesystemService.deleteItem(req.user.username, p, userRole),
-      ),
+  bulkDelete(@Body() body: { paths?: unknown }, @CurrentUser() user: AuthUser) {
+    return settleAll(body.paths, (p) =>
+      this.filesystemService.deleteItem(user, p),
     );
-    return { success: true, count: paths.length };
   }
 
   @Post('bulk-move')
-  async bulkMove(@Body() body, @Request() req) {
-    const userRole = req.user.roles?.includes('admin')
-      ? 'admin'
-      : req.user.roles?.includes('moderator')
-        ? 'moderator'
-        : 'guest';
-    const paths: string[] = body.paths || [];
-    const destination = body.destination;
-    await Promise.all(
-      paths.map((p) =>
-        this.filesystemService.moveItem(
-          req.user.username,
-          p,
-          destination,
-          userRole,
-        ),
-      ),
+  bulkMove(
+    @Body() body: { paths?: unknown; destination?: unknown },
+    @CurrentUser() user: AuthUser,
+  ) {
+    return settleAll(body.paths, (p) =>
+      this.filesystemService.moveItem(user, p, body.destination),
     );
-    return { success: true, count: paths.length };
   }
 
   @Get('recent')
-  async getRecentFiles(@Query('days') days: number = 7, @Request() req) {
-    const recentFiles = await this.filesystemService.getRecentFiles(days);
-    return { success: true, files: recentFiles };
+  async getRecentFiles(
+    @Query('days') days: unknown,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const parsed = Number(days);
+    const files = await this.filesystemService.getRecentFiles(
+      user,
+      Number.isFinite(parsed) && parsed > 0 ? parsed : 7,
+    );
+    return { success: true, files };
   }
 
   @Get('disk-usage')
-  async getDiskUsage(@Request() req) {
-    const diskUsage = await this.filesystemService.getDiskUsage();
-    return { success: true, diskUsage };
-  }
-
-  @Post('classify')
-  async classifyFile(@Body() body, @Request() req) {
-    const relativePath = body.path;
-    if (!relativePath) {
-      return { success: false, error: 'Missing "path" in request body' };
-    }
-    const classification =
-      await this.classificationService.classifyFile(relativePath);
-    return { success: true, classification };
+  async getDiskUsage() {
+    return {
+      success: true,
+      diskUsage: await this.filesystemService.getDiskUsage(),
+    };
   }
 }
