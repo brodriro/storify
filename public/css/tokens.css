@@ -69,6 +69,19 @@
 
     /* WCAG 2.5.8 minimum is 24px; 44px where space allows. */
     --target-min: 44px;
+
+    /* Floating chat button, and the room bottom-anchored overlays (toasts,
+       selection bar, chat panel) leave so they never cover it or its target. */
+    --fab-size: 64px;
+    --fab-offset: var(--space-xl);
+    --fab-clearance: calc(var(--fab-offset) + var(--fab-size) + var(--space-md));
+}
+
+@media (max-width: 640px) {
+    :root {
+        --fab-size: 56px;
+        --fab-offset: var(--space-md);
+    }
 }
 
 :root[data-theme='dark'] {

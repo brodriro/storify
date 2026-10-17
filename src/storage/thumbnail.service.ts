@@ -1,10 +1,16 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  UnsupportedMediaTypeException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import sharp from 'sharp';
 import type { AppConfig } from '../config/configuration';
+import { t } from '../i18n';
 
 /** Thumbnails older than this are pruned on startup; those still needed are regenerated on demand. */
 const MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -48,6 +54,10 @@ export class ThumbnailService implements OnModuleInit {
     const thumbnail = { path: target, etag: `"${key}"` };
 
     if (await this.isFile(target)) return thumbnail;
+    // A file sharp could not decode is not retried until it changes (the key
+    // includes size and mtime): no decode attempt and no log on every visit.
+    const failedMarker = path.join(this.cacheDir, `${key}.failed`);
+    if (await this.isFile(failedMarker)) throw this.unsupported();
 
     // Written aside and renamed, so a concurrent request never reads half a file.
     const partial = `${target}.${randomUUID()}.partial`;
@@ -58,13 +68,25 @@ export class ThumbnailService implements OnModuleInit {
         .webp({ quality: 80 })
         .toFile(partial);
       await fs.promises.rename(partial, target);
+    } catch (error) {
+      // fs errors (ENOENT, EACCES...) carry a code; decode failures don't.
+      if ((error as NodeJS.ErrnoException).code) throw error;
+      this.logger.warn(
+        `No thumbnail for ${path.basename(source)}: ${(error as Error).message}`,
+      );
+      await fs.promises.writeFile(failedMarker, '').catch(() => undefined);
+      throw this.unsupported();
     } finally {
       await fs.promises.rm(partial, { force: true });
     }
     return thumbnail;
   }
 
-  /** Removes thumbnails (and leftover partials) last written before `cutoff`. */
+  private unsupported() {
+    return new UnsupportedMediaTypeException(t('errors.noThumbnail'));
+  }
+
+  /** Removes thumbnails, failure markers and leftover partials last written before `cutoff`. */
   async prune(cutoff: number): Promise<number> {
     let removed = 0;
     let names: string[];

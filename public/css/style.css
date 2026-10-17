@@ -48,6 +48,18 @@ a:hover {
     display: none !important;
 }
 
+/* Browser surfaces carry the palette too. */
+:root {
+    accent-color: var(--accent);
+    caret-color: var(--accent-text);
+    scrollbar-color: var(--border-strong) transparent;
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
 /* One visible focus style for every control (U3, WCAG 2.4.7). */
 :focus-visible {
     outline: 2px solid var(--focus-ring);
@@ -248,9 +260,17 @@ a:hover {
     margin-bottom: var(--space-xl);
     padding: var(--space-md) var(--space-xl);
     display: flex;
-    justify-content: space-between;
     align-items: center;
     gap: var(--space-md);
+}
+
+/* Without a session there is no greeting: keep the controls on the right. */
+.main-header .header-controls {
+    margin-left: auto;
+}
+
+.main-header .welcome-text + .header-controls {
+    margin-left: 0;
 }
 
 .logo {
@@ -267,7 +287,9 @@ a:hover {
 }
 
 .welcome-text {
-    margin: 0;
+    margin: 0 0 0 auto;
+    color: var(--text-muted);
+    font-size: 0.9rem;
 }
 
 .header-controls {
@@ -286,6 +308,12 @@ a:hover {
     gap: var(--space-md);
     flex-wrap: wrap;
     margin-bottom: var(--space-xl);
+}
+
+.page-heading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
 }
 
 .page-title {
@@ -333,10 +361,15 @@ a:hover {
 
 .storage-meter {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-    min-width: 160px;
+    align-items: center;
+    gap: var(--space-sm);
     color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.storage-meter .usage-bar {
+    width: 120px;
+    flex-shrink: 0;
 }
 
 .usage-bar {
@@ -479,7 +512,7 @@ a:hover {
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-sm) var(--space-md);
     background: none;
     border: none;
     border-radius: inherit;
@@ -497,21 +530,24 @@ a:hover {
     outline-offset: -2px;
 }
 
+/* Every card shares one 4:3 media box: rows stay aligned whatever the
+   content, and a folder no longer takes a photo's height. */
 .file-icon {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 220px;
-    margin-bottom: var(--space-md);
+    aspect-ratio: 4 / 3;
+    margin-bottom: var(--space-sm);
+    border-radius: 8px;
+    background: var(--surface-sunken);
+    overflow: hidden;
 }
 
 .file-thumbnail {
     width: 100%;
-    height: 220px;
+    height: 100%;
     object-fit: cover;
-    border-radius: 8px;
-    background: var(--surface-sunken);
 }
 
 .fallback-icon {
@@ -519,15 +555,24 @@ a:hover {
 }
 
 .file-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    padding: 0 var(--space-xs);
     font-weight: 500;
-    font-size: 0.8rem;
-    word-break: break-all;
+    font-size: 0.8125rem;
     line-height: 1.4;
+    /* Break long names where needed, not every word mid-way. */
+    overflow-wrap: anywhere;
     color: var(--text);
 }
 
 .file-meta {
+    padding: 0 var(--space-xs);
     font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
     color: var(--text-muted);
     margin-top: var(--space-xs);
 }
@@ -594,7 +639,7 @@ a:hover {
 .dropdown-content {
     position: absolute;
     right: 0;
-    top: 42px;
+    top: calc(100% + 6px);
     min-width: 160px;
     padding: var(--space-xs);
     background: var(--surface);
@@ -913,8 +958,8 @@ a:hover {
 
 .toast-container {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: var(--fab-clearance);
+    right: var(--fab-offset);
     z-index: 2000;
     display: flex;
     flex-direction: column;
@@ -1128,20 +1173,53 @@ a:hover {
     animation: slideUp 400ms var(--ease-out);
 }
 
-/* Users who ask for less motion get none: no entrance animations, hover
-   lifts or slides (WCAG 2.3.3). Transitions collapse to an instant change. */
+/* Reduced motion: nothing slides, lifts or rotates, but state changes keep
+   a short opacity fade (not motion) so appearing toasts, menus and panels
+   still read as changes (WCAG 2.3.3). */
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
+    html {
+        scroll-behavior: auto;
+    }
+
+    .animate-slide-up {
+        animation-name: fadeIn;
     }
 
     .file-card:hover {
         transform: none;
+    }
+
+    .order-icon {
+        transition: none;
+    }
+
+    .toast {
+        transform: none;
+        opacity: 0;
+        transition: opacity var(--transition-fast);
+    }
+
+    .toast.show {
+        opacity: 1;
+    }
+}
+
+/* Touch: every control reaches the 44 px target (the 36 px compact sizes
+   are for mouse pointers only). */
+@media (pointer: coarse) {
+    .logo,
+    .btn-sm,
+    .sort-select,
+    .breadcrumb-link,
+    .dropdown-item,
+    .folder-item {
+        min-height: var(--target-min);
+    }
+
+    .btn-icon,
+    .kebab-toggle {
+        min-width: var(--target-min);
+        min-height: var(--target-min);
     }
 }
 
@@ -1181,7 +1259,12 @@ a:hover {
     }
 
     .welcome-text {
+        margin: 0;
         font-size: 0.85rem;
+    }
+
+    .main-header .header-controls {
+        margin-left: 0;
     }
 
     .file-grid {
@@ -1189,21 +1272,10 @@ a:hover {
         gap: var(--space-sm);
     }
 
-    .file-open {
-        padding: 0.8rem;
-    }
-
-    .file-icon {
-        min-height: 140px;
-    }
-
-    .file-thumbnail {
-        height: 140px;
-    }
-
     .selection-action-bar {
         left: var(--space-md);
         right: var(--space-md);
+        bottom: var(--fab-clearance);
         transform: none;
         flex-wrap: wrap;
         justify-content: center;

@@ -158,6 +158,7 @@ describe('Storify (e2e)', () => {
       '/vendor/dompurify/purify.min.js',
       '/js/browser.js',
       '/css/fonts.css',
+      '/favicon.svg',
       '/vendor/fira-sans/fira-sans-latin-400-normal.woff2',
       '/vendor/fira-code/fira-code-latin-600-normal.woff2',
     ]) {
