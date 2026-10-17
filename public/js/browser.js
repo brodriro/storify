@@ -73,7 +73,6 @@
             for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
             svg.appendChild(el);
         }
-        svg.style.color = type === 'error' ? '#ef4444' : 'var(--color-cta)';
         return svg;
     }
 

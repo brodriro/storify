@@ -5,15 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Storify NAS</title>
+    <!-- Sets html[data-theme] before the page paints -->
+    <script src="/js/theme.js"></script>
     <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/tokens.css">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/style-ux.css">
     {{#if user}}<link rel="stylesheet" href="/css/chat.css">{{/if}}
 </head>
 
 <body class="container animate-fade-in">
-    <!-- Applies the saved theme before the page paints -->
-    <script src="/js/theme.js"></script>
     {{> header}}
 
     {{#if user}}

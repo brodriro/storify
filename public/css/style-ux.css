@@ -4,10 +4,10 @@
     position: absolute;
     right: 10px;
     top: 40px;
-    background: var(--glass-bg);
+    background: var(--surface);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--border);
     min-width: 140px;
     box-shadow: var(--shadow-lg);
     z-index: 50;
@@ -57,36 +57,35 @@
     gap: 8px;
     cursor: pointer;
     font-size: 0.85rem;
-    color: var(--text-main);
+    color: var(--text);
     transition: background 0.2s;
 }
 
 .dropdown-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--surface-hover);
 }
 
 .dropdown-item.danger {
-    color: #ef4444;
+    color: var(--danger-text);
 }
 
 .dropdown-item.danger:hover {
-    background: rgba(239, 68, 68, 0.1);
+    background: var(--danger-soft);
 }
 
 /* Custom Prompt Modal styles already exist mostly in .modal-* classes */
 .prompt-input {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--border-strong);
     border-radius: var(--rounded-md);
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-main);
+    background: var(--surface);
+    color: var(--text);
     margin: 1rem 0;
 }
 
 .prompt-input:focus {
-    outline: none;
-    border-color: var(--primary);
+    border-color: var(--accent);
 }
 
 .modal-footer {
@@ -108,19 +107,27 @@
 }
 
 .toast {
-    background: var(--glass-bg);
+    background: var(--surface);
     backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--border);
     padding: 12px 20px;
     border-radius: var(--rounded-md);
     box-shadow: var(--shadow-md);
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--text-main);
+    color: var(--text);
     font-size: 0.9rem;
     transform: translateX(120%);
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast-icon-error {
+    color: var(--danger-text);
+}
+
+.toast-icon-success {
+    color: var(--accent-text);
 }
 
 .toast.show {
@@ -142,7 +149,7 @@
 }
 
 .breadcrumb-link {
-    color: var(--primary);
+    color: var(--accent-text);
     font-weight: 500;
     cursor: pointer;
     padding: 4px 8px;
@@ -151,7 +158,7 @@
 }
 
 .breadcrumb-link:hover {
-    background: rgba(34, 197, 94, 0.1);
+    background: var(--accent-soft);
 }
 
 .breadcrumb-separator {
@@ -178,6 +185,6 @@
 }
 
 .file-card.selected {
-    border-color: var(--primary);
-    background: rgba(34, 197, 94, 0.05);
+    border-color: var(--accent);
+    background: var(--accent-soft);
 }

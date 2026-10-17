@@ -1,98 +1,31 @@
 /* Loaded after fonts.css; style-ux.css is linked separately (no @import chains). */
 
-:root {
-    /* Color Palette - Design System */
-    --color-primary: #0F172A;
-    --color-secondary: #1E293B;
-    --color-cta: #22C55E;
-    --color-background: #020617;
-    --color-text: #F8FAFC;
-
-    /* Legacy Mappings */
-    --primary: var(--color-cta);
-    --primary-hover: #16a34a;
-    --primary-light: #dcfce7;
-
-    --bg-color: #f8fafc;
-    /* Overridden in body */
-    --text-main: #334155;
-    --text-muted: #64748b;
-
-    /* Spacing */
-    --space-xs: 0.25rem;
-    --space-sm: 0.5rem;
-    --space-md: 1rem;
-    --space-lg: 1.5rem;
-    --space-xl: 2rem;
-    --space-2xl: 3rem;
-    --space-3xl: 4rem;
-
-    /* Glassmorphism Variables */
-    --glass-bg: rgba(255, 255, 255, 0.92);
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-
-    --rounded-lg: 16px;
-    --rounded-md: 10px;
-
-    /* Shadow Depths */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
-
-    /* Transitions */
-    --transition-fast: 0.2s ease;
-    --transition-medium: 0.3s ease;
-}
-
-body.dark {
-    --bg-color: var(--color-background);
-    --text-main: var(--color-text);
-    --text-muted: #94a3b8;
-
-    --glass-bg: rgba(15, 23, 42, 0.92);
-    /* Slate-900 with opacity */
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-
-    /* Re-map legacy */
-    --primary: var(--color-cta);
-}
-
 body {
-    font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
-    background-color: var(--bg-color);
-    /* Deep Space Mesh Gradient */
+    font-family: var(--font-sans);
+    background-color: var(--bg);
     background-image:
-        radial-gradient(at 0% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%),
-        radial-gradient(at 50% 0%, hsla(222, 47%, 8%, 1) 0, transparent 50%),
-        radial-gradient(at 100% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%);
-    background-size: 100% 100%;
+        radial-gradient(at 0% 0%, var(--bg-glow-1) 0, transparent 50%),
+        radial-gradient(at 50% 0%, var(--bg-glow-2) 0, transparent 50%),
+        radial-gradient(at 100% 0%, var(--bg-glow-1) 0, transparent 50%);
     background-attachment: fixed;
-    color: var(--text-main);
+    color: var(--text);
     margin: 0;
     min-height: 100vh;
-    transition: background-color var(--transition-medium), color var(--transition-medium);
 }
 
-/* Light mode overrides */
-body:not(.dark) {
-    --bg-color: #F8FAFC;
-    --text-main: #0F172A;
-    background-image:
-        radial-gradient(at 0% 0%, hsla(210, 100%, 96%, 1) 0, transparent 50%),
-        radial-gradient(at 50% 0%, hsla(220, 100%, 98%, 1) 0, transparent 50%),
-        radial-gradient(at 100% 0%, hsla(200, 100%, 96%, 1) 0, transparent 50%);
+/* One visible focus style for every control (U3, WCAG 2.4.7). */
+:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
 }
 
 /* Utilities */
 /* Solid surface: blur is reserved for single overlaid surfaces (modal
    backdrop, chat, open menu, toasts), never for repeated elements. */
 .glass-panel {
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
     border-radius: var(--rounded-lg);
 }
 
@@ -110,17 +43,17 @@ h3 {
     font-weight: 600;
     letter-spacing: -0.025em;
     margin-top: 0;
-    color: var(--text-main);
+    color: var(--text);
 }
 
 a {
-    color: var(--primary);
+    color: var(--accent-text);
     text-decoration: none;
     transition: color var(--transition-fast);
 }
 
 a:hover {
-    color: var(--primary-hover);
+    color: var(--accent-hover);
 }
 
 /* Buttons */
@@ -139,8 +72,8 @@ a:hover {
 }
 
 .btn-primary {
-    background: var(--color-cta);
-    color: white;
+    background: var(--accent);
+    color: var(--on-accent);
     box-shadow: var(--shadow-md);
 }
 
@@ -152,26 +85,22 @@ a:hover {
 
 .btn-secondary {
     background: transparent;
-    border: 1px solid var(--glass-border);
-    color: var(--text-main);
+    border: 1px solid var(--border);
+    color: var(--text);
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: var(--text-main);
-}
-
-.dark .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--surface-hover);
+    border-color: var(--text);
 }
 
 .btn-danger {
-    background: #ef4444;
-    color: white;
+    background: var(--danger);
+    color: var(--on-danger);
 }
 
 .btn-danger:hover {
-    background: #dc2626;
+    background: var(--danger-hover);
 }
 
 .btn-sm {
@@ -236,17 +165,17 @@ a:hover {
     transition: all 200ms ease;
     cursor: pointer;
     position: relative;
-    border: 1px solid transparent;
+    border: 1px solid var(--border);
     /* Use design system card bg if desired, or keep glass */
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--surface);
     border-radius: 12px;
     box-shadow: var(--shadow-sm);
 }
 
 .file-card:hover {
     transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--color-cta);
+    background: var(--surface-hover);
+    border-color: var(--accent);
     box-shadow: var(--shadow-lg);
 }
 
@@ -266,7 +195,7 @@ a:hover {
     height: 220px;
     object-fit: cover;
     border-radius: 8px;
-    background: var(--bg-secondary);
+    background: var(--surface-sunken);
 }
 
 .fallback-icon {
@@ -282,7 +211,7 @@ a:hover {
     font-size: 0.72rem;
     word-break: break-all;
     line-height: 1.4;
-    color: var(--text-main);
+    color: var(--text);
 }
 
 .file-meta {
@@ -348,15 +277,15 @@ a:hover {
 }
 
 .drop-zone {
-    border: 2px dashed var(--glass-border);
+    border: 2px dashed var(--border);
     border-radius: var(--rounded-lg);
     transition: all var(--transition-medium);
-    background: rgba(255, 255, 255, 0.02);
+    background: transparent;
 }
 
 .drop-zone.drag-over {
-    border-color: var(--primary);
-    background: rgba(37, 99, 235, 0.1);
+    border-color: var(--accent);
+    background: var(--accent-soft);
     transform: scale(1.01);
 }
 
@@ -367,7 +296,7 @@ a:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.85);
+    background: var(--overlay);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     display: flex;
@@ -385,8 +314,8 @@ a:hover {
 }
 
 .modal-content {
-    background: rgba(15, 23, 42, 0.9);
-    border: 1px solid var(--glass-border);
+    background: var(--surface);
+    border: 1px solid var(--border);
     padding: 2rem;
     border-radius: var(--rounded-lg);
     max-width: 95%;
@@ -426,7 +355,7 @@ a:hover {
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: var(--text-main);
+    color: var(--text);
     line-height: 1;
 }
 
@@ -438,11 +367,11 @@ a:hover {
 }
 
 .login-card {
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
+    background: var(--surface);
+    border: 1px solid var(--border);
     padding: 2rem;
     border-radius: var(--rounded-lg);
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--shadow-md);
     width: 100%;
     max-width: 400px;
 }
@@ -461,28 +390,27 @@ a:hover {
 .form-label {
     display: block;
     margin-bottom: 0.5rem;
-    color: var(--text-main);
+    color: var(--text);
 }
 
 .form-input {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--border-strong);
     border-radius: var(--rounded-md);
-    background: rgba(255, 255, 255, 0.5);
-    color: var(--text-main);
+    background: var(--surface);
+    color: var(--text);
     box-sizing: border-box;
 }
 
 .form-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: rgba(255, 255, 255, 0.8);
+    border-color: var(--accent);
+    background: var(--surface);
 }
 
 .btn-submit {
-    background: var(--primary);
-    color: white;
+    background: var(--accent);
+    color: var(--on-accent);
     padding: 0.75rem;
     border: none;
     border-radius: var(--rounded-md);
@@ -492,15 +420,15 @@ a:hover {
 }
 
 .btn-submit:hover {
-    background: var(--primary-hover);
+    background: var(--accent-hover);
 }
 
 .error-msg {
-    color: #ef4444;
+    color: var(--danger-text);
     display: none;
     margin-top: 1rem;
     text-align: center;
-    background: rgba(239, 68, 68, 0.1);
+    background: var(--danger-soft);
     padding: 0.5rem;
     border-radius: var(--rounded-md);
 }
@@ -528,14 +456,10 @@ a:hover {
 .sort-select {
     background: transparent;
     border: none;
-    color: var(--text-main);
+    color: var(--text);
     font-family: inherit;
     cursor: pointer;
     padding-right: 1rem;
-}
-
-.sort-select:focus {
-    outline: none;
 }
 
 .current-path-bar {
@@ -597,20 +521,20 @@ a:hover {
     height: 8px;
     border: none;
     border-radius: 4px;
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--border);
     overflow: hidden;
 }
 
 .usage-bar::-webkit-progress-bar {
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--border);
 }
 
 .usage-bar::-webkit-progress-value {
-    background: var(--primary);
+    background: var(--accent);
 }
 
 .usage-bar::-moz-progress-bar {
-    background: var(--primary);
+    background: var(--accent);
 }
 
 .storage-meter {
@@ -637,13 +561,13 @@ a:hover {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--border);
     padding-bottom: 0.25rem;
 }
 
 .badge-primary {
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--primary);
+    background: var(--accent-soft);
+    color: var(--accent-text);
     padding: 2px 8px;
     border-radius: 10px;
     font-size: 0.8rem;
@@ -653,7 +577,7 @@ a:hover {
 .logo {
     font-weight: 600;
     font-size: 1.5rem;
-    color: var(--primary);
+    color: var(--accent-text);
 }
 
 .header-controls {
@@ -663,7 +587,7 @@ a:hover {
 }
 
 .btn-logout {
-    color: var(--text-main) !important;
+    color: var(--text) !important;
 }
 
 /* Icon Utilities */

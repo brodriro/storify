@@ -127,7 +127,7 @@
 
                     <div class="file-icon">
                         {{#if this.isDirectory}}
-                        <svg class="icon-lg" style="color: var(--color-cta);" viewBox="0 0 24 24">
+                        <svg class="icon-lg" style="color: var(--accent-text);" viewBox="0 0 24 24">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
                             </path>
                         </svg>
@@ -239,7 +239,7 @@
             <div class="modal-header">
                 <div style="display: flex; flex-direction: column;">
                     <h3 id="modalTitle"
-                        style="margin: 0; font-family: 'Fira Code', monospace; color: var(--color-cta);">filename.ext
+                        style="margin: 0; font-family: 'Fira Code', monospace; color: var(--accent-text);">filename.ext
                     </h3>
                     <small id="modalMeta" style="color: var(--text-muted); font-size: 0.8rem;">0.0 MB</small>
                 </div>
@@ -279,13 +279,13 @@
     <div id="actionModal" class="modal-overlay" data-action="close-action-modal">
         <div class="modal-content" style="max-width: 400px; padding: 1.5rem;">
             <div class="modal-header">
-                <h3 id="actionModalTitle" style="margin: 0; color: var(--color-cta);">Action</h3>
+                <h3 id="actionModalTitle" style="margin: 0; color: var(--accent-text);">Action</h3>
                 <button type="button" class="btn-close" data-action="close-action-modal" aria-label="Close"
                     style="font-size: 1.5rem;">&times;</button>
             </div>
             <div class="modal-body"
                 style="min-height: auto; align-items: flex-start; justify-content: flex-start; flex-direction: column;">
-                <p id="actionModalText" style="margin: 0 0 1rem 0; color: var(--text-main);">Please confirm.</p>
+                <p id="actionModalText" style="margin: 0 0 1rem 0; color: var(--text);">Please confirm.</p>
                 <input type="text" id="actionModalInput" class="prompt-input" style="display: none;">
             </div>
             <div class="modal-footer">
