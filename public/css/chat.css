@@ -1,9 +1,9 @@
 .chat-button {
     position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    width: 64px;
-    height: 64px;
+    bottom: var(--fab-offset);
+    right: var(--fab-offset);
+    width: var(--fab-size);
+    height: var(--fab-size);
     background: var(--accent);
     color: var(--on-accent);
     border-radius: 50%;
@@ -37,10 +37,10 @@
 /* Widget Container */
 .chat-sidebar {
     position: fixed;
-    bottom: 6rem;
+    bottom: var(--fab-clearance);
     right: -450px;
     width: 380px;
-    height: min(600px, calc(100vh - 8rem));
+    height: min(600px, calc(100vh - var(--fab-clearance) - var(--space-xl)));
     background: var(--surface);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
@@ -55,7 +55,7 @@
 }
 
 .chat-sidebar.open {
-    right: 2rem;
+    right: var(--fab-offset);
     opacity: 1;
 }
 
@@ -63,8 +63,8 @@
     .chat-sidebar {
         width: calc(100% - 2rem);
         right: -100%;
-        bottom: 5.5rem;
-        height: calc(100vh - 7rem);
+        bottom: var(--fab-clearance);
+        height: calc(100vh - var(--fab-clearance) - var(--space-md));
     }
 
     .chat-sidebar.open {

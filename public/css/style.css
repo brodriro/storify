@@ -594,7 +594,7 @@ a:hover {
 .dropdown-content {
     position: absolute;
     right: 0;
-    top: 42px;
+    top: calc(100% + 6px);
     min-width: 160px;
     padding: var(--space-xs);
     background: var(--surface);
@@ -913,8 +913,8 @@ a:hover {
 
 .toast-container {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: var(--fab-clearance);
+    right: var(--fab-offset);
     z-index: 2000;
     display: flex;
     flex-direction: column;
@@ -1145,6 +1145,24 @@ a:hover {
     }
 }
 
+/* Touch: every control reaches the 44 px target (the 36 px compact sizes
+   are for mouse pointers only). */
+@media (pointer: coarse) {
+    .btn-sm,
+    .sort-select,
+    .breadcrumb-link,
+    .dropdown-item,
+    .folder-item {
+        min-height: var(--target-min);
+    }
+
+    .btn-icon,
+    .kebab-toggle {
+        min-width: var(--target-min);
+        min-height: var(--target-min);
+    }
+}
+
 /* ---- Small screens ------------------------------------------------------- */
 
 @media (max-width: 768px) {
@@ -1204,6 +1222,7 @@ a:hover {
     .selection-action-bar {
         left: var(--space-md);
         right: var(--space-md);
+        bottom: var(--fab-clearance);
         transform: none;
         flex-wrap: wrap;
         justify-content: center;
