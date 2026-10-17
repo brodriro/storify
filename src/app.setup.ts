@@ -6,6 +6,7 @@ import { existsSync } from 'fs';
 import hbs from 'hbs';
 import helmet from 'helmet';
 import { dirname, join } from 'path';
+import { clientMessagesJson, format, lookup } from './i18n';
 import { ViewExceptionFilter } from './common/view-exception.filter';
 
 /**
@@ -91,6 +92,21 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
     ) {
       return arg1 == arg2 ? options.fn(this) : options.inverse(this);
     },
+  );
+
+  // {{t "browser.title"}} or {{t "browser.usedOf" used=a total=b}} (escaped).
+  hbs.registerHelper(
+    't',
+    function (key: string, options: Handlebars.HelperOptions) {
+      const template = lookup(key);
+      if (template === undefined)
+        throw new Error(`Unknown message key: ${key}`);
+      return format(template, options.hash as Record<string, unknown>);
+    },
+  );
+  hbs.registerHelper(
+    'clientMessages',
+    () => new hbs.handlebars.SafeString(clientMessagesJson()),
   );
 
   app.use(cookieParser());

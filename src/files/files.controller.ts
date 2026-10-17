@@ -20,6 +20,7 @@ import * as path from 'path';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { t } from '../i18n';
 import { formatSize } from '../common/file-types';
 import { StorageService, UploadedTempFile } from '../storage/storage.service';
 import {
@@ -154,6 +155,9 @@ export class FilesController {
     }).replace(/</g, '\\u003c');
 
     return {
+      pageTitle: currentPath
+        ? `${parts[parts.length - 1]} · ${t('browser.title')}`
+        : t('browser.title'),
       files: entries,
       clientData,
       user,

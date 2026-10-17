@@ -19,11 +19,11 @@
         try {
             const res = await fetch('/admin/backup', { method: 'POST' });
             const data = await res.json().catch(() => ({}));
-            if (data.inProgress) showStatus('Ya hay un backup ejecutándose.');
-            else if (res.ok && data.success) showStatus('Backup iniciado. Se generará en segundo plano.');
-            else showStatus('No se pudo iniciar el backup.');
+            if (data.inProgress) showStatus(t('dashboard.inProgress'));
+            else if (res.ok && data.success) showStatus(t('dashboard.started'));
+            else showStatus(t('dashboard.failed'));
         } catch (e) {
-            showStatus('Error al iniciar el backup.');
+            showStatus(t('dashboard.error'));
             console.error(e);
         } finally {
             button.disabled = false;

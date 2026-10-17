@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(responseTimer);
         responseTimer = setTimeout(() => {
             finishWaiting();
-            appendMessage('No he recibido respuesta del asistente. Inténtalo de nuevo.', 'ai');
+            appendMessage(t('chat.noResponse'), 'ai');
         }, RESPONSE_TIMEOUT_MS);
     }
 
@@ -111,12 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmBtn = document.createElement('button');
         confirmBtn.type = 'button';
         confirmBtn.className = 'btn btn-primary btn-sm';
-        confirmBtn.textContent = 'Confirmar';
+        confirmBtn.textContent = t('chat.confirm');
         confirmBtn.addEventListener('click', () => decide(true));
         const cancelBtn = document.createElement('button');
         cancelBtn.type = 'button';
         cancelBtn.className = 'btn btn-secondary btn-sm';
-        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.textContent = t('chat.cancel');
         cancelBtn.addEventListener('click', () => decide(false));
         bar.append(confirmBtn, cancelBtn);
         chatHistory.appendChild(bar);
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('disconnect', () => {
         if (!typingIndicator.classList.contains('visible')) return;
         finishWaiting();
-        appendMessage('Se ha perdido la conexión con el asistente.', 'ai');
+        appendMessage(t('chat.disconnected'), 'ai');
     });
 
     function getTimestamp() {
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const meta = document.createElement('div');
         meta.className = 'msg-meta';
-        const name = sender === 'user' ? 'You' : 'Storify AI';
+        const name = sender === 'user' ? t('chat.you') : t('chat.assistant');
         const nameEl = document.createElement('span');
         nameEl.textContent = name;
         const timeEl = document.createElement('span');
@@ -195,18 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayWelcomeMessage() {
-        const welcomeMessage = 'Hi! I am your Storify NAS Assistant. I can help you with:\n' +
-            '-   **Available Space**\n' +
-            '-   **Recent Files**\n' +
-            '-   **System Backups**\n' +
-            '-   **General questions**\n\nHow can I help you today?';
-        appendMessage(welcomeMessage, 'ai');
+        appendMessage(t('chat.welcome'), 'ai');
         if (chatInfo && !chatInfo.enabled) {
-            appendNotice('El asistente no está configurado en este servidor.');
+            appendNotice(t('chat.disabled'));
         } else if (chatInfo) {
-            appendNotice(
-                `Tus mensajes, y el contenido de los documentos que me pidas resumir o clasificar, se envían a ${chatInfo.provider} para procesarlos. Las acciones que modifican archivos siempre te pedirán confirmación.`,
-            );
+            appendNotice(t('chat.providerNotice', { provider: chatInfo.provider }));
         }
     }
 });

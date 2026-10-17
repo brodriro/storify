@@ -1,13 +1,13 @@
 {{#> main}}
 <div class="page animate-slide-up">
     <div class="page-header">
-        <h1 class="page-title">Admin Dashboard</h1>
+        <h1 class="page-title">{{t "dashboard.title"}}</h1>
         <a href="/files/browser" class="btn btn-secondary">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <polyline points="15 18 9 12 15 6"></polyline>
                 <line x1="9" y1="12" x2="21" y2="12"></line>
             </svg>
-            Volver al navegador
+            {{t "dashboard.back"}}
         </a>
     </div>
 
@@ -21,17 +21,17 @@
                     <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                     <line x1="12" y1="22.08" x2="12" y2="12"></line>
                 </svg>
-                Storage Usage
+                {{t "dashboard.usage"}}
             </h2>
             <p class="usage-files-count">
-                {{stats.totalFiles}} <span class="usage-files-label">files</span>
+                {{stats.totalFiles}} <span class="usage-files-label">{{t "dashboard.files"}}</span>
             </p>
             <div class="usage-meta">
-                <span>Total Size</span>
-                <strong>{{totalSizeMb}} MB</strong>
+                <span>{{t "dashboard.totalSize"}}</span>
+                <strong>{{totalSizeLabel}}</strong>
             </div>
-            <progress class="usage-bar" max="100" value="{{usagePercent}}" aria-label="Storage used"></progress>
-            <p class="usage-note">Usage relative to {{config.totalStorageGb}}GB limit</p>
+            <progress class="usage-bar" max="100" value="{{usagePercent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
+            <p class="usage-note">{{#if limitEnforced}}{{t "dashboard.usageLimit" gb=config.totalStorageGb}}{{else}}{{t "dashboard.usageReference" gb=config.totalStorageGb}}{{/if}}</p>
         </section>
 
         <section class="panel stat-card" aria-labelledby="types-title">
@@ -42,7 +42,7 @@
                     <line x1="12" y1="18" x2="12" y2="12"></line>
                     <line x1="9" y1="15" x2="15" y2="15"></line>
                 </svg>
-                File Types
+                {{t "dashboard.fileTypes"}}
             </h2>
             <ul class="list-clean">
                 {{#each stats.fileTypes}}
@@ -62,13 +62,13 @@
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                 </svg>
-                User Quotas
+                {{t "dashboard.perUser"}}
             </h2>
             <ul class="list-clean">
-                {{#each userUsageMb}}
+                {{#each userUsage}}
                 <li class="list-item-row">
                     <span class="list-key">{{@key}}</span>
-                    <span class="list-value">{{this}} MB</span>
+                    <span class="list-value">{{this}}</span>
                 </li>
                 {{/each}}
             </ul>
@@ -81,9 +81,9 @@
                     <polyline points="7 10 12 15 17 10"></polyline>
                     <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                System Backup
+                {{t "dashboard.backup"}}
             </h2>
-            <p class="stat-text">Create and download a full backup of all user data.</p>
+            <p class="stat-text">{{t "dashboard.backupText"}}</p>
             <div class="stack">
                 <button type="button" class="btn btn-primary btn-block" id="createBackupBtn">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -91,7 +91,7 @@
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    Create Backup
+                    {{t "dashboard.createBackup"}}
                 </button>
                 <a href="/admin/backup/download" class="btn btn-secondary btn-block">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -99,7 +99,7 @@
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
-                    Download Latest Backup
+                    {{t "dashboard.downloadBackup"}}
                 </a>
                 <p id="backupToast" class="backup-status" role="status" aria-live="polite"></p>
             </div>

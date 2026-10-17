@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Storify NAS</title>
+    <title>{{#if pageTitle}}{{pageTitle}} · {{/if}}{{t "app.name"}}</title>
     <!-- Sets html[data-theme] before the page paints -->
     <script src="/js/theme.js"></script>
+    <!-- UI strings for public/js (src/i18n), inert JSON read by i18n.js -->
+    <script type="application/json" id="i18n">{{clientMessages}}</script>
+    <script src="/js/i18n.js"></script>
     <link rel="stylesheet" href="/css/fonts.css">
     <link rel="stylesheet" href="/css/tokens.css">
     <link rel="stylesheet" href="/css/style.css">
@@ -14,18 +17,18 @@
 </head>
 
 <body class="container">
-    <a class="skip-link" href="#main">Skip to content</a>
+    <a class="skip-link" href="#main">{{t "app.skipToContent"}}</a>
     {{> header}}
 
     {{#if user}}
-    <button type="button" id="chat-button" class="chat-button" aria-label="Open assistant"
+    <button type="button" id="chat-button" class="chat-button" aria-label="{{t "chat.open"}}"
         aria-expanded="false" aria-controls="chat-sidebar">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>
     </button>
 
-    <aside id="chat-sidebar" class="chat-sidebar" aria-label="Assistant" inert>
+    <aside id="chat-sidebar" class="chat-sidebar" aria-label="{{t "chat.assistant"}}" inert>
         <div class="chat-header">
             <div class="chat-header-info">
                 <div class="chat-header-icon">
@@ -37,11 +40,11 @@
                     </svg>
                 </div>
                 <div>
-                    <h2 class="chat-title">Storify AI</h2>
-                    <p>NAS Assistant</p>
+                    <h2 class="chat-title">{{t "chat.title"}}</h2>
+                    <p>{{t "chat.subtitle"}}</p>
                 </div>
             </div>
-            <button type="button" id="close-chat" aria-label="Close assistant">
+            <button type="button" id="close-chat" aria-label="{{t "chat.close"}}">
                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -49,7 +52,7 @@
             </button>
         </div>
 
-        <div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation"></div>
+        <div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="{{t "chat.conversation"}}"></div>
 
         <div class="typing-indicator-wrapper" id="typing-indicator" aria-hidden="true">
             <div class="typing-dots">
@@ -59,9 +62,9 @@
 
         <div class="chat-input-container">
             <div class="chat-input-wrapper">
-                <textarea id="chat-message-input" aria-label="Message" placeholder="Ask about your files, storage..." rows="1"></textarea>
+                <textarea id="chat-message-input" aria-label="{{t "chat.message"}}" placeholder="{{t "chat.placeholder"}}" rows="1"></textarea>
             </div>
-            <button type="button" id="send-chat-message" class="btn-send-chat" disabled aria-label="Send">
+            <button type="button" id="send-chat-message" class="btn-send-chat" disabled aria-label="{{t "chat.send"}}">
                 <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
                     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>

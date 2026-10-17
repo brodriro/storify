@@ -32,7 +32,7 @@
         const payload = await res.json().catch(() => ({}));
         if (!res.ok) {
             const message = Array.isArray(payload.message) ? payload.message.join(', ') : payload.message;
-            throw new Error(message || `Request failed (${res.status})`);
+            throw new Error(message || t('browser.requestFailed', { status: res.status }));
         }
         return payload;
     }
@@ -48,7 +48,7 @@
     function reportBulk(result, label) {
         if (result.failed && result.failed.length) {
             const detail = result.failed.map((f) => `${f.path}: ${f.error}`).join('\n');
-            sessionStorageSafeSet('pendingToast', JSON.stringify({ type: 'error', message: `${label}: ${result.failed.length} failed\n${detail}` }));
+            sessionStorageSafeSet('pendingToast', JSON.stringify({ type: 'error', message: `${t('browser.partialFailure', { label, count: result.failed.length })}\n${detail}` }));
         }
         window.location.reload();
     }
@@ -150,7 +150,7 @@
         bar.hidden = selected.size === 0;
         document.body.classList.toggle('selection-mode', selected.size > 0);
         if (selected.size > 0) {
-            $('selectionCount').textContent = `${selected.size} selected`;
+            $('selectionCount').textContent = t('browser.selectedCount', { count: selected.size });
         } else {
             document.querySelectorAll('.bulk-checkbox').forEach((cb) => (cb.checked = false));
             document.querySelectorAll('.file-card.selected').forEach((c) => c.classList.remove('selected'));
@@ -191,7 +191,7 @@
             body.appendChild(video);
         } else {
             const p = document.createElement('p');
-            p.textContent = 'Preview not available for this file type.';
+            p.textContent = t('browser.previewUnavailable');
             body.appendChild(p);
         }
         $('modalNav').hidden = !(isPreviewable(file) && files.some((f, i) => i !== index && isPreviewable(f)));
@@ -289,19 +289,19 @@
                     'pendingToast',
                     JSON.stringify({
                         type: 'success',
-                        message: `Duplicate files renamed:\n${renamed.map((u) => `"${u.original}" -> "${u.final}"`).join('\n')}`,
+                        message: `${t('browser.renamedDuplicates')}\n${renamed.map((u) => `«${u.original}» → «${u.final}»`).join('\n')}`,
                     }),
                 );
             }
             window.location.reload();
-        }, 'Upload failed');
+        }, t('browser.uploadFailed'));
     }
 
     function moveTo(path, destination) {
         run(async () => {
             await api('/files/move', 'POST', { path, destination });
             window.location.reload();
-        }, 'Move failed');
+        }, t('browser.moveFailed'));
     }
 
     const cardActions = {
@@ -310,26 +310,26 @@
         },
         rename(card) {
             const name = card.dataset.name;
-            openActionModal('Rename', 'New name:', 'prompt', (newName) => {
+            openActionModal(t('browser.renameTitle'), t('browser.renamePrompt'), 'prompt', (newName) => {
                 if (!newName || newName === name) return;
                 run(async () => {
                     await api('/files/rename', 'POST', { path: card.dataset.path, newName });
                     window.location.reload();
-                }, 'Rename failed');
+                }, t('browser.renameFailed'));
             }, name);
         },
         move(card) {
-            openActionModal('Move', "Destination folder (relative to the root, e.g. 'photos'):", 'prompt', (destination) => {
+            openActionModal(t('browser.moveTitle'), t('browser.movePrompt'), 'prompt', (destination) => {
                 if (destination === null || destination === undefined) return;
                 moveTo(card.dataset.path, destination);
             }, currentPath);
         },
         delete(card) {
-            openActionModal('Delete', `Delete ${card.dataset.name}?`, 'confirm', () => {
+            openActionModal(t('browser.deleteTitle'), t('browser.deleteConfirm', { name: card.dataset.name }), 'confirm', () => {
                 run(async () => {
                     await api('/files/delete', 'DELETE', { path: card.dataset.path });
                     window.location.reload();
-                }, 'Delete failed');
+                }, t('browser.deleteFailed'));
             }, '', true);
         },
         menu(card, toggle) {
@@ -345,12 +345,12 @@
         },
         upload: () => $('fileInput').click(),
         'new-folder': () =>
-            openActionModal('New folder', 'Folder name:', 'prompt', (name) => {
+            openActionModal(t('browser.newFolderTitle'), t('browser.newFolderPrompt'), 'prompt', (name) => {
                 if (!name) return;
                 run(async () => {
                     await api('/files/mkdir', 'POST', { path: currentPath, name });
                     window.location.reload();
-                }, 'Could not create folder');
+                }, t('browser.createFolderFailed'));
             }),
         'close-preview': () => previewModal.close(),
         'preview-prev': () => navigatePreview(-1),
@@ -362,15 +362,15 @@
         },
         'bulk-delete': () => {
             if (!selected.size) return;
-            openActionModal('Delete selection', `Delete ${selected.size} item(s)? This cannot be undone.`, 'confirm', () => {
-                run(async () => reportBulk(await api('/files/bulk-delete', 'POST', { paths: [...selected] }), 'Delete'), 'Bulk delete failed');
+            openActionModal(t('browser.bulkDeleteTitle'), t('browser.bulkDeleteConfirm', { count: selected.size }), 'confirm', () => {
+                run(async () => reportBulk(await api('/files/bulk-delete', 'POST', { paths: [...selected] }), t('browser.deleteLabel')), t('browser.bulkDeleteFailed'));
             }, '', true);
         },
         'bulk-move': () => {
             if (!selected.size) return;
-            openActionModal('Move selection', `Destination folder (relative to the root) for ${selected.size} item(s):`, 'prompt', (destination) => {
+            openActionModal(t('browser.bulkMoveTitle'), t('browser.bulkMovePrompt', { count: selected.size }), 'prompt', (destination) => {
                 if (destination === null || destination === undefined) return;
-                run(async () => reportBulk(await api('/files/bulk-move', 'POST', { paths: [...selected], destination }), 'Move'), 'Bulk move failed');
+                run(async () => reportBulk(await api('/files/bulk-move', 'POST', { paths: [...selected], destination }), t('browser.moveLabel')), t('browser.bulkMoveFailed'));
             }, currentPath);
         },
     };

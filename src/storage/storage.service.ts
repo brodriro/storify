@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import {
   BadRequestException,
   ConflictException,
@@ -277,7 +278,9 @@ export class StorageService implements OnApplicationBootstrap {
     const { totalSize } = await this.getGlobalStats();
     if (totalSize + this.reservedBytes + bytes > this.storageLimitBytes) {
       throw new HttpException(
-        `Storage limit reached (${formatSize(this.storageLimitBytes)}): free some space or ask the administrator to raise TOTAL_STORAGE_GB`,
+        t('errors.storageLimit', {
+          limit: formatSize(this.storageLimitBytes),
+        }),
         HttpStatus.INSUFFICIENT_STORAGE,
       );
     }
@@ -303,9 +306,7 @@ export class StorageService implements OnApplicationBootstrap {
 
     const ext = path.extname(target.absolute).toLowerCase();
     if (!THUMBNAIL_EXTENSIONS.includes(ext)) {
-      throw new UnsupportedMediaTypeException(
-        'No thumbnail for this file type',
-      );
+      throw new UnsupportedMediaTypeException(t('errors.noThumbnail'));
     }
 
     return this.thumbnails.get(target.absolute, stats);
@@ -336,7 +337,7 @@ export class StorageService implements OnApplicationBootstrap {
     await this.statExisting(source);
     const destination = path.join(parent.absolute, name);
     if (await this.exists(destination)) {
-      throw new ConflictException('Target name already exists');
+      throw new ConflictException(t('errors.targetExists'));
     }
     await fs.promises.rename(source.absolute, destination);
     // Renaming a top-level folder changes who the usage is attributed to.
@@ -355,7 +356,7 @@ export class StorageService implements OnApplicationBootstrap {
       destDir.relative === source.relative ||
       destDir.relative.startsWith(`${source.relative}/`)
     ) {
-      throw new BadRequestException('Cannot move a folder into itself');
+      throw new BadRequestException(t('errors.moveIntoItself'));
     }
 
     await this.statExisting(source);
@@ -363,11 +364,11 @@ export class StorageService implements OnApplicationBootstrap {
       .stat(destDir.absolute)
       .catch(() => null);
     if (!destStats?.isDirectory()) {
-      throw new NotFoundException('Destination folder does not exist');
+      throw new NotFoundException(t('errors.destinationMissing'));
     }
     const finalDest = path.join(destDir.absolute, name);
     if (await this.exists(finalDest)) {
-      throw new ConflictException('File with same name exists in destination');
+      throw new ConflictException(t('errors.destinationConflict'));
     }
     await fs.promises.rename(source.absolute, finalDest);
     this.invalidateStats();
@@ -599,7 +600,7 @@ export class StorageService implements OnApplicationBootstrap {
 
   private async statFile(target: ResolvedPath): Promise<fs.Stats> {
     const stats = await this.statExisting(target);
-    if (!stats.isFile()) throw new NotFoundException('File not found');
+    if (!stats.isFile()) throw new NotFoundException(t('errors.fileNotFound'));
     return stats;
   }
 
@@ -607,7 +608,8 @@ export class StorageService implements OnApplicationBootstrap {
     try {
       return await fs.promises.stat(target.absolute);
     } catch (error) {
-      if (isNotFound(error)) throw new NotFoundException('Item not found');
+      if (isNotFound(error))
+        throw new NotFoundException(t('errors.itemNotFound'));
       throw error;
     }
   }

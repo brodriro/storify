@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import {
   CanActivate,
   ExecutionContext,
@@ -30,6 +31,6 @@ export class RolesGuard implements CanActivate {
       .switchToHttp()
       .getRequest<Request & { user?: AuthUser }>().user;
     if (user && required.includes(user.role)) return true;
-    throw new ForbiddenException('Insufficient role');
+    throw new ForbiddenException(t('errors.insufficientRole'));
   }
 }
