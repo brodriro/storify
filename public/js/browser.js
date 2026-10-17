@@ -218,7 +218,7 @@
     });
 
     // A click on the backdrop (the <dialog> itself, outside its content) closes it.
-    for (const dialog of [previewModal, actionModal]) {
+    for (const dialog of [previewModal, actionModal, $('moveModal')]) {
         dialog.addEventListener('click', (e) => {
             if (e.target === dialog) dialog.close();
         });
@@ -297,6 +297,115 @@
         }, t('browser.uploadFailed'));
     }
 
+    // --- Move picker -------------------------------------------------------
+
+    const moveModal = $('moveModal');
+    const moveHereBtn = $('moveHereBtn');
+    let moveState = null; // { paths, folder, canWrite, onPick }
+
+    const parentOf = (path) => path.split('/').slice(0, -1).join('/');
+    /** Moving `paths` into `folder` would put a folder inside itself. */
+    const insideMoved = (folder, paths) => paths.some((p) => folder === p || folder.startsWith(`${p}/`));
+
+    function openMovePicker(paths, title, onPick) {
+        moveState = { paths, folder: currentPath, canWrite: false, onPick };
+        $('moveModalTitle').textContent = title;
+        moveModal.showModal();
+        loadMoveFolder(currentPath);
+    }
+
+    function moveCrumb(label, path, isCurrent) {
+        const li = document.createElement('li');
+        li.className = 'breadcrumb-item';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'breadcrumb-link';
+        button.textContent = label;
+        button.dataset.moveTo = path;
+        if (isCurrent) button.setAttribute('aria-current', 'location');
+        li.appendChild(button);
+        return li;
+    }
+
+    async function loadMoveFolder(path) {
+        const status = $('moveStatus');
+        const list = $('moveFolderList');
+        status.textContent = t('browser.loading');
+        moveHereBtn.disabled = true;
+        let listing;
+        try {
+            listing = await api(`/files/folders?${new URLSearchParams({ path })}`, 'GET');
+        } catch (error) {
+            status.textContent = `${t('browser.loadFailed')}: ${error.message}`;
+            return;
+        }
+        if (!moveState) return; // closed meanwhile
+        moveState.folder = listing.path;
+        moveState.canWrite = listing.canWrite;
+
+        const crumbs = $('moveBreadcrumb');
+        const parts = listing.path ? listing.path.split('/') : [];
+        crumbs.replaceChildren(
+            moveCrumb(t('browser.home'), '', parts.length === 0),
+            ...parts.map((name, i) => moveCrumb(name, parts.slice(0, i + 1).join('/'), i === parts.length - 1)),
+        );
+
+        list.replaceChildren(
+            ...listing.folders.map((folder) => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'folder-item';
+                button.dataset.moveTo = folder.path;
+                const moving = insideMoved(folder.path, moveState.paths);
+                button.textContent = moving ? t('browser.beingMoved', { name: folder.name }) : folder.name;
+                button.disabled = moving;
+                li.appendChild(button);
+                return li;
+            }),
+        );
+
+        // Why "Move here" is unavailable, if it is.
+        let blocked = '';
+        if (!listing.canWrite) blocked = t('browser.notWritable');
+        else if (insideMoved(listing.path, moveState.paths)) blocked = t('browser.intoItself');
+        else if (moveState.paths.every((p) => parentOf(p) === listing.path)) blocked = t('browser.alreadyHere');
+        moveHereBtn.disabled = Boolean(blocked);
+
+        const notes = [];
+        if (blocked) notes.push(blocked);
+        if (listing.folders.length === 0) notes.push(t('browser.noSubfolders'));
+        if (listing.truncated) notes.push(t('browser.truncated', { count: listing.folders.length }));
+        status.textContent = notes.join(' ');
+
+        const first = list.querySelector('button:not(:disabled)');
+        (first || (moveHereBtn.disabled ? $('moveModalTitle') : moveHereBtn)).focus();
+    }
+
+    moveModal.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-move-to]');
+        if (target && !target.disabled) loadMoveFolder(target.dataset.moveTo);
+    });
+    moveModal.addEventListener('keydown', (e) => {
+        // Arrow keys walk the folder list; Backspace goes up a level.
+        const items = [...$('moveFolderList').querySelectorAll('button:not(:disabled)')];
+        const index = items.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown' && index >= 0) items[Math.min(index + 1, items.length - 1)].focus();
+        else if (e.key === 'ArrowUp' && index >= 0) items[Math.max(index - 1, 0)].focus();
+        else if (e.key === 'Backspace' && moveState && moveState.folder && e.target.tagName !== 'INPUT') loadMoveFolder(parentOf(moveState.folder));
+        else return;
+        e.preventDefault();
+    });
+    moveHereBtn.addEventListener('click', () => {
+        if (!moveState || moveHereBtn.disabled) return;
+        const { folder, onPick } = moveState;
+        moveModal.close();
+        onPick(folder);
+    });
+    moveModal.addEventListener('close', () => {
+        moveState = null;
+    });
+
     function moveTo(path, destination) {
         run(async () => {
             await api('/files/move', 'POST', { path, destination });
@@ -319,10 +428,9 @@
             }, name);
         },
         move(card) {
-            openActionModal(t('browser.moveTitle'), t('browser.movePrompt'), 'prompt', (destination) => {
-                if (destination === null || destination === undefined) return;
-                moveTo(card.dataset.path, destination);
-            }, currentPath);
+            openMovePicker([card.dataset.path], t('browser.moveTitleOne', { name: card.dataset.name }), (destination) =>
+                moveTo(card.dataset.path, destination),
+            );
         },
         delete(card) {
             openActionModal(t('browser.deleteTitle'), t('browser.deleteConfirm', { name: card.dataset.name }), 'confirm', () => {
@@ -356,6 +464,7 @@
         'preview-prev': () => navigatePreview(-1),
         'preview-next': () => navigatePreview(1),
         'close-action-modal': () => actionModal.close(),
+        'close-move-modal': () => moveModal.close(),
         'clear-selection': () => {
             selected.clear();
             updateSelectionBar();
@@ -368,10 +477,10 @@
         },
         'bulk-move': () => {
             if (!selected.size) return;
-            openActionModal(t('browser.bulkMoveTitle'), t('browser.bulkMovePrompt', { count: selected.size }), 'prompt', (destination) => {
-                if (destination === null || destination === undefined) return;
-                run(async () => reportBulk(await api('/files/bulk-move', 'POST', { paths: [...selected], destination }), t('browser.moveLabel')), t('browser.bulkMoveFailed'));
-            }, currentPath);
+            const paths = [...selected];
+            openMovePicker(paths, t('browser.moveTitleMany', { count: paths.length }), (destination) =>
+                run(async () => reportBulk(await api('/files/bulk-move', 'POST', { paths, destination }), t('browser.moveLabel')), t('browser.bulkMoveFailed')),
+            );
         },
     };
 

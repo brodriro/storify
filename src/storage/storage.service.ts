@@ -34,6 +34,8 @@ const FS_CONCURRENCY = 32;
 /** Default cap for tree searches (recent files, name search). */
 export const DEFAULT_FIND_LIMIT = 100;
 const STATS_TTL_MS = 5 * 60 * 1000;
+/** Subfolders listed per level in the move picker. */
+const MAX_FOLDERS = 500;
 
 export interface FileEntry {
   name: string;
@@ -45,6 +47,18 @@ export interface FileEntry {
   extension: string;
   isImage: boolean;
   isVideo: boolean;
+}
+
+export interface FolderListing {
+  /** Folder shown, relative to the user's root ('' = root). */
+  path: string;
+  /** null at the root. */
+  parentPath: string | null;
+  /** Whether items can be moved into `path`. */
+  canWrite: boolean;
+  folders: { name: string; path: string }[];
+  /** More than MAX_FOLDERS subfolders: only the first ones are listed. */
+  truncated: boolean;
 }
 
 export interface FoundFile {
@@ -207,6 +221,49 @@ export class StorageService implements OnApplicationBootstrap {
             : a.name.localeCompare(b.name);
         return order === 'asc' ? comparison : -comparison;
       });
+  }
+
+  /**
+   * Subfolders of a folder, for the "move to" picker. Reads directory entries
+   * only (no stat per file), so it stays cheap in folders full of photos.
+   */
+  async listFolders(
+    user: AuthUser,
+    relativePath: unknown = '',
+  ): Promise<FolderListing> {
+    const dir = await this.policy.resolve(user, relativePath, 'read');
+    let entries: fs.Dirent[];
+    try {
+      entries = await fs.promises.readdir(dir.absolute, {
+        withFileTypes: true,
+      });
+    } catch (error) {
+      if (isNotFound(error)) {
+        throw new NotFoundException(t('errors.destinationMissing'));
+      }
+      throw error;
+    }
+    const collator = new Intl.Collator(undefined, { numeric: true });
+    const folders = entries
+      // Symlinked folders are not offered (Dirent.isDirectory is false).
+      .filter(
+        (e) => e.isDirectory() && this.policy.isVisible(user, dir, e.name),
+      )
+      .map((e) => e.name)
+      .sort(collator.compare)
+      .map((name) => ({
+        name,
+        path: dir.relative ? `${dir.relative}/${name}` : name,
+      }));
+    return {
+      path: dir.relative,
+      parentPath: dir.segments.length
+        ? dir.segments.slice(0, -1).join('/')
+        : null,
+      canWrite: this.policy.canWrite(user, dir),
+      folders: folders.slice(0, MAX_FOLDERS),
+      truncated: folders.length > MAX_FOLDERS,
+    };
   }
 
   async createFolder(user: AuthUser, parentPath: unknown, folderName: unknown) {

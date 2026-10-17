@@ -27,6 +27,7 @@ import {
   BrowserQueryDto,
   BulkDeleteDto,
   BulkMoveDto,
+  FolderQueryDto,
   MkdirDto,
   MoveDto,
   PathBodyDto,
@@ -201,6 +202,15 @@ export class FilesController {
   async createFolder(@Body() body: MkdirDto, @CurrentUser() user: AuthUser) {
     await this.storageService.createFolder(user, body.path ?? '', body.name);
     return { success: true };
+  }
+
+  /** Subfolders of `path` and whether items can be moved there (move picker). */
+  @Get('folders')
+  listFolders(
+    @Query() { path: folderPath }: FolderQueryDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.storageService.listFolders(user, folderPath ?? '');
   }
 
   @Get('download')

@@ -830,6 +830,85 @@ a:hover {
     border-color: var(--accent);
 }
 
+/* Move picker */
+.modal-move {
+    width: min(95vw, 480px);
+    padding: var(--space-lg);
+}
+
+.move-path {
+    margin-bottom: var(--space-sm);
+}
+
+.move-path .breadcrumb-link {
+    background: none;
+    border: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.move-path .breadcrumb-link[aria-current] {
+    color: var(--text);
+}
+
+.folder-list {
+    max-height: min(50vh, 360px);
+    overflow-y: auto;
+    margin: 0;
+    padding: var(--space-xs);
+    list-style: none;
+    border: 1px solid var(--border);
+    border-radius: var(--rounded-md);
+    background: var(--surface-sunken);
+}
+
+.folder-list:empty {
+    display: none;
+}
+
+.folder-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 var(--space-md);
+    background: none;
+    border: none;
+    border-radius: var(--rounded-sm);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    word-break: break-all;
+    cursor: pointer;
+}
+
+.folder-item::before {
+    content: '';
+    width: 16px;
+    height: 12px;
+    margin-right: var(--space-sm);
+    flex-shrink: 0;
+    border: 2px solid var(--accent);
+    border-radius: 2px;
+}
+
+.folder-item:hover:not(:disabled),
+.folder-item:focus-visible {
+    background: var(--surface-hover);
+}
+
+.folder-item:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.move-status {
+    min-height: 1.5em;
+    margin: var(--space-sm) 0 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
 /* ---- Toasts -------------------------------------------------------------- */
 
 .toast-container {

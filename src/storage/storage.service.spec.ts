@@ -230,6 +230,48 @@ describe('StorageService access control', () => {
     });
   });
 
+  describe('move picker folders', () => {
+    beforeEach(() => {
+      write(usersRoot, 'ALICE/Fotos/2024/a.jpg');
+      write(usersRoot, 'ALICE/.oculta/x');
+      write(usersRoot, 'ALICE/Docs/y.txt');
+    });
+
+    it('lists only visible subfolders, sorted, without files', async () => {
+      const listing = await service.listFolders(ALICE, 'ALICE');
+      expect(listing).toEqual({
+        path: 'ALICE',
+        parentPath: '',
+        canWrite: true,
+        folders: [
+          { name: 'Docs', path: 'ALICE/Docs' },
+          { name: 'Fotos', path: 'ALICE/Fotos' },
+        ],
+        truncated: false,
+      });
+    });
+
+    it("hides other users' folders at the root", async () => {
+      const root = await service.listFolders(ALICE, '');
+      expect(root.parentPath).toBeNull();
+      expect(root.folders.map((f) => f.name)).toEqual(['ALICE', 'Compartido']);
+    });
+
+    it('denies folders the user cannot read', async () => {
+      await expect(service.listFolders(ALICE, 'BOB')).rejects.toThrow(
+        errors.accessDenied,
+      );
+      await expect(service.listFolders(ALICE, '../public')).rejects.toThrow(
+        errors.accessDenied,
+      );
+    });
+
+    it('tells the guest it cannot move anything there', async () => {
+      const listing = await service.listFolders(GUEST, '');
+      expect(listing.canWrite).toBe(false);
+    });
+  });
+
   describe('storage statistics (P2)', () => {
     it('attributes usage to top-level folders', async () => {
       const stats = await service.getGlobalStats();
