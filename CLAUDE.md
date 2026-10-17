@@ -16,13 +16,16 @@ pnpm run start:dev          # watch mode, http://localhost:3000
 pnpm run build              # nest build → dist/ (copies views/ and public/ as assets, see nest-cli.json)
 pnpm run start:prod         # node dist/main
 pnpm run lint               # eslint --fix over src/test (type-checked rules + prettier)
+pnpm run lint:check         # eslint without --fix (what CI runs)
+pnpm run typecheck          # tsc --noEmit (ts-jest does NOT type-check specs)
 pnpm run format             # prettier on src/test
 pnpm test                   # jest, rootDir=src, *.spec.ts
 pnpm test -- path/or/pattern -t "test name"   # single test file / single test
 pnpm run test:e2e           # jest --config test/jest-e2e.json
+pnpm hash-password          # bcrypt hash for USER_<NAME>, password read from stdin
 ```
 
-CI (`.github/workflows/ci.yml`) runs build, unit, e2e and `prettier --check`. ESLint still reports ~20 `no-unsafe-*` errors in older code (LLM/admin services), so it runs non-blocking for now.
+CI (`.github/workflows/ci.yml`) runs build, typecheck, lint, `prettier --check`, unit and e2e; all blocking. Lint is at zero errors, so keep it there.
 
 The e2e suite boots the real `AppModule` against a temp `STORAGE_PATH`. Env vars must be set before `AppModule` is required, because configuration is read at import time. `src/app.setup.ts` (`configureApp`) holds the Express setup (helmet/CSP, static assets, `/vendor/*`, hbs, cookies) shared by `main.ts` and the tests.
 
@@ -32,7 +35,7 @@ The e2e suite boots the real `AppModule` against a temp `STORAGE_PATH`. Env vars
 
 `src/config/configuration.ts` (`loadConfig`) is the only place that reads `process.env`. It returns a typed `AppConfig` and **throws at startup** on invalid config: `JWT_SECRET` must be 32+ characters, every user in `USERS` needs a non-empty `USER_<NAME>`, and usernames are restricted to `[A-Za-z0-9_-]`. Consume config with `ConfigService<AppConfig, true>` and `get('key', { infer: true })`; never read raw env keys. See `.env.example` for all variables.
 
-`OPENAI_API_KEY` is optional. Without it `LlmService` throws `ServiceUnavailableException` on use, and the rest of the app works.
+AI is optional. It is enabled by `OPENAI_API_KEY` and/or `LLM_BASE_URL` (any OpenAI-compatible endpoint, e.g. Ollama), with `LLM_MODEL` (default `gpt-5-mini`; it must support tool calling). When AI is disabled, `LlmService` throws `ServiceUnavailableException` on use and the rest of the app works. `USER_<NAME>` may be a bcrypt hash (recommended) or plaintext (logs a warning). Backups: `BACKUP_PATH`, `BACKUP_KEEP_FULL`.
 
 ## Architecture
 
@@ -48,15 +51,23 @@ The e2e suite boots the real `AppModule` against a temp `STORAGE_PATH`. Env vars
 `src/storage/storage.service.spec.ts` is the table of ACL cases; extend it when you change rules.
 
 ### Storage layout
-`<STORAGE_PATH>/users/<USERNAME>/…` (home created on login for non-guests), `public/` (guest root), `backups/` (ZIPs + `last_backup_timestamp.json`), `.tmp/` (multer temp dir, same volume so the final `rename` works), `.audit/events.jsonl` (security events). Upload limits come from config. Name collisions become `name_duplicado[N].ext`, reserved atomically with `O_EXCL`.
+`<STORAGE_PATH>/users/<USERNAME>/…` (home created on login for non-guests), `public/` (guest root), `backups/` (default `BACKUP_PATH`), `.tmp/` (multer temp dir, same volume so the final `rename` works), `.audit/events.jsonl` (security events). Upload limits come from config. Name collisions become `name_duplicado[N].ext`, reserved atomically with `O_EXCL`.
 
 ### Agent (`src/agent/`)
-- `chat/chat.gateway.ts`: authenticates the socket in `handleConnection` from the `jwt` cookie (no CORS), keeps a bounded per-socket history (cleared on disconnect), calls `AgentService.processMessage(text, previousTurns, user)`, and replies only to that socket.
-- `agent.service.ts`: ReAct-style loop. Tool schemas live in `availableTools` and are dispatched in the `executeTool` switch; adding a tool means editing both. Tools run as the session user through `StorageService`/`AccessPolicy`. `create_incremental_backup` and `get_suspicious_activity` are admin-only.
-- `llm/llm.service.ts`: OpenAI client. Agent decisions use the Responses API (`gpt-5-mini`), summaries use Chat Completions, classification uses `gpt-4o-mini` with JSON mode. Model names are hardcoded.
+- `tools/`: one `@Injectable` class per tool implementing `AgentTool` (name, JSON schema, `mutates`, `adminOnly`, optional `describe`, `run(params, { user })`). **To add a tool**, create `xyz.tool.ts` and list it in `tools/index.ts`. `ToolRegistry` hides admin-only tools from non-admins and validates arguments (`validateToolParams`: flat schemas, string/number/integer/boolean). Tools must access files only through `StorageService` with `ctx.user`.
+- `agent.service.ts`: Chat Completions tool loop with a full transcript (`assistant.tool_calls` + `tool` messages), parallel calls, 12 iterations and a 75 s budget. Tools with `mutates: true` are **never run directly**: the loop returns `confirmation` + `pending`, and `resolveConfirmation(pending, approved, user)` resumes it.
+- `chat/chat.gateway.ts`: authenticates the socket from the `jwt` cookie in `handleConnection` (no CORS), emits `chatInfo { enabled, provider }`, keeps a bounded per-socket history, and replies only to that socket. One pending confirmation per socket (`confirmAction { id, approved }`, single use, 5 min TTL, dropped by a new message).
+- `llm/llm.service.ts`: Chat Completions only, the API that OpenAI-compatible local servers implement. `chat(messages, tools)`, `summarizeText`, `classifyFile` (JSON mode), all with the configured model and base URL.
 - `classification/` builds a Spanish prompt from file metadata, extracted text and the folders the user can see, and owns `POST /files/classify` (kept out of the core file modules so they don't depend on the LLM). `documents/` (`DocumentReaderService`) extracts text from `.txt`/`.docx`/`.pdf` and does **no** ACL checks: pass it only already-resolved paths.
 - `src/audit/` (`AuditService`): logger wrapper plus `recordEvent` (JSONL). `getSuspiciousActivity()` detects bursts of `login_failure` / `access_denied` per user.
 - Use relative imports; jest has no `moduleNameMapper` for `src/...` paths.
+
+### Backups (`src/backup/`)
+`BackupService.start('full'|'incremental')` runs in the background: it writes `*.zip.partial`, renames it when complete and writes `<name>.manifest.json` (file state, archived paths, deletions, base full). Incrementals diff against the latest manifest (size/mtime) and add `DELETED.txt`. Retention runs only after a successful full backup. Partials are deleted on startup, and a running backup is aborted on shutdown (`enableShutdownHooks` in `main.ts`). `AdminController` exposes create, list and download (newest full by default).
+
+### HTTP conventions
+- Every body and query has a DTO (`*.dto.ts`, class-validator) under a global `ValidationPipe` (whitelist + forbidNonWhitelisted + transform). DTOs check shape only; path rules belong to `AccessPolicy`.
+- Throw Nest HTTP exceptions (403/404/409/400), never a bare `Error`. `ViewExceptionFilter` turns 401/403 on HTML GET navigations into redirects (401 to `/`, 403 to `/files/browser`); fetch/JSON callers get normal errors.
 
 ### Views and frontend
 - **No inline JavaScript.** The CSP is `script-src 'self'`. Views load `public/js/*.js` (`browser.js`, `dashboard.js`, `theme.js`, `chat.js`) and use `data-action` / `data-path` attributes with event delegation. Never put user data in `on*=` attributes or build HTML from it; use `textContent` / `dataset`.
