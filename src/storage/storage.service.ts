@@ -22,6 +22,7 @@ import { AccessPolicy, ResolvedPath } from './access-policy';
 const FS_CONCURRENCY = 32;
 /** Default cap for tree searches (recent files, name search). */
 export const DEFAULT_FIND_LIMIT = 100;
+const STATS_TTL_MS = 5 * 60 * 1000;
 
 const IMAGE_EXTENSIONS = [
   '.jpg',
@@ -68,6 +69,21 @@ export interface FoundFile {
   extension: string;
 }
 
+export interface GlobalStats {
+  totalSize: number;
+  totalFiles: number;
+  fileTypes: Record<string, number>;
+  /** Bytes per top-level folder under users/ ('OTROS' for root files). */
+  userUsage: Record<string, number>;
+}
+
+export interface DiskUsage {
+  /** Bytes stored under users/. */
+  totalBytes: number;
+  /** The filesystem holding STORAGE_PATH (free = available to this process). */
+  volume: { sizeBytes: number; freeBytes: number };
+}
+
 export interface UploadedTempFile {
   path: string;
   originalname: string;
@@ -80,6 +96,9 @@ function isNotFound(error: unknown): boolean {
 @Injectable()
 export class StorageService {
   private readonly baseStoragePath: string;
+  private statsCache: { value: GlobalStats; at: number } | null = null;
+  private statsInFlight: Promise<GlobalStats> | null = null;
+  private statsGeneration = 0;
 
   constructor(
     configService: ConfigService<AppConfig, true>,
@@ -204,6 +223,7 @@ export class StorageService {
       }
 
       await fs.promises.rename(file.path, path.join(dir.absolute, finalName));
+      this.invalidateStats();
       return finalName;
     } finally {
       await fs.promises.rm(file.path, { force: true });
@@ -238,7 +258,12 @@ export class StorageService {
     const target = await this.policy.resolve(user, relativePath, 'write');
     this.policy.assertMutable(user, target);
     await this.statExisting(target);
-    await fs.promises.rm(target.absolute, { recursive: true, force: true });
+    try {
+      await fs.promises.rm(target.absolute, { recursive: true, force: true });
+    } finally {
+      // Also after a partial failure: part of the tree may be gone.
+      this.invalidateStats();
+    }
   }
 
   async renameItem(user: AuthUser, currentPath: unknown, newName: unknown) {
@@ -257,6 +282,8 @@ export class StorageService {
       throw new ConflictException('Target name already exists');
     }
     await fs.promises.rename(source.absolute, destination);
+    // Renaming a top-level folder changes who the usage is attributed to.
+    this.invalidateStats();
   }
 
   async moveItem(user: AuthUser, currentPath: unknown, destination: unknown) {
@@ -286,16 +313,65 @@ export class StorageService {
       throw new ConflictException('File with same name exists in destination');
     }
     await fs.promises.rename(source.absolute, finalDest);
+    this.invalidateStats();
   }
 
-  /** Storage-wide statistics for the admin dashboard. */
-  async getGlobalStats() {
+  /**
+   * Storage-wide statistics for the admin dashboard. Walking users/ is
+   * O(total files), so the result is cached for STATS_TTL_MS, concurrent
+   * callers share one walk, and every write through this service
+   * invalidates it.
+   */
+  getGlobalStats(): Promise<GlobalStats> {
+    if (this.statsCache && Date.now() - this.statsCache.at < STATS_TTL_MS) {
+      return Promise.resolve(this.statsCache.value);
+    }
+    if (!this.statsInFlight) {
+      const generation = this.statsGeneration;
+      const run = this.computeGlobalStats()
+        .then((value) => {
+          // A write during the walk makes this result stale: don't keep it.
+          if (generation === this.statsGeneration) {
+            this.statsCache = { value, at: Date.now() };
+          }
+          return value;
+        })
+        .finally(() => {
+          if (this.statsInFlight === run) this.statsInFlight = null;
+        });
+      this.statsInFlight = run;
+    }
+    return this.statsInFlight;
+  }
+
+  /** Storify's data size plus the real state of the volume behind it. */
+  async getDiskUsage(): Promise<DiskUsage> {
+    const [stats, volume] = await Promise.all([
+      this.getGlobalStats(),
+      fs.promises.statfs(this.baseStoragePath),
+    ]);
+    return {
+      totalBytes: stats.totalSize,
+      volume: {
+        sizeBytes: volume.blocks * volume.bsize,
+        freeBytes: volume.bavail * volume.bsize,
+      },
+    };
+  }
+
+  private invalidateStats() {
+    this.statsGeneration++;
+    this.statsCache = null;
+    this.statsInFlight = null;
+  }
+
+  private async computeGlobalStats(): Promise<GlobalStats> {
     const root = path.join(this.baseStoragePath, 'users');
-    const stats = {
+    const stats: GlobalStats = {
       totalSize: 0,
       totalFiles: 0,
-      fileTypes: {} as Record<string, number>,
-      userUsage: {} as Record<string, number>,
+      fileTypes: {},
+      userUsage: {},
     };
 
     const processDir = async (dirPath: string, owner?: string) => {
@@ -306,31 +382,37 @@ export class StorageService {
         if (isNotFound(error)) return;
         throw error;
       }
+      const files = items.filter((item) => item.isFile());
+      const sizes = await mapWithConcurrency(files, FS_CONCURRENCY, (item) =>
+        fs.promises
+          .stat(path.join(dirPath, item.name))
+          .then(({ size }) => size)
+          .catch((error: unknown) => {
+            if (isNotFound(error)) return null;
+            throw error;
+          }),
+      );
+      files.forEach((item, i) => {
+        const size = sizes[i];
+        if (size === null) return;
+        stats.totalSize += size;
+        stats.totalFiles++;
+        const ext = path.extname(item.name).toLowerCase() || 'unknown';
+        stats.fileTypes[ext] = (stats.fileTypes[ext] || 0) + 1;
+        // Files directly in the shared root belong to no user
+        const key = owner ?? 'OTROS';
+        stats.userUsage[key] = (stats.userUsage[key] || 0) + size;
+      });
       for (const item of items) {
-        const fullPath = path.join(dirPath, item.name);
         if (item.isDirectory()) {
           // Top-level folders under users/ are attributed to that name
-          await processDir(fullPath, owner ?? item.name);
-        } else if (item.isFile()) {
-          const { size } = await fs.promises.stat(fullPath);
-          stats.totalSize += size;
-          stats.totalFiles++;
-          const ext = path.extname(item.name).toLowerCase() || 'unknown';
-          stats.fileTypes[ext] = (stats.fileTypes[ext] || 0) + 1;
-          // Files directly in the shared root belong to no user
-          const key = owner ?? 'OTROS';
-          stats.userUsage[key] = (stats.userUsage[key] || 0) + size;
+          await processDir(path.join(dirPath, item.name), owner ?? item.name);
         }
       }
     };
 
     await processDir(root);
     return stats;
-  }
-
-  async getDiskUsage(): Promise<{ totalBytes: number }> {
-    const stats = await this.getGlobalStats();
-    return { totalBytes: stats.totalSize };
   }
 
   /** Readable files modified in the last `days` days, newest first. */

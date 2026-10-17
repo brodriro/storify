@@ -222,6 +222,53 @@ describe('StorageService access control', () => {
     });
   });
 
+  describe('storage statistics (P2)', () => {
+    it('attributes usage to top-level folders', async () => {
+      const stats = await service.getGlobalStats();
+      expect(stats.totalFiles).toBe(5);
+      expect(stats.userUsage).toMatchObject({
+        ADMIN: 'admin-secret'.length,
+        ALICE: 'alice'.length,
+        OTROS: 'shared'.length,
+      });
+    });
+
+    it('caches the walk until a write goes through the service', async () => {
+      const before = await service.getGlobalStats();
+      // Written behind the service's back: not seen until the cache expires.
+      write(usersRoot, 'ALICE/external.txt', 'external');
+      expect(await service.getGlobalStats()).toBe(before);
+
+      await service.deleteItem(ALICE, 'ALICE/own.txt');
+      const after = await service.getGlobalStats();
+      expect(after.totalFiles).toBe(before.totalFiles); // -own +external
+      expect(after.userUsage.ALICE).toBe('external'.length);
+    });
+
+    it('shares one walk between concurrent callers', async () => {
+      const readdir = jest.spyOn(fs.promises, 'readdir');
+      const [a, b] = await Promise.all([
+        service.getGlobalStats(),
+        service.getGlobalStats(),
+      ]);
+      expect(a).toBe(b);
+      const walksOfRoot = readdir.mock.calls.filter(
+        ([dir]) => dir === usersRoot,
+      );
+      expect(walksOfRoot).toHaveLength(1);
+      readdir.mockRestore();
+    });
+
+    it('reports the volume behind STORAGE_PATH', async () => {
+      const usage = await service.getDiskUsage();
+      expect(usage.totalBytes).toBeGreaterThan(0);
+      expect(usage.volume.sizeBytes).toBeGreaterThan(0);
+      expect(usage.volume.freeBytes).toBeLessThanOrEqual(
+        usage.volume.sizeBytes,
+      );
+    });
+  });
+
   describe('search and recent files', () => {
     it('only returns files the user can read, as relative paths', async () => {
       const found = await service.searchFiles(ALICE, '.txt');
