@@ -1,10 +1,12 @@
 {{#> main}}
 <div class="page animate-slide-up">
     <div class="browser-header">
-        <h1 class="page-title">{{t "browser.title"}}</h1>
-        <div class="storage-meter">
-            <progress class="usage-bar" max="100" value="{{storage.percent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
-            <small>{{t "browser.usedOf" used=storage.usedLabel total=storage.totalLabel}}</small>
+        <div class="page-heading">
+            <h1 class="page-title">{{t "browser.title"}}</h1>
+            <div class="storage-meter">
+                <progress class="usage-bar" max="100" value="{{storage.percent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
+                <small>{{t "browser.usedOf" used=storage.usedLabel total=storage.totalLabel}}</small>
+            </div>
         </div>
         <div class="toolbar">
             <div class="panel sort-controls">
@@ -95,9 +97,9 @@
                 {{/if}}
 
                 {{#if this.isDirectory}}
-                <a class="file-open" href="{{this.openUrl}}">
+                <a class="file-open" href="{{this.openUrl}}" title="{{this.name}}">
                 {{else}}
-                <button type="button" class="file-open" data-action="open" aria-haspopup="dialog">
+                <button type="button" class="file-open" data-action="open" aria-haspopup="dialog" title="{{this.name}}">
                 {{/if}}
                     <span class="file-icon">
                         {{#if this.isDirectory}}
