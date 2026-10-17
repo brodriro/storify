@@ -172,6 +172,29 @@ describe('Storify (e2e)', () => {
     }
   });
 
+  it('renders accessible pages without inline styles (U2, U11)', async () => {
+    const { cookie } = await login('ADMIN', 'admin-pass');
+    const pages = [
+      await request(app.getHttpServer()).get('/').expect(200),
+      await request(app.getHttpServer())
+        .get('/files/browser')
+        .set('Cookie', cookie!)
+        .expect(200),
+      await request(app.getHttpServer())
+        .get('/admin/dashboard')
+        .set('Cookie', cookie!)
+        .expect(200),
+    ];
+    for (const res of pages) {
+      expect(res.headers['content-security-policy']).toContain(
+        "style-src 'self';",
+      );
+      expect(res.text).not.toMatch(/\sstyle="|<style[\s>]/);
+      expect(res.text.match(/<h1[\s>]/g)).toHaveLength(1);
+      expect(res.text).toContain('<main id="main"');
+    }
+  });
+
   it('renders hostile file names as inert data (S7)', async () => {
     const hostile = [`x');alert(1);x`, '<img src=x onerror=alert(1)>'];
     fs.mkdirSync(path.join(storage, 'users', 'ALICE'), { recursive: true });

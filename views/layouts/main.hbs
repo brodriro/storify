@@ -10,25 +10,26 @@
     <link rel="stylesheet" href="/css/fonts.css">
     <link rel="stylesheet" href="/css/tokens.css">
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/style-ux.css">
     {{#if user}}<link rel="stylesheet" href="/css/chat.css">{{/if}}
 </head>
 
-<body class="container animate-fade-in">
+<body class="container">
+    <a class="skip-link" href="#main">Skip to content</a>
     {{> header}}
 
     {{#if user}}
-    <button type="button" id="chat-button" class="chat-button" aria-label="Open assistant">
-        <svg viewBox="0 0 24 24">
+    <button type="button" id="chat-button" class="chat-button" aria-label="Open assistant"
+        aria-expanded="false" aria-controls="chat-sidebar">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>
     </button>
 
-    <div id="chat-sidebar" class="chat-sidebar">
+    <aside id="chat-sidebar" class="chat-sidebar" aria-label="Assistant" inert>
         <div class="chat-header">
             <div class="chat-header-info">
                 <div class="chat-header-icon">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
                         <path d="M5 10h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"></path>
                         <path d="M9 14v4"></path>
@@ -36,23 +37,21 @@
                     </svg>
                 </div>
                 <div>
-                    <h3>Storify AI</h3>
+                    <h2 class="chat-title">Storify AI</h2>
                     <p>NAS Assistant</p>
                 </div>
             </div>
-            <button id="close-chat" title="Close Chat">
-                <svg class="icon" viewBox="0 0 24 24">
+            <button type="button" id="close-chat" aria-label="Close assistant">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             </button>
         </div>
 
-        <div class="chat-history" id="chat-history">
-            <!-- Messages injected here -->
-        </div>
+        <div class="chat-history" id="chat-history" role="log" aria-live="polite" aria-label="Conversation"></div>
 
-        <div class="typing-indicator-wrapper" id="typing-indicator">
+        <div class="typing-indicator-wrapper" id="typing-indicator" aria-hidden="true">
             <div class="typing-dots">
                 <span></span><span></span><span></span>
             </div>
@@ -60,19 +59,21 @@
 
         <div class="chat-input-container">
             <div class="chat-input-wrapper">
-                <textarea id="chat-message-input" placeholder="Ask about your files, storage..." rows="1"></textarea>
+                <textarea id="chat-message-input" aria-label="Message" placeholder="Ask about your files, storage..." rows="1"></textarea>
             </div>
-            <button id="send-chat-message" class="btn-send-chat" disabled aria-label="Send">
-                <svg class="icon icon-sm" viewBox="0 0 24 24">
+            <button type="button" id="send-chat-message" class="btn-send-chat" disabled aria-label="Send">
+                <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
                     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                 </svg>
             </button>
         </div>
-    </div>
+    </aside>
     {{/if}}
 
+    <main id="main" class="main-content">
     {{> @partial-block }}
+    </main>
 
     {{#if user}}
     <!-- Served by the Socket.IO server itself, so the version always matches -->

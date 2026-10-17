@@ -1,32 +1,6 @@
-<header class="main-header glass-panel" style="display: flex; align-items: center; justify-content: space-between;">
-    <style>
-        @media (max-width: 640px) {
-            .main-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-
-            .header-controls {
-                width: 100%;
-                justify-content: flex-start;
-                flex-wrap: wrap;
-                gap: 0.4rem;
-            }
-
-            .header-controls .btn,
-            .header-controls a {
-                flex: 1 1 auto;
-                justify-content: center;
-            }
-
-            .welcome-text {
-                font-size: 0.85rem;
-            }
-        }
-    </style>
-    <div class="logo">
-        <svg class="icon" style="color: var(--accent-text); margin-right: 0.5rem;" viewBox="0 0 24 24">
+<header class="main-header panel">
+    <a class="logo" href="{{#if user}}/files/browser{{else}}/{{/if}}">
+        <svg class="icon logo-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path
                 d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
             </path>
@@ -34,31 +8,28 @@
             <line x1="12" y1="22.08" x2="12" y2="12"></line>
         </svg>
         Storify
-    </div>
+    </a>
     {{#if user}}
-    <div class="welcome-text">
-        Bienvenido {{user.username}}
-    </div>
+    <p class="welcome-text">Bienvenido {{user.username}}</p>
     {{/if}}
-    <div class="header-controls">
-        <button type="button" id="themeToggle" class="btn btn-secondary btn-sm icon-btn">
-            <svg class="icon icon-sm" viewBox="0 0 24 24">
+    <nav class="header-controls" aria-label="Account">
+        <button type="button" id="themeToggle" class="btn btn-secondary btn-sm" aria-pressed="false">
+            <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
-            Theme
+            Dark theme
         </button>
         {{#if user}}
-        {{#if userRole}}{{#if_eq userRole "admin"}}
-        <a href="/admin/dashboard" class="btn btn-primary btn-sm icon-btn">
-            <svg class="icon icon-sm" viewBox="0 0 24 24">
+        {{#if_eq userRole "admin"}}
+        <a href="/admin/dashboard" class="btn btn-primary btn-sm">
+            <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M3 13h4v8H3zM10 3h4v18h-4zM17 9h4v12h-4z"></path>
             </svg>
             Admin Dashboard
         </a>
         {{/if_eq}}
-        {{/if}}
-        <a href="/auth/logout" class="btn btn-secondary btn-sm btn-logout icon-btn">
-            <svg class="icon icon-sm" viewBox="0 0 24 24">
+        <a href="/auth/logout" class="btn btn-secondary btn-sm">
+            <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -66,5 +37,5 @@
             Logout
         </a>
         {{/if}}
-    </div>
+    </nav>
 </header>

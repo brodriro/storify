@@ -1,6 +1,10 @@
 // File browser behaviour. All handlers are attached here (no inline JS) so the
 // page can run under a strict Content-Security-Policy and file names are only
 // ever treated as data (dataset / textContent), never as code or HTML.
+//
+// Keyboard model: folders and breadcrumbs are links; a file card is a button
+// that opens the preview; ⋯ is a WAI-ARIA menu button (arrows, Home/End,
+// Escape); dialogs are native <dialog> (focus trap, Escape, inert page).
 (function () {
     'use strict';
 
@@ -44,7 +48,7 @@
     function reportBulk(result, label) {
         if (result.failed && result.failed.length) {
             const detail = result.failed.map((f) => `${f.path}: ${f.error}`).join('\n');
-            sessionStorageSafeSet('pendingToast', `${label}: ${result.failed.length} failed\n${detail}`);
+            sessionStorageSafeSet('pendingToast', JSON.stringify({ type: 'error', message: `${label}: ${result.failed.length} failed\n${detail}` }));
         }
         window.location.reload();
     }
@@ -64,6 +68,7 @@
         const svg = document.createElementNS(SVG_NS, 'svg');
         svg.setAttribute('class', `icon icon-sm toast-icon-${type}`);
         svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('aria-hidden', 'true');
         const shapes =
             type === 'error'
                 ? [['circle', { cx: 12, cy: 12, r: 10 }], ['line', { x1: 15, y1: 9, x2: 9, y2: 15 }], ['line', { x1: 9, y1: 9, x2: 15, y2: 15 }]]
@@ -81,63 +86,52 @@
         toast.className = 'toast';
         toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
         const text = document.createElement('span');
+        text.className = 'toast-text';
         text.textContent = message;
-        text.style.whiteSpace = 'pre-line';
         toast.append(icon(type), text);
         $('toastContainer').appendChild(toast);
-        setTimeout(() => toast.classList.add('show'), 10);
+        requestAnimationFrame(() => toast.classList.add('show'));
         setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, type === 'error' ? 6000 : 3000);
     }
 
-    // --- Prompt / confirm modal ---------------------------------------------
+    // --- Prompt / confirm dialog --------------------------------------------
 
+    const actionModal = $('actionModal');
+    const actionInput = $('actionModalInput');
+    const actionConfirm = $('actionModalConfirmBtn');
     let modalCallback = null;
 
-    function openActionModal(title, text, type, callback, defaultValue = '') {
+    function openActionModal(title, text, type, callback, defaultValue = '', danger = false) {
         $('actionModalTitle').textContent = title;
         $('actionModalText').textContent = text;
-        const input = $('actionModalInput');
-        input.style.display = type === 'prompt' ? 'block' : 'none';
-        input.value = defaultValue;
-        const confirmBtn = $('actionModalConfirmBtn');
-        confirmBtn.className = /delete/i.test(title) ? 'btn btn-danger' : 'btn btn-primary';
+        actionInput.hidden = type !== 'prompt';
+        actionInput.value = defaultValue;
+        actionConfirm.className = danger ? 'btn btn-danger' : 'btn btn-primary';
         modalCallback = (value) => callback(type === 'prompt' ? value : true);
-        $('actionModal').classList.add('active');
-        (type === 'prompt' ? input : confirmBtn).focus();
+        actionModal.showModal();
+        if (type === 'prompt') {
+            actionInput.focus();
+            actionInput.select();
+        } else {
+            actionConfirm.focus();
+        }
     }
 
-    function closeActionModal() {
-        $('actionModal').classList.remove('active');
-        $('actionModalInput').value = '';
-        modalCallback = null;
-    }
-
-    $('actionModalConfirmBtn').addEventListener('click', () => {
-        // Read the value before closing: closing clears the input.
+    // Submitting the form (button or Enter in the input) confirms.
+    $('actionModalForm').addEventListener('submit', () => {
         const callback = modalCallback;
-        const value = $('actionModalInput').value;
-        closeActionModal();
+        const value = actionInput.value;
+        modalCallback = null;
         if (callback) callback(value);
     });
-    $('actionModalInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') $('actionModalConfirmBtn').click();
+    actionModal.addEventListener('close', () => {
+        modalCallback = null;
     });
 
     // --- Navigation ---------------------------------------------------------
-
-    function goToPath(path) {
-        const url = new URL('/files/browser', window.location.origin);
-        if (path) url.searchParams.set('path', path);
-        const current = new URL(window.location.href);
-        for (const key of ['sort', 'order']) {
-            const value = current.searchParams.get(key);
-            if (value) url.searchParams.set(key, value);
-        }
-        window.location.href = url.toString();
-    }
 
     function setQueryParam(key, value) {
         const url = new URL(window.location.href);
@@ -153,13 +147,11 @@
 
     function updateSelectionBar() {
         const bar = $('selectionActionBar');
+        bar.hidden = selected.size === 0;
+        document.body.classList.toggle('selection-mode', selected.size > 0);
         if (selected.size > 0) {
-            bar.style.display = 'flex';
             $('selectionCount').textContent = `${selected.size} selected`;
-            document.body.classList.add('selection-mode');
         } else {
-            bar.style.display = 'none';
-            document.body.classList.remove('selection-mode');
             document.querySelectorAll('.bulk-checkbox').forEach((cb) => (cb.checked = false));
             document.querySelectorAll('.file-card.selected').forEach((c) => c.classList.remove('selected'));
         }
@@ -177,6 +169,8 @@
 
     // --- Preview ------------------------------------------------------------
 
+    const previewModal = $('previewModal');
+
     function showPreview(index) {
         const file = files[index];
         if (!file) return;
@@ -185,13 +179,12 @@
         $('modalDownloadLink').href = file.downloadUrl;
         const body = $('modalBody');
         body.replaceChildren();
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'].includes(ext)) {
+        if (file.isImage) {
             const img = document.createElement('img');
             img.src = file.downloadUrl;
             img.alt = file.name;
             body.appendChild(img);
-        } else if (['mp4', 'webm'].includes(ext)) {
+        } else if (file.isVideo) {
             const video = document.createElement('video');
             video.src = file.downloadUrl;
             video.controls = true;
@@ -201,9 +194,8 @@
             p.textContent = 'Preview not available for this file type.';
             body.appendChild(p);
         }
-        const hasOthers = files.some((f, i) => i !== index && isPreviewable(f));
-        $('modalNav').style.display = hasOthers ? 'flex' : 'none';
-        $('previewModal').classList.add('active');
+        $('modalNav').hidden = !(isPreviewable(file) && files.some((f, i) => i !== index && isPreviewable(f)));
+        if (!previewModal.open) previewModal.showModal();
     }
 
     function navigatePreview(direction) {
@@ -212,12 +204,75 @@
         }
     }
 
-    function closePreview() {
-        const modal = $('previewModal');
-        modal.classList.remove('active');
-        const video = modal.querySelector('video');
+    previewModal.addEventListener('close', () => {
+        const video = previewModal.querySelector('video');
         if (video) video.pause();
+        // Return focus to the card that opened the preview.
+        const file = files[previewIndex];
+        const card = file && document.querySelector(`.file-card[data-path="${CSS.escape(file.path)}"] .file-open`);
+        if (card) card.focus();
+    });
+    previewModal.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') navigatePreview(1);
+        else if (e.key === 'ArrowLeft') navigatePreview(-1);
+    });
+
+    // A click on the backdrop (the <dialog> itself, outside its content) closes it.
+    for (const dialog of [previewModal, actionModal]) {
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) dialog.close();
+        });
     }
+
+    // --- Card menus (WAI-ARIA menu button) ----------------------------------
+
+    function menuOf(toggle) {
+        return $(toggle.getAttribute('aria-controls'));
+    }
+
+    function closeMenus(except) {
+        document.querySelectorAll('.kebab-toggle[aria-expanded="true"]').forEach((toggle) => {
+            if (toggle === except) return;
+            toggle.setAttribute('aria-expanded', 'false');
+            menuOf(toggle).hidden = true;
+            toggle.closest('.file-card').classList.remove('menu-open');
+        });
+    }
+
+    function openMenu(toggle, focusLast = false) {
+        closeMenus(toggle);
+        const menu = menuOf(toggle);
+        toggle.setAttribute('aria-expanded', 'true');
+        menu.hidden = false;
+        toggle.closest('.file-card').classList.add('menu-open');
+        const items = menu.querySelectorAll('[role="menuitem"]');
+        items[focusLast ? items.length - 1 : 0].focus();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        const toggle = e.target.closest && e.target.closest('.kebab-toggle');
+        if (toggle && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            e.preventDefault();
+            openMenu(toggle, e.key === 'ArrowUp');
+            return;
+        }
+        const menu = e.target.closest && e.target.closest('[role="menu"]');
+        if (!menu) return;
+        const items = [...menu.querySelectorAll('[role="menuitem"]')];
+        const index = items.indexOf(e.target);
+        const owner = $(menu.getAttribute('aria-labelledby'));
+        const focusItem = (i) => items[(i + items.length) % items.length].focus();
+        if (e.key === 'ArrowDown') focusItem(index + 1);
+        else if (e.key === 'ArrowUp') focusItem(index - 1);
+        else if (e.key === 'Home') focusItem(0);
+        else if (e.key === 'End') focusItem(items.length - 1);
+        else if (e.key === 'Escape' || e.key === 'Tab') {
+            closeMenus();
+            if (e.key === 'Escape') owner.focus();
+            else return; // let Tab move on naturally
+        } else return;
+        e.preventDefault();
+    });
 
     // --- File operations ----------------------------------------------------
 
@@ -232,7 +287,10 @@
             if (renamed.length) {
                 sessionStorageSafeSet(
                     'pendingToast',
-                    `Duplicate files renamed:\n${renamed.map((u) => `"${u.original}" -> "${u.final}"`).join('\n')}`,
+                    JSON.stringify({
+                        type: 'success',
+                        message: `Duplicate files renamed:\n${renamed.map((u) => `"${u.original}" -> "${u.final}"`).join('\n')}`,
+                    }),
                 );
             }
             window.location.reload();
@@ -248,12 +306,11 @@
 
     const cardActions = {
         open(card) {
-            if (card.dataset.kind === 'dir') goToPath(card.dataset.path);
-            else showPreview(files.findIndex((f) => f.path === card.dataset.path));
+            showPreview(files.findIndex((f) => f.path === card.dataset.path));
         },
         rename(card) {
             const name = card.dataset.name;
-            openActionModal('Rename', 'Enter new name:', 'prompt', (newName) => {
+            openActionModal('Rename', 'New name:', 'prompt', (newName) => {
                 if (!newName || newName === name) return;
                 run(async () => {
                     await api('/files/rename', 'POST', { path: card.dataset.path, newName });
@@ -262,25 +319,22 @@
             }, name);
         },
         move(card) {
-            openActionModal('Move Item', "Enter destination folder (relative to root, e.g. 'photos'):", 'prompt', (destination) => {
+            openActionModal('Move', "Destination folder (relative to the root, e.g. 'photos'):", 'prompt', (destination) => {
                 if (destination === null || destination === undefined) return;
                 moveTo(card.dataset.path, destination);
             }, currentPath);
         },
         delete(card) {
-            openActionModal('Delete File', `Are you sure you want to delete ${card.dataset.name}?`, 'confirm', () => {
+            openActionModal('Delete', `Delete ${card.dataset.name}?`, 'confirm', () => {
                 run(async () => {
                     await api('/files/delete', 'DELETE', { path: card.dataset.path });
                     window.location.reload();
                 }, 'Delete failed');
-            });
+            }, '', true);
         },
-        menu(card) {
-            const menu = card.querySelector('.dropdown-content');
-            document.querySelectorAll('.dropdown-content.show').forEach((el) => {
-                if (el !== menu) el.classList.remove('show');
-            });
-            if (menu) menu.classList.toggle('show');
+        menu(card, toggle) {
+            if (toggle.getAttribute('aria-expanded') === 'true') closeMenus();
+            else openMenu(toggle);
         },
     };
 
@@ -291,31 +345,30 @@
         },
         upload: () => $('fileInput').click(),
         'new-folder': () =>
-            openActionModal('New Folder', 'Enter folder name:', 'prompt', (name) => {
+            openActionModal('New folder', 'Folder name:', 'prompt', (name) => {
                 if (!name) return;
                 run(async () => {
                     await api('/files/mkdir', 'POST', { path: currentPath, name });
                     window.location.reload();
                 }, 'Could not create folder');
             }),
-        go: (el) => goToPath(el.dataset.path),
-        'close-preview': closePreview,
+        'close-preview': () => previewModal.close(),
         'preview-prev': () => navigatePreview(-1),
         'preview-next': () => navigatePreview(1),
-        'close-action-modal': closeActionModal,
+        'close-action-modal': () => actionModal.close(),
         'clear-selection': () => {
             selected.clear();
             updateSelectionBar();
         },
         'bulk-delete': () => {
             if (!selected.size) return;
-            openActionModal('Delete Selected', `Are you sure you want to delete ${selected.size} item(s)? This action cannot be undone.`, 'confirm', () => {
+            openActionModal('Delete selection', `Delete ${selected.size} item(s)? This cannot be undone.`, 'confirm', () => {
                 run(async () => reportBulk(await api('/files/bulk-delete', 'POST', { paths: [...selected] }), 'Delete'), 'Bulk delete failed');
-            });
+            }, '', true);
         },
         'bulk-move': () => {
             if (!selected.size) return;
-            openActionModal('Move Selected', `Enter destination path (relative to root) for ${selected.size} item(s):`, 'prompt', (destination) => {
+            openActionModal('Move selection', `Destination folder (relative to the root) for ${selected.size} item(s):`, 'prompt', (destination) => {
                 if (destination === null || destination === undefined) return;
                 run(async () => reportBulk(await api('/files/bulk-move', 'POST', { paths: [...selected], destination }), 'Move'), 'Bulk move failed');
             }, currentPath);
@@ -325,24 +378,27 @@
     // --- Event delegation ---------------------------------------------------
 
     document.addEventListener('click', (e) => {
-        const actionEl = e.target.closest('[data-action]');
         const card = cardOf(e.target);
 
-        // Overlay actions only fire on the backdrop itself, not inside the dialog.
-        if (actionEl && actionEl.classList.contains('modal-overlay') && e.target !== actionEl) return;
-
         if (e.target.classList.contains('bulk-checkbox')) {
-            e.stopPropagation();
             setSelected(card, e.target.checked);
             return;
         }
 
+        // While selecting, activating a card toggles it instead of opening it.
+        const open = e.target.closest('.file-open');
+        if (open && card && document.body.classList.contains('selection-mode')) {
+            e.preventDefault();
+            setSelected(card, !selected.has(card.dataset.path));
+            return;
+        }
+
+        const actionEl = e.target.closest('[data-action]');
         if (actionEl) {
             const action = actionEl.dataset.action;
-            if (actionEl.tagName === 'A') e.preventDefault();
             if (card && cardActions[action]) {
-                e.stopPropagation();
-                cardActions[action](card);
+                if (action !== 'menu') closeMenus();
+                cardActions[action](card, actionEl);
                 return;
             }
             if (pageActions[action]) {
@@ -351,27 +407,7 @@
             }
         }
 
-        if (card && !e.target.closest('.dropdown-content')) {
-            if (document.body.classList.contains('selection-mode')) {
-                setSelected(card, !selected.has(card.dataset.path));
-            } else {
-                cardActions.open(card);
-            }
-        }
-
-        if (!card) {
-            document.querySelectorAll('.dropdown-content.show').forEach((el) => el.classList.remove('show'));
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if ($('previewModal').classList.contains('active')) {
-            if (e.key === 'ArrowRight') navigatePreview(1);
-            else if (e.key === 'ArrowLeft') navigatePreview(-1);
-            else if (e.key === 'Escape') closePreview();
-        } else if (e.key === 'Escape' && $('actionModal').classList.contains('active')) {
-            closeActionModal();
-        }
+        if (!e.target.closest('.file-menu')) closeMenus();
     });
 
     // Broken thumbnails fall back to the generic image icon ('error' doesn't bubble).
@@ -380,14 +416,14 @@
         (e) => {
             const img = e.target;
             if (img.tagName === 'IMG' && img.classList.contains('file-thumbnail')) {
-                img.style.display = 'none';
-                if (img.nextElementSibling) img.nextElementSibling.style.display = 'block';
+                img.hidden = true;
+                if (img.nextElementSibling) img.nextElementSibling.hidden = false;
             }
         },
         true,
     );
 
-    // --- Drag & drop --------------------------------------------------------
+    // --- Drag & drop (mouse shortcut; the ⋯ menu is the keyboard/touch path) --
 
     if (canWrite) {
         $('fileInput').addEventListener('change', (e) => uploadFiles(e.target.files));
@@ -438,15 +474,15 @@
         });
     }
 
-    // Messages queued before a reload (e.g. renamed duplicates).
+    // Messages queued before a reload (e.g. renamed duplicates, partial failures).
     try {
         const pending = sessionStorage.getItem('pendingToast');
         if (pending) {
             sessionStorage.removeItem('pendingToast');
-            showToast(pending, /failed/.test(pending) ? 'error' : 'success');
+            const { type, message } = JSON.parse(pending);
+            showToast(message, type);
         }
     } catch {
-        /* storage unavailable */
+        /* storage unavailable or old format */
     }
-
 })();

@@ -25,19 +25,30 @@ document.addEventListener('DOMContentLoaded', () => {
         sendChatMessageButton.disabled = this.value.trim() === '';
     });
 
-    chatButton.addEventListener('click', () => {
-        chatSidebar.classList.toggle('open');
-        if (chatSidebar.classList.contains('open') && !isChatInitialized) {
-            displayWelcomeMessage();
-            isChatInitialized = true;
+    // Closed, the panel is off-screen and inert, so Tab never lands inside it.
+    function setChatOpen(open) {
+        chatSidebar.classList.toggle('open', open);
+        chatSidebar.inert = !open;
+        chatButton.setAttribute('aria-expanded', String(open));
+        if (open) {
+            if (!isChatInitialized) {
+                displayWelcomeMessage();
+                isChatInitialized = true;
+            }
+            chatMessageInput.focus();
         }
-        if (chatSidebar.classList.contains('open')) {
-            setTimeout(() => chatMessageInput.focus(), 300);
-        }
-    });
+    }
 
+    chatButton.addEventListener('click', () => setChatOpen(!chatSidebar.classList.contains('open')));
     closeChatButton.addEventListener('click', () => {
-        chatSidebar.classList.remove('open');
+        setChatOpen(false);
+        chatButton.focus();
+    });
+    chatSidebar.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            setChatOpen(false);
+            chatButton.focus();
+        }
     });
 
     sendChatMessageButton.addEventListener('click', sendMessage);

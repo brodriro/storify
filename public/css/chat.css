@@ -99,7 +99,7 @@
     border: 1px solid var(--border);
 }
 
-.chat-header h3 {
+.chat-title {
     margin: 0;
     font-size: 1.1rem;
     font-family: 'Fira Sans', system-ui, sans-serif;
@@ -375,6 +375,21 @@
 
 .typing-dots span:nth-child(2) {
     animation-delay: -0.16s;
+}
+
+/* Was referenced but never defined, so the dots never moved. */
+@keyframes bounce {
+    0%,
+    80%,
+    100% {
+        transform: scale(0.6);
+        opacity: 0.5;
+    }
+
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 /* Confirmation of agent actions that change files, and data notice */
 .chat-confirm {

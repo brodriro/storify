@@ -87,25 +87,31 @@ export class FilesController {
       this.storageService.getStorageSummary(),
     ]);
 
+    // Every link keeps the sort the user chose; folders are real links so
+    // they work with the keyboard, middle-click and without JavaScript.
+    const browserUrl = (path: string, page = 1) => {
+      const params = new URLSearchParams();
+      if (path) params.set('path', path);
+      if (query.sort) params.set('sort', query.sort);
+      if (query.order) params.set('order', query.order);
+      if (page > 1) params.set('page', String(page));
+      const search = params.toString();
+      return search ? `/files/browser?${search}` : '/files/browser';
+    };
+
     const parts = currentPath.split('/').filter((p) => p);
+    const parentPath = parts.slice(0, -1).join('/');
     const breadcrumbs = parts.map((name, i) => ({
       name,
       path: parts.slice(0, i + 1).join('/'),
+      url: browserUrl(parts.slice(0, i + 1).join('/')),
     }));
 
     // Rendering is what blocks on big folders (~4 KB of markup per entry), so
     // only one page of entries reaches the template.
     const totalPages = Math.max(1, Math.ceil(files.length / BROWSER_PAGE_SIZE));
     const page = Math.min(query.page ?? 1, totalPages);
-    const pageUrl = (n: number) => {
-      const params = new URLSearchParams();
-      if (currentPath) params.set('path', currentPath);
-      if (query.sort) params.set('sort', query.sort);
-      if (query.order) params.set('order', query.order);
-      if (n > 1) params.set('page', String(n));
-      const search = params.toString();
-      return search ? `/files/browser?${search}` : '/files/browser';
-    };
+    const pageUrl = (n: number) => browserUrl(currentPath, n);
     const pagination = {
       page,
       totalPages,
@@ -125,6 +131,7 @@ export class FilesController {
       return {
         ...f,
         path: relPath,
+        openUrl: f.isDirectory ? browserUrl(relPath) : null,
         thumbnailUrl: `/files/thumbnail?path=${query}`,
         downloadUrl: `/files/download?path=${query}`,
       };
@@ -134,7 +141,7 @@ export class FilesController {
     // no file name can close the <script> element.
     const clientData = JSON.stringify({
       currentPath,
-      parentPath: parts.slice(0, -1).join('/'),
+      parentPath,
       canWrite: user.role !== 'guest',
       files: entries.map((f) => ({
         name: f.name,
@@ -151,6 +158,8 @@ export class FilesController {
       clientData,
       user,
       currentPath,
+      homeUrl: browserUrl(''),
+      parentUrl: currentPath ? browserUrl(parentPath) : null,
       breadcrumbs,
       pagination,
       storage: {

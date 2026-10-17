@@ -37,8 +37,9 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
           defaultSrc: ["'self'"],
           // No inline scripts anywhere: views load /js/*.js only.
           scriptSrc: ["'self'"],
-          // Inline style attributes remain in the views (plan U11).
-          styleSrc: ["'self'", "'unsafe-inline'"],
+          // No inline styles either (U11): views use classes only. Scripts may
+          // still set element.style through the CSSOM, which CSP allows.
+          styleSrc: ["'self'"],
           // Fonts are self-hosted (/vendor/fira-*): no Google Fonts.
           fontSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
