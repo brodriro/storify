@@ -10,7 +10,7 @@ import { LogsService } from '../logs/logs.service';
 import { Logger } from '@nestjs/common';
 import { AgentService } from '../agent.service'; // Import AgentService
 import { Socket } from 'socket.io';
-import { ChatMessage } from 'src/agent/interfaces/ChatMessage';
+import { ChatMessage } from '../interfaces/ChatMessage';
 
 @WebSocketGateway({ cors: true }) // Enable CORS for development
 export class ChatGateway {

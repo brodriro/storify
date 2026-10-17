@@ -7,7 +7,7 @@ import OpenAI from 'openai';
 import * as dotenv from 'dotenv';
 import { AgentResponseDto } from '../dto/agent-response.dto';
 import { Tool } from 'openai/resources/responses/responses';
-import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
+import { ChatMessage, ToolNas } from '../interfaces/ChatMessage';
 import { FileClassificationResponse } from '../interfaces/classification.interface';
 dotenv.config();
 

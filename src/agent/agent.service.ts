@@ -6,7 +6,7 @@ import { LogsService } from './logs/logs.service';
 import { FileReaderService } from './file-reader/file-reader.service';
 import { ClassificationService } from './classification/classification.service';
 import { AgentResponseDto } from './dto/agent-response.dto';
-import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
+import { ChatMessage, ToolNas } from './interfaces/ChatMessage';
 
 @Injectable()
 export class AgentService {
