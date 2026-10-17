@@ -1,0 +1,9 @@
+allowBuilds:
+  # Only prints an Open Collective banner.
+  '@nestjs/core': false
+  # Prebuilt binaries come from the @img/* optional dependencies; the install
+  # script only compiles from source when a global libvips is detected, and
+  # fails without a native toolchain.
+  sharp: false
+  # Native resolver used by jest; postinstall links the platform binding.
+  unrs-resolver: true

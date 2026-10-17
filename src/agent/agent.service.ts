@@ -6,7 +6,7 @@ import { LogsService } from './logs/logs.service';
 import { FileReaderService } from './file-reader/file-reader.service';
 import { ClassificationService } from './classification/classification.service';
 import { AgentResponseDto } from './dto/agent-response.dto';
-import { ChatMessage, ToolNas } from 'src/agent/interfaces/ChatMessage';
+import { ChatMessage, ToolNas } from './interfaces/ChatMessage';
 
 @Injectable()
 export class AgentService {
@@ -29,7 +29,12 @@ export class AgentService {
       parameters: {
         type: 'object',
         properties: {
-          days: { type: 'number', description: 'Número de días hacia atrás para buscar archivos recientes.', default: 7 },
+          days: {
+            type: 'number',
+            description:
+              'Número de días hacia atrás para buscar archivos recientes.',
+            default: 7,
+          },
         },
         required: [],
       },
@@ -58,7 +63,10 @@ export class AgentService {
       parameters: {
         type: 'object',
         properties: {
-          name: { type: 'string', description: 'El nombre o parte del nombre del documento a buscar.' },
+          name: {
+            type: 'string',
+            description: 'El nombre o parte del nombre del documento a buscar.',
+          },
         },
         required: ['name'],
       },
@@ -69,30 +77,47 @@ export class AgentService {
       parameters: {
         type: 'object',
         properties: {
-          filePath: { type: 'string', description: 'El nombre completo del documento a resumir.' },
+          filePath: {
+            type: 'string',
+            description: 'El nombre completo del documento a resumir.',
+          },
         },
         required: ['filePath'],
       },
     },
     {
       name: 'classify_file',
-      description: 'Clasifica automáticamente un archivo del NAS. Analiza su contenido, metadata y estructura para determinar categoría, subcategoría, sensibilidad, etiquetas y acciones sugeridas.',
+      description:
+        'Clasifica automáticamente un archivo del NAS. Analiza su contenido, metadata y estructura para determinar categoría, subcategoría, sensibilidad, etiquetas y acciones sugeridas.',
       parameters: {
         type: 'object',
         properties: {
-          filePath: { type: 'string', description: 'Ruta relativa del archivo dentro del NAS (ej: ADMIN/docs/factura.pdf).' },
+          filePath: {
+            type: 'string',
+            description:
+              'Ruta relativa del archivo dentro del NAS (ej: ADMIN/docs/factura.pdf).',
+          },
         },
         required: ['filePath'],
       },
     },
     {
       name: 'move_file',
-      description: 'Mueve un archivo o carpeta a una nueva ubicación dentro del NAS.',
+      description:
+        'Mueve un archivo o carpeta a una nueva ubicación dentro del NAS.',
       parameters: {
         type: 'object',
         properties: {
-          filePath: { type: 'string', description: 'Ruta relativa actual del archivo (ej: ADMIN/docs/factura.pdf).' },
-          destination: { type: 'string', description: 'Ruta relativa de la carpeta destino (ej: ADMIN/finanzas/facturas).' },
+          filePath: {
+            type: 'string',
+            description:
+              'Ruta relativa actual del archivo (ej: ADMIN/docs/factura.pdf).',
+          },
+          destination: {
+            type: 'string',
+            description:
+              'Ruta relativa de la carpeta destino (ej: ADMIN/finanzas/facturas).',
+          },
         },
         required: ['filePath', 'destination'],
       },
@@ -103,8 +128,15 @@ export class AgentService {
       parameters: {
         type: 'object',
         properties: {
-          path: { type: 'string', description: 'Ruta relativa del directorio padre donde se creará la carpeta (ej: ADMIN/finanzas).' },
-          name: { type: 'string', description: 'Nombre de la nueva carpeta a crear.' },
+          path: {
+            type: 'string',
+            description:
+              'Ruta relativa del directorio padre donde se creará la carpeta (ej: ADMIN/finanzas).',
+          },
+          name: {
+            type: 'string',
+            description: 'Nombre de la nueva carpeta a crear.',
+          },
         },
         required: ['path', 'name'],
       },
@@ -118,25 +150,32 @@ export class AgentService {
     private readonly logsService: LogsService,
     private readonly fileReaderService: FileReaderService,
     private readonly classificationService: ClassificationService,
-  ) { }
+  ) {}
 
-  async processMessage(userMessage: string, history: ChatMessage[]): Promise<{ response: string }> {
+  async processMessage(
+    userMessage: string,
+    history: ChatMessage[],
+  ): Promise<{ response: string }> {
     let currentMessage = userMessage;
     let agentResponse: AgentResponseDto | null = null;
     let iterations = 0;
 
     while (iterations < this.maxIterations) {
-      this.logger.log(`Iteration ${iterations + 1}: Processing message: ${currentMessage}`);
+      this.logger.log(
+        `Iteration ${iterations + 1}: Processing message: ${currentMessage}`,
+      );
 
       // LLM Reasoner: Decide whether to take an action or provide a final answer
       agentResponse = await this.llmService.getAgentAction(
         currentMessage,
         this.availableTools,
-        history
+        history,
       );
 
       if (agentResponse === null || agentResponse === undefined) {
-        this.logger.warn('LLM Reasoner returned null or undefined agentResponse. Continuing to next iteration or handling as error.');
+        this.logger.warn(
+          'LLM Reasoner returned null or undefined agentResponse. Continuing to next iteration or handling as error.',
+        );
         // Optionally, you might want to return an error or break the loop here.
         // For now, I'll just skip the current iteration and log a warning.
         iterations++; // Increment iterations to prevent infinite loop if LLM always returns null
@@ -149,29 +188,51 @@ export class AgentService {
       }
 
       if (agentResponse.type === 'action' && agentResponse.action) {
-        this.logger.log(`LLM Reasoner decided to take action: ${agentResponse.action} with params: ${JSON.stringify(agentResponse.params)}`);
+        this.logger.log(
+          `LLM Reasoner decided to take action: ${agentResponse.action} with params: ${JSON.stringify(agentResponse.params)}`,
+        );
         // Tool Executor: Execute the action
         try {
-          const toolResult = await this.executeTool(agentResponse.action, agentResponse.params);
+          const toolResult = await this.executeTool(
+            agentResponse.action,
+            agentResponse.params,
+          );
           // Observation Handler: Normalize and feed back to LLM Reasoner
           currentMessage = `Tool ${agentResponse.action} executed successfully. Observation: ${JSON.stringify(toolResult)}`;
-          this.logger.log(`Tool execution successful. Observation: ${currentMessage}`);
+          this.logger.log(
+            `Tool execution successful. Observation: ${currentMessage}`,
+          );
         } catch (error) {
           currentMessage = `Tool ${agentResponse.action} failed. Error: ${error.message}`;
-          this.logger.error(`Tool execution failed. Error: ${error.message}`, error.stack);
+          this.logger.error(
+            `Tool execution failed. Error: ${error.message}`,
+            error.stack,
+          );
         }
       } else {
-        this.logger.warn('LLM Reasoner did not provide a valid action or final response type.');
-        return { response: 'I could not determine a valid action or response based on your request.' };
+        this.logger.warn(
+          'LLM Reasoner did not provide a valid action or final response type.',
+        );
+        return {
+          response:
+            'I could not determine a valid action or response based on your request.',
+        };
       }
       iterations++;
     }
 
     this.logger.warn('Max iterations reached. Providing a default response.');
-    return { response: agentResponse?.message || 'I could not complete your request within the allowed iterations.' };
+    return {
+      response:
+        agentResponse?.message ||
+        'I could not complete your request within the allowed iterations.',
+    };
   }
 
-  private async executeTool(action: string, params: { [key: string]: any } | null): Promise<any> {
+  private async executeTool(
+    action: string,
+    params: { [key: string]: any } | null,
+  ): Promise<any> {
     switch (action) {
       case 'get_disk_usage':
         return this.fileSystemService.getDiskUsage();
@@ -190,7 +251,9 @@ export class AgentService {
         if (!params || !params.filePath) {
           throw new Error('Missing parameter: filePath for summarize_document');
         }
-        const fileContent = await this.fileReaderService.readFileContent(params.filePath);
+        const fileContent = await this.fileReaderService.readFileContent(
+          params.filePath,
+        );
         return this.llmService.summarizeText(fileContent);
       case 'classify_file':
         if (!params || !params.filePath) {
@@ -199,22 +262,48 @@ export class AgentService {
         return this.classificationService.classifyFile(params.filePath);
       case 'move_file':
         if (!params || !params.filePath || !params.destination) {
-          throw new Error('Missing parameters: filePath and destination for move_file');
+          throw new Error(
+            'Missing parameters: filePath and destination for move_file',
+          );
         }
         {
-          const normFile = params.filePath.replace(/^\.?\/?(?:public_storage\/)?users\//, '').replace(/^\.?\/?/, '');
-          const normDest = params.destination.replace(/^\.?\/?(?:public_storage\/)?users\//, '').replace(/^\.?\/?/, '');
-          await this.fileSystemService.moveItem('ADMIN', normFile, normDest, 'admin');
-          return { success: true, message: `Archivo movido de ${normFile} a ${normDest}` };
+          const normFile = params.filePath
+            .replace(/^\.?\/?(?:public_storage\/)?users\//, '')
+            .replace(/^\.?\/?/, '');
+          const normDest = params.destination
+            .replace(/^\.?\/?(?:public_storage\/)?users\//, '')
+            .replace(/^\.?\/?/, '');
+          await this.fileSystemService.moveItem(
+            'ADMIN',
+            normFile,
+            normDest,
+            'admin',
+          );
+          return {
+            success: true,
+            message: `Archivo movido de ${normFile} a ${normDest}`,
+          };
         }
       case 'create_folder':
         if (!params || !params.path || !params.name) {
-          throw new Error('Missing parameters: path and name for create_folder');
+          throw new Error(
+            'Missing parameters: path and name for create_folder',
+          );
         }
         {
-          const normPath = params.path.replace(/^\.?\/?(?:public_storage\/)?users\//, '').replace(/^\.?\/?/, '');
-          await this.fileSystemService.createFolder('ADMIN', normPath, params.name, 'admin');
-          return { success: true, message: `Carpeta '${params.name}' creada en ${normPath}` };
+          const normPath = params.path
+            .replace(/^\.?\/?(?:public_storage\/)?users\//, '')
+            .replace(/^\.?\/?/, '');
+          await this.fileSystemService.createFolder(
+            'ADMIN',
+            normPath,
+            params.name,
+            'admin',
+          );
+          return {
+            success: true,
+            message: `Carpeta '${params.name}' creada en ${normPath}`,
+          };
         }
       default:
         throw new Error(`Unknown tool: ${action}`);

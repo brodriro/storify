@@ -5,9 +5,9 @@ import { FileSystemModule } from '../filesystem/filesystem.module';
 import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-    imports: [FileSystemModule, NotificationModule],
-    controllers: [AdminController],
-    providers: [AdminService],
-    exports: [AdminService],
+  imports: [FileSystemModule, NotificationModule],
+  controllers: [AdminController],
+  providers: [AdminService],
+  exports: [AdminService],
 })
-export class AdminModule { }
+export class AdminModule {}

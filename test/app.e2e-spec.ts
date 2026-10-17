@@ -1,25 +1,93 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { Test } from '@nestjs/testing';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
 
-describe('AppController (e2e)', () => {
+describe('Storify (e2e)', () => {
   let app: INestApplication<App>;
+  let storage: string;
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+  beforeAll(async () => {
+    storage = fs.mkdtempSync(path.join(os.tmpdir(), 'storify-e2e-'));
+    // Configuration is read when AppModule is first imported, so the
+    // environment has to be in place before requiring it.
+    Object.assign(process.env, {
+      STORAGE_PATH: storage,
+      JWT_SECRET: 'e2e-secret-e2e-secret-e2e-secret!',
+      OPENAI_API_KEY: 'sk-e2e-dummy',
+      USERS: 'ADMIN,ALICE,INVITADO',
+      USER_ADMIN: 'admin-pass',
+      USER_ALICE: 'alice-pass',
+      USER_INVITADO: 'guest-pass',
+    });
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { AppModule } =
+      require('../src/app.module') as typeof import('../src/app.module');
+    const { configureApp } =
+      require('../src/app.setup') as typeof import('../src/app.setup');
+    /* eslint-enable @typescript-eslint/no-require-imports */
+
+    const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+    const nestApp = moduleRef.createNestApplication<NestExpressApplication>();
+    await configureApp(nestApp);
+    await nestApp.init();
+    app = nestApp as unknown as INestApplication<App>;
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterAll(async () => {
+    await app?.close();
+    fs.rmSync(storage, { recursive: true, force: true });
+  });
+
+  const login = async (username: string, password: string) => {
+    const res = await request(app.getHttpServer())
+      .post('/auth/login')
+      .type('form')
+      .send({ username, password });
+    const cookies = res.get('Set-Cookie') ?? [];
+    return { res, cookie: cookies.find((c) => c.startsWith('jwt=')) };
+  };
+
+  it('renders the login page', async () => {
+    const res = await request(app.getHttpServer()).get('/').expect(200);
+    expect(res.text).toContain('action="/auth/login"');
+  });
+
+  it('rejects the file browser without a session', async () => {
+    await request(app.getHttpServer()).get('/files/browser').expect(401);
+  });
+
+  it('redirects back to login on wrong credentials', async () => {
+    const { res, cookie } = await login('ALICE', 'nope');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/?error=invalid');
+    expect(cookie).toBeUndefined();
+  });
+
+  it('logs in and opens the file browser', async () => {
+    const { res, cookie } = await login('ALICE', 'alice-pass');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/files/browser');
+    expect(cookie).toBeDefined();
+
+    await request(app.getHttpServer())
+      .get('/files/browser')
+      .set('Cookie', cookie!)
+      .expect(200);
+  });
+
+  // S4 in the improvement plan: backup endpoints have no admin check.
+  it.failing('forbids backup download for non-admin users', async () => {
+    const { cookie } = await login('INVITADO', 'guest-pass');
+    await request(app.getHttpServer())
+      .get('/admin/backup/download')
+      .set('Cookie', cookie!)
+      .expect(403);
   });
 });

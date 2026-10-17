@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as mammoth from 'mammoth';
@@ -7,7 +11,6 @@ import { PDFParse } from 'pdf-parse';
 @Injectable()
 export class FileReaderService {
   async readFileContent(filePath: string): Promise<string> {
-
     const ext = path.extname(filePath).toLowerCase();
     let content = '';
 
@@ -28,7 +31,11 @@ export class FileReaderService {
 
       return this.cleanText(content);
     } catch (error) {
-      Logger.error(`Error reading file ${filePath}: ${error.message}`, error.stack, 'FileReaderService');
+      Logger.error(
+        `Error reading file ${filePath}: ${error.message}`,
+        error.stack,
+        'FileReaderService',
+      );
       throw new InternalServerErrorException(`Failed to read file ${filePath}`);
     }
   }
@@ -42,28 +49,48 @@ export class FileReaderService {
     const matchingDocuments: string[] = [];
 
     try {
-      await this.findDocumentsRecursively(directoryPath, searchName, matchingDocuments);
+      await this.findDocumentsRecursively(
+        directoryPath,
+        searchName,
+        matchingDocuments,
+      );
       return matchingDocuments;
     } catch (error) {
-      Logger.error(`Error listing documents in ${directoryPath}: ${error.message}`, error.stack, 'FileReaderService');
-      throw new InternalServerErrorException(`Failed to list documents in ${directoryPath}`);
+      Logger.error(
+        `Error listing documents in ${directoryPath}: ${error.message}`,
+        error.stack,
+        'FileReaderService',
+      );
+      throw new InternalServerErrorException(
+        `Failed to list documents in ${directoryPath}`,
+      );
     }
   }
 
   private static readonly SUPPORTED_EXTENSIONS = ['.txt', '.docx', '.pdf'];
 
-  private async findDocumentsRecursively(directory: string, searchName: string, matchingDocuments: string[]): Promise<void> {
+  private async findDocumentsRecursively(
+    directory: string,
+    searchName: string,
+    matchingDocuments: string[],
+  ): Promise<void> {
     const entries = await fs.readdir(directory, { withFileTypes: true });
 
     for (const entry of entries) {
       const fullPath = path.join(directory, entry.name);
       if (entry.isDirectory()) {
-        await this.findDocumentsRecursively(fullPath, searchName, matchingDocuments);
+        await this.findDocumentsRecursively(
+          fullPath,
+          searchName,
+          matchingDocuments,
+        );
       } else if (
         entry.isFile() &&
         entry.name.toLowerCase().includes(searchName.toLowerCase()) &&
         !entry.name.startsWith('.') &&
-        FileReaderService.SUPPORTED_EXTENSIONS.includes(path.extname(entry.name).toLowerCase())
+        FileReaderService.SUPPORTED_EXTENSIONS.includes(
+          path.extname(entry.name).toLowerCase(),
+        )
       ) {
         matchingDocuments.push(fullPath);
       }

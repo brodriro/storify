@@ -5,6 +5,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# pnpm is the package manager; never commit npm/yarn lockfiles
+package-lock.json
+yarn.lock
+
+# Python bytecode (agent skill scripts)
+__pycache__/
+*.pyc
+
 # Build output
 dist/
 build/
@@ -40,6 +48,9 @@ temp_uploads/
 public_storage/
 storage/
 
-# Logs
-logs/
+# Logs (anchored to the root so src/agent/logs/ stays tracked)
+/logs/
 *.log
+
+# Local audit / improvement plan (not versioned)
+plan-mejoras/

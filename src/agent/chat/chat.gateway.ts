@@ -1,10 +1,16 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, ConnectedSocket } from '@nestjs/websockets';
+import {
+  WebSocketGateway,
+  SubscribeMessage,
+  MessageBody,
+  WebSocketServer,
+  ConnectedSocket,
+} from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { LogsService } from '../logs/logs.service';
 import { Logger } from '@nestjs/common';
 import { AgentService } from '../agent.service'; // Import AgentService
 import { Socket } from 'socket.io';
-import { ChatMessage } from 'src/agent/interfaces/ChatMessage';
+import { ChatMessage } from '../interfaces/ChatMessage';
 
 @WebSocketGateway({ cors: true }) // Enable CORS for development
 export class ChatGateway {
@@ -14,10 +20,13 @@ export class ChatGateway {
   constructor(
     private readonly logsService: LogsService,
     private readonly agentService: AgentService, // Inject AgentService
-  ) { }
+  ) {}
 
   @SubscribeMessage('chat')
-  async handleMessage(@MessageBody() message: string, @ConnectedSocket() client: Socket): Promise<void> {
+  async handleMessage(
+    @MessageBody() message: string,
+    @ConnectedSocket() client: Socket,
+  ): Promise<void> {
     this.logsService.log(`Received chat message: ${message}`, 'ChatGateway');
 
     const sessionId = client.id;
@@ -31,12 +40,18 @@ export class ChatGateway {
     history.push({ role: 'user', content: message });
 
     // Pass the message and history to the AgentService for processing
-    const agentResponse = await this.agentService.processMessage(message, history);
+    const agentResponse = await this.agentService.processMessage(
+      message,
+      history,
+    );
 
     // Store agent's response in history
     history.push({ role: 'assistant', content: agentResponse.response });
 
     this.server.emit('chatResponse', { response: agentResponse.response }); // Emit the response back to the client
-    this.logsService.log(`Sent chat response: ${JSON.stringify(agentResponse)}`, 'ChatGateway');
+    this.logsService.log(
+      `Sent chat response: ${JSON.stringify(agentResponse)}`,
+      'ChatGateway',
+    );
   }
 }

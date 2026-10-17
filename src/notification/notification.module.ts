@@ -3,8 +3,8 @@ import { NotificationService } from './notification.service';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-    imports: [ConfigModule],
-    providers: [NotificationService],
-    exports: [NotificationService],
+  imports: [ConfigModule],
+  providers: [NotificationService],
+  exports: [NotificationService],
 })
-export class NotificationModule { }
+export class NotificationModule {}
