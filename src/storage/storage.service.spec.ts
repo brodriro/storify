@@ -2,10 +2,10 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import type { LogsService } from '../agent/logs/logs.service';
+import type { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/auth-user';
 import { AccessPolicy } from './access-policy';
-import { FileSystemService } from './filesystem.service';
+import { StorageService } from './storage.service';
 
 const ADMIN: AuthUser = { username: 'ADMIN', role: 'admin' };
 const ALICE: AuthUser = { username: 'ALICE', role: 'member' };
@@ -16,11 +16,11 @@ const GUEST: AuthUser = { username: 'INVITADO', role: 'guest' };
  * Runs against a real temp directory so path normalization and symlinks are
  * exercised for real.
  */
-describe('FileSystemService access control', () => {
+describe('StorageService access control', () => {
   let storage: string;
   let usersRoot: string;
   let publicRoot: string;
-  let service: FileSystemService;
+  let service: StorageService;
   let recordEvent: jest.Mock;
 
   const write = (root: string, rel: string, content = 'x') => {
@@ -46,8 +46,8 @@ describe('FileSystemService access control', () => {
       ],
     });
     recordEvent = jest.fn().mockResolvedValue(undefined);
-    const logs = { recordEvent } as unknown as LogsService;
-    service = new FileSystemService(config, new AccessPolicy(config, logs));
+    const logs = { recordEvent } as unknown as AuditService;
+    service = new StorageService(config, new AccessPolicy(config, logs));
 
     write(usersRoot, 'ADMIN/secret.txt', 'admin-secret');
     write(usersRoot, 'ALICE/own.txt', 'alice');
@@ -198,16 +198,16 @@ describe('FileSystemService access control', () => {
     it.each([
       [
         'delete a file',
-        (s: FileSystemService) => s.deleteItem(GUEST, 'readme.txt'),
+        (s: StorageService) => s.deleteItem(GUEST, 'readme.txt'),
       ],
-      ['delete the root', (s: FileSystemService) => s.deleteItem(GUEST, '')],
+      ['delete the root', (s: StorageService) => s.deleteItem(GUEST, '')],
       [
         'create a folder',
-        (s: FileSystemService) => s.createFolder(GUEST, '', 'x'),
+        (s: StorageService) => s.createFolder(GUEST, '', 'x'),
       ],
       [
         'rename a file',
-        (s: FileSystemService) => s.renameItem(GUEST, 'readme.txt', 'x.txt'),
+        (s: StorageService) => s.renameItem(GUEST, 'readme.txt', 'x.txt'),
       ],
     ])('cannot %s', async (_label, run) => {
       await expect(run(service)).rejects.toThrow('Access denied');

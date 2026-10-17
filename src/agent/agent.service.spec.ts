@@ -1,11 +1,11 @@
 import type { AdminService } from '../admin/admin.service';
 import type { AuthUser } from '../auth/auth-user';
-import type { FileSystemService } from '../filesystem/filesystem.service';
+import type { StorageService } from '../storage/storage.service';
 import { AgentService } from './agent.service';
 import type { ClassificationService } from './classification/classification.service';
-import type { FileReaderService } from './file-reader/file-reader.service';
+import type { DocumentReaderService } from './documents/document-reader.service';
 import type { LlmService } from './llm/llm.service';
-import type { LogsService } from './logs/logs.service';
+import type { AuditService } from '../audit/audit.service';
 
 const ALICE: AuthUser = { username: 'ALICE', role: 'member' };
 const ADMIN: AuthUser = { username: 'ADMIN', role: 'admin' };
@@ -16,10 +16,10 @@ async function runTool(
   action: string,
   params: Record<string, unknown>,
   deps: Partial<{
-    fileSystem: Partial<FileSystemService>;
+    fileSystem: Partial<StorageService>;
     admin: Partial<AdminService>;
-    logs: Partial<LogsService>;
-    reader: Partial<FileReaderService>;
+    logs: Partial<AuditService>;
+    reader: Partial<DocumentReaderService>;
   }> = {},
 ): Promise<string> {
   const getAgentAction = jest
@@ -33,10 +33,10 @@ async function runTool(
     });
   const agent = new AgentService(
     { getAgentAction, summarizeText: jest.fn() } as unknown as LlmService,
-    (deps.fileSystem ?? {}) as FileSystemService,
+    (deps.fileSystem ?? {}) as StorageService,
     (deps.admin ?? {}) as AdminService,
-    (deps.logs ?? {}) as LogsService,
-    (deps.reader ?? {}) as FileReaderService,
+    (deps.logs ?? {}) as AuditService,
+    (deps.reader ?? {}) as DocumentReaderService,
     {} as ClassificationService,
   );
   await agent.processMessage('go', [], user);

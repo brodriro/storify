@@ -14,7 +14,7 @@ import type { AppConfig } from '../config/configuration';
 import {
   ensureDirectoryExists,
   resolveStoragePath,
-} from '../shared/utils/path.utils';
+} from '../common/path.utils';
 import { AccessPolicy, ResolvedPath } from './access-policy';
 
 const IMAGE_EXTENSIONS = [
@@ -72,7 +72,7 @@ function isNotFound(error: unknown): boolean {
 }
 
 @Injectable()
-export class FileSystemService {
+export class StorageService {
   private readonly baseStoragePath: string;
 
   constructor(

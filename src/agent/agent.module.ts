@@ -2,18 +2,18 @@ import { Module } from '@nestjs/common';
 import { AgentService } from './agent.service';
 import { LlmModule } from './llm/llm.module';
 import { AdminModule } from '../admin/admin.module';
-import { LogsModule } from './logs/logs.module';
-import { FileSystemModule } from '../filesystem/filesystem.module';
-import { FileReaderModule } from './file-reader/file-reader.module';
+import { AuditModule } from '../audit/audit.module';
+import { StorageModule } from '../storage/storage.module';
+import { DocumentReaderModule } from './documents/document-reader.module';
 import { ClassificationModule } from './classification/classification.module';
 
 @Module({
   imports: [
     LlmModule,
     AdminModule,
-    LogsModule,
-    FileSystemModule,
-    FileReaderModule,
+    AuditModule,
+    StorageModule,
+    DocumentReaderModule,
     ClassificationModule,
   ],
   providers: [AgentService],

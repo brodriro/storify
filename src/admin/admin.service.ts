@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { FileSystemService } from '../filesystem/filesystem.service';
+import { StorageService } from '../storage/storage.service';
 import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notification/notification.service';
 import * as fs from 'fs';
@@ -7,7 +7,7 @@ import * as path from 'path';
 import {
   ensureDirectoryExists,
   resolveStoragePath,
-} from '../shared/utils/path.utils';
+} from '../common/path.utils';
 import archiver from 'archiver';
 import type { AppConfig } from '../config/configuration';
 
@@ -19,7 +19,7 @@ export class AdminService {
   private lastBackupTimestamp: number = 0; // Store timestamp of the last backup
 
   constructor(
-    private fileSystemService: FileSystemService,
+    private storageService: StorageService,
     private configService: ConfigService<AppConfig, true>,
     private notificationService: NotificationService,
   ) {
@@ -61,7 +61,7 @@ export class AdminService {
   }
 
   async getStats() {
-    return this.fileSystemService.getGlobalStats();
+    return this.storageService.getGlobalStats();
   }
 
   /**

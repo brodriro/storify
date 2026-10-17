@@ -18,7 +18,7 @@ import * as path from 'path';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { FileSystemService, UploadedTempFile } from './filesystem.service';
+import { StorageService, UploadedTempFile } from '../storage/storage.service';
 
 type PathBody = { path?: unknown };
 
@@ -55,8 +55,8 @@ async function settleAll(
 
 @Controller('files')
 @UseGuards(JwtAuthGuard)
-export class FileSystemController {
-  constructor(private readonly filesystemService: FileSystemService) {}
+export class FilesController {
+  constructor(private readonly storageService: StorageService) {}
 
   @Get('/browser')
   @Render('browser')
@@ -73,7 +73,7 @@ export class FileSystemController {
         ? requestedPath.replace(/^\/+/, '')
         : '';
 
-    const files = await this.filesystemService.listFiles(
+    const files = await this.storageService.listFiles(
       user,
       currentPath,
       sortBy,
@@ -135,7 +135,7 @@ export class FileSystemController {
   ) {
     const uploaded: { original: string; final: string }[] = [];
     for (const file of files) {
-      const finalName = await this.filesystemService.handleUpload(
+      const finalName = await this.storageService.handleUpload(
         user,
         file,
         body.path ?? '',
@@ -150,7 +150,7 @@ export class FileSystemController {
     @Body() body: PathBody & { name?: unknown },
     @CurrentUser() user: AuthUser,
   ) {
-    await this.filesystemService.createFolder(user, body.path ?? '', body.name);
+    await this.storageService.createFolder(user, body.path ?? '', body.name);
     return { success: true };
   }
 
@@ -159,7 +159,7 @@ export class FileSystemController {
     @Query('path') filePath: unknown,
     @CurrentUser() user: AuthUser,
   ) {
-    const fullPath = await this.filesystemService.downloadFile(user, filePath);
+    const fullPath = await this.storageService.downloadFile(user, filePath);
     return new StreamableFile(createReadStream(fullPath), {
       disposition: `attachment; filename*=UTF-8''${encodeURIComponent(path.basename(fullPath))}`,
     });
@@ -175,13 +175,13 @@ export class FileSystemController {
     // No fallback to serving the original inline: user-uploaded SVG/HTML on
     // this origin would be a stored XSS vector.
     return new StreamableFile(
-      await this.filesystemService.getThumbnail(user, filePath),
+      await this.storageService.getThumbnail(user, filePath),
     );
   }
 
   @Delete('delete')
   async deleteItem(@Body() body: PathBody, @CurrentUser() user: AuthUser) {
-    await this.filesystemService.deleteItem(user, body.path);
+    await this.storageService.deleteItem(user, body.path);
     return { success: true };
   }
 
@@ -190,7 +190,7 @@ export class FileSystemController {
     @Body() body: PathBody & { newName?: unknown },
     @CurrentUser() user: AuthUser,
   ) {
-    await this.filesystemService.renameItem(user, body.path, body.newName);
+    await this.storageService.renameItem(user, body.path, body.newName);
     return { success: true };
   }
 
@@ -199,14 +199,14 @@ export class FileSystemController {
     @Body() body: PathBody & { destination?: unknown },
     @CurrentUser() user: AuthUser,
   ) {
-    await this.filesystemService.moveItem(user, body.path, body.destination);
+    await this.storageService.moveItem(user, body.path, body.destination);
     return { success: true };
   }
 
   @Post('bulk-delete')
   bulkDelete(@Body() body: { paths?: unknown }, @CurrentUser() user: AuthUser) {
     return settleAll(body.paths, (p) =>
-      this.filesystemService.deleteItem(user, p),
+      this.storageService.deleteItem(user, p),
     );
   }
 
@@ -216,7 +216,7 @@ export class FileSystemController {
     @CurrentUser() user: AuthUser,
   ) {
     return settleAll(body.paths, (p) =>
-      this.filesystemService.moveItem(user, p, body.destination),
+      this.storageService.moveItem(user, p, body.destination),
     );
   }
 
@@ -226,7 +226,7 @@ export class FileSystemController {
     @CurrentUser() user: AuthUser,
   ) {
     const parsed = Number(days);
-    const files = await this.filesystemService.getRecentFiles(
+    const files = await this.storageService.getRecentFiles(
       user,
       Number.isFinite(parsed) && parsed > 0 ? parsed : 7,
     );
@@ -237,7 +237,7 @@ export class FileSystemController {
   async getDiskUsage() {
     return {
       success: true,
-      diskUsage: await this.filesystemService.getDiskUsage(),
+      diskUsage: await this.storageService.getDiskUsage(),
     };
   }
 }

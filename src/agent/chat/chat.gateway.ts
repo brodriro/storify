@@ -12,7 +12,7 @@ import type { AuthUser } from '../../auth/auth-user';
 import { AuthService } from '../../auth/auth.service';
 import { AgentService } from '../agent.service';
 import { ChatMessage } from '../interfaces/ChatMessage';
-import { LogsService } from '../logs/logs.service';
+import { AuditService } from '../../audit/audit.service';
 
 /** Messages kept per socket (user + assistant turns). */
 const MAX_HISTORY_MESSAGES = 20;
@@ -40,7 +40,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly conversationHistory = new Map<string, ChatMessage[]>();
 
   constructor(
-    private readonly logsService: LogsService,
+    private readonly auditService: AuditService,
     private readonly agentService: AgentService,
     private readonly authService: AuthService,
   ) {}
@@ -74,7 +74,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (typeof message !== 'string' || message.trim() === '') return;
     const text = message.slice(0, MAX_MESSAGE_LENGTH);
 
-    this.logsService.log(
+    this.auditService.log(
       `Chat message from ${user.username} (${text.length} chars)`,
       ChatGateway.name,
     );

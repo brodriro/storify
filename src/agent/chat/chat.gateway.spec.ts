@@ -1,7 +1,7 @@
 import type { Socket } from 'socket.io';
 import type { AuthService } from '../../auth/auth.service';
 import type { AgentService } from '../agent.service';
-import type { LogsService } from '../logs/logs.service';
+import type { AuditService } from '../../audit/audit.service';
 import { ChatGateway } from './chat.gateway';
 
 function fakeSocket(cookie?: string) {
@@ -23,7 +23,7 @@ describe('ChatGateway', () => {
     verifyToken.mockReset();
     processMessage.mockReset();
     gateway = new ChatGateway(
-      { log: jest.fn() } as unknown as LogsService,
+      { log: jest.fn() } as unknown as AuditService,
       { processMessage } as unknown as AgentService,
       { verifyToken } as unknown as AuthService,
     );

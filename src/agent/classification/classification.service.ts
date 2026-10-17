@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { AuthUser } from '../../auth/auth-user';
-import { FileSystemService } from '../../filesystem/filesystem.service';
+import { StorageService } from '../../storage/storage.service';
 import { LlmService } from '../llm/llm.service';
-import { FileReaderService } from '../file-reader/file-reader.service';
+import { DocumentReaderService } from '../documents/document-reader.service';
 import {
   FileClassificationRequest,
   FileClassificationResponse,
@@ -62,8 +62,8 @@ export class ClassificationService {
 
   constructor(
     private readonly llmService: LlmService,
-    private readonly fileReaderService: FileReaderService,
-    private readonly fileSystemService: FileSystemService,
+    private readonly documentReader: DocumentReaderService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -74,7 +74,7 @@ export class ClassificationService {
     user: AuthUser,
     relativePath: unknown,
   ): Promise<FileClassificationResponse> {
-    const target = await this.fileSystemService.resolveReadableFile(
+    const target = await this.storageService.resolveReadableFile(
       user,
       relativePath,
     );
@@ -89,7 +89,7 @@ export class ClassificationService {
     const textExtractable = ['.txt', '.docx', '.pdf'];
     if (textExtractable.includes(ext)) {
       try {
-        extractedText = await this.fileReaderService.readFileContent(fullPath);
+        extractedText = await this.documentReader.readFileContent(fullPath);
         // Truncate to avoid exceeding token limits
         if (extractedText.length > 4000) {
           extractedText =
@@ -212,7 +212,7 @@ Devuelve respuesta en este formato exacto:
     currentDepth = 0,
   ): Promise<string> {
     if (currentDepth >= maxDepth) return '';
-    const entries = await this.fileSystemService
+    const entries = await this.storageService
       .listFiles(user, relativePath)
       .catch(() => []);
     const indent = '  '.repeat(currentDepth);

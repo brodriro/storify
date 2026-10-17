@@ -1,10 +1,10 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { LlmService } from './llm/llm.service';
-import { FileSystemService } from './../filesystem/filesystem.service';
-import { AdminService } from './../admin/admin.service';
-import { LogsService } from './logs/logs.service';
-import { FileReaderService } from './file-reader/file-reader.service';
+import { StorageService } from '../storage/storage.service';
+import { AdminService } from '../admin/admin.service';
+import { AuditService } from '../audit/audit.service';
+import { DocumentReaderService } from './documents/document-reader.service';
 import { ClassificationService } from './classification/classification.service';
 import { AgentResponseDto } from './dto/agent-response.dto';
 import { ChatMessage, ToolNas } from './interfaces/ChatMessage';
@@ -159,10 +159,10 @@ export class AgentService {
 
   constructor(
     private readonly llmService: LlmService,
-    private readonly fileSystemService: FileSystemService,
+    private readonly storageService: StorageService,
     private readonly adminService: AdminService,
-    private readonly logsService: LogsService,
-    private readonly fileReaderService: FileReaderService,
+    private readonly auditService: AuditService,
+    private readonly documentReader: DocumentReaderService,
     private readonly classificationService: ClassificationService,
   ) {}
 
@@ -271,10 +271,10 @@ export class AgentService {
 
     switch (action) {
       case 'get_disk_usage':
-        return this.fileSystemService.getDiskUsage();
+        return this.storageService.getDiskUsage();
       case 'get_recent_files': {
         const days = Number(params?.days);
-        return this.fileSystemService.getRecentFiles(
+        return this.storageService.getRecentFiles(
           user,
           Number.isFinite(days) && days > 0 ? days : 7,
         );
@@ -284,10 +284,10 @@ export class AgentService {
         return this.adminService.createBackup(true);
       case 'get_suspicious_activity':
         requireAdmin();
-        return this.logsService.getSuspiciousActivity();
+        return this.auditService.getSuspiciousActivity();
       case 'list_documents_by_name': {
         const name = requireString('name');
-        const files = await this.fileSystemService.searchFiles(
+        const files = await this.storageService.searchFiles(
           user,
           name,
           DOCUMENT_EXTENSIONS,
@@ -295,11 +295,11 @@ export class AgentService {
         return files.map((f) => f.path);
       }
       case 'summarize_document': {
-        const target = await this.fileSystemService.resolveReadableFile(
+        const target = await this.storageService.resolveReadableFile(
           user,
           requireString('filePath'),
         );
-        const content = await this.fileReaderService.readFileContent(
+        const content = await this.documentReader.readFileContent(
           target.absolute,
         );
         return this.llmService.summarizeText(content);
@@ -312,7 +312,7 @@ export class AgentService {
       case 'move_file': {
         const filePath = requireString('filePath');
         const destination = requireString('destination');
-        await this.fileSystemService.moveItem(user, filePath, destination);
+        await this.storageService.moveItem(user, filePath, destination);
         return {
           success: true,
           message: `Archivo movido de ${filePath} a ${destination}`,
@@ -323,7 +323,7 @@ export class AgentService {
           typeof params?.path === 'string' ? params.path : '',
         );
         const name = requireString('name');
-        await this.fileSystemService.createFolder(user, parent, name);
+        await this.storageService.createFolder(user, parent, name);
         return {
           success: true,
           message: `Carpeta '${name}' creada en ${parent || '/'}`,
