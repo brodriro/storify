@@ -524,7 +524,9 @@
     // script at the end of the page) are caught by the scan below.
     function showFallback(img) {
         img.hidden = true;
-        if (img.nextElementSibling) img.nextElementSibling.hidden = false;
+        // The fallback is an <svg>: SVG elements have no `hidden` property, so
+        // the attribute itself must go.
+        if (img.nextElementSibling) img.nextElementSibling.removeAttribute('hidden');
     }
     document.addEventListener(
         'error',

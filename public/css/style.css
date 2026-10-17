@@ -1207,6 +1207,7 @@ a:hover {
 /* Touch: every control reaches the 44 px target (the 36 px compact sizes
    are for mouse pointers only). */
 @media (pointer: coarse) {
+    .logo,
     .btn-sm,
     .sort-select,
     .breadcrumb-link,
