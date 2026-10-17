@@ -1,3 +1,5 @@
+> **Histórico.** Especificación inicial del agente. La implementación actual (tool calling, confirmación humana para acciones con efectos, LLM configurable) está descrita en el README y analizada en `analysis_result.json`.
+
 # SPEC: Conversational NAS Agent
 
 ## GOAL

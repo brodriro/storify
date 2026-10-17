@@ -108,7 +108,7 @@ Implementación: `src/agent/` (bucle en `agent.service.ts`, una herramienta por 
 
 ## Requisitos
 
-- Node.js 22 o superior (la versión usada en CI).
+- Node.js 22 o superior (`engines` en `package.json`; es la versión usada en CI).
 - pnpm (la versión exacta está fijada en `package.json` → `packageManager`; tras `corepack enable`, Node usa esa versión automáticamente).
 
 ---
