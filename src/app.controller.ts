@@ -1,14 +1,10 @@
-import { Controller, Get, Render } from '@nestjs/common';
-import { AppService } from './app.service';
+import { Controller, Get, Query, Render } from '@nestjs/common';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
-
   @Get()
   @Render('index')
-  root() {
-    // @Request() req if we want to check if already logged in and redirect
-    return { title: 'Login' };
+  root(@Query('error') error?: string) {
+    return { title: 'Login', error: error !== undefined };
   }
 }

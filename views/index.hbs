@@ -17,17 +17,12 @@
             <button type="submit" class="btn btn-submit">Login</button>
         </form>
 
-        <div id="error-msg" class="error-msg">
+        {{#if error}}
+        <div id="error-msg" class="error-msg" role="alert" style="display: block;">
             Invalid credentials
         </div>
+        {{/if}}
     </div>
 </div>
 
-<script>
-    // Simple query param check for error
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('error')) {
-        document.getElementById('error-msg').style.display = 'block';
-    }
-</script>
 {{/main}}

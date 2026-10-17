@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { LogsService } from '../agent/logs/logs.service';
@@ -6,6 +6,7 @@ import type { AppConfig } from '../config/configuration';
 import { FileSystemService } from '../filesystem/filesystem.service';
 import { SESSION_TTL_SECONDS } from './auth.constants';
 import { AuthService } from './auth.service';
+import { LoginThrottlerGuard } from './login-throttler.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -17,6 +18,7 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @UseGuards(LoginThrottlerGuard)
   async login(
     @Body() body: { username?: unknown; password?: unknown },
     @Res() res: Response,

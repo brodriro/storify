@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import configuration from './config/configuration';
 import { AuthModule } from './auth/auth.module';
 import { FileSystemModule } from './filesystem/filesystem.module';
@@ -24,6 +23,5 @@ import { ChatModule } from './agent/chat/chat.module';
     ChatModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

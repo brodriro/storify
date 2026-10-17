@@ -86,19 +86,38 @@ export class FileSystemController {
       path: parts.slice(0, i + 1).join('/'),
     }));
 
-    return {
-      files,
-      filesJson: JSON.stringify(
-        files.map((f) => ({
-          name: f.name,
-          isImage: f.isImage,
-          isVideo: f.isVideo,
-          isDir: f.isDirectory,
-        })),
-      ),
-      user,
+    const entries = files.map((f) => {
+      const relPath = currentPath ? `${currentPath}/${f.name}` : f.name;
+      const query = encodeURIComponent(relPath);
+      return {
+        ...f,
+        path: relPath,
+        thumbnailUrl: `/files/thumbnail?path=${query}`,
+        downloadUrl: `/files/download?path=${query}`,
+      };
+    });
+
+    // Data for public/js/browser.js, embedded as inert JSON. '<' is escaped so
+    // no file name can close the <script> element.
+    const clientData = JSON.stringify({
       currentPath,
       parentPath: parts.slice(0, -1).join('/'),
+      canWrite: user.role !== 'guest',
+      files: entries.map((f) => ({
+        name: f.name,
+        path: f.path,
+        isImage: f.isImage,
+        isVideo: f.isVideo,
+        isDir: f.isDirectory,
+        downloadUrl: f.downloadUrl,
+      })),
+    }).replace(/</g, '\\u003c');
+
+    return {
+      files: entries,
+      clientData,
+      user,
+      currentPath,
       breadcrumbs,
       userRole: user.role,
       canWrite: user.role !== 'guest',

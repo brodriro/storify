@@ -2,7 +2,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { existsSync } from 'fs';
 import hbs from 'hbs';
-import { join } from 'path';
+import helmet from 'helmet';
+import { dirname, join } from 'path';
 
 /**
  * Resolves an asset directory both when running the compiled build (nest-cli
@@ -25,7 +26,44 @@ function registerPartials(dir: string): Promise<void> {
 export async function configureApp(app: NestExpressApplication): Promise<void> {
   const viewsPath = assetDir('views');
 
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          defaultSrc: ["'self'"],
+          // No inline scripts anywhere: views load /js/*.js only.
+          scriptSrc: ["'self'"],
+          // Inline style attributes remain in the views (plan U11).
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            'https://fonts.googleapis.com',
+          ],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          mediaSrc: ["'self'", 'blob:'],
+          connectSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+          // Deliberately no upgrade-insecure-requests: the NAS is often served
+          // over plain HTTP on the LAN.
+        },
+      },
+    }),
+  );
+
   app.useStaticAssets(assetDir('public'));
+  // Browser bundles served from node_modules, so versions are pinned by the
+  // lockfile and the app works without Internet access (no CDNs).
+  app.useStaticAssets(dirname(require.resolve('marked')), {
+    prefix: '/vendor/marked/',
+  });
+  app.useStaticAssets(dirname(require.resolve('dompurify')), {
+    prefix: '/vendor/dompurify/',
+  });
   app.setBaseViewsDir(viewsPath);
   app.setViewEngine('hbs');
 

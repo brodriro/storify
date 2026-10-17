@@ -135,4 +135,62 @@ describe('Storify (e2e)', () => {
       .send({ username: 'ALICE' });
     expect(res.headers.location).toBe('/?error=invalid');
   });
+
+  it('sends a strict CSP and serves the client libraries locally', async () => {
+    const res = await request(app.getHttpServer()).get('/').expect(200);
+    expect(res.headers['content-security-policy']).toContain(
+      "script-src 'self'",
+    );
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    // No inline scripts and no chat (and no socket) on the login page.
+    expect(res.text).not.toMatch(/<script>|onclick=/);
+    expect(res.text).not.toContain('chat.js');
+
+    for (const url of [
+      '/vendor/marked/marked.umd.js',
+      '/vendor/dompurify/purify.min.js',
+      '/js/browser.js',
+    ]) {
+      await request(app.getHttpServer()).get(url).expect(200);
+    }
+  });
+
+  it('renders hostile file names as inert data (S7)', async () => {
+    const hostile = [`x');alert(1);x`, '<img src=x onerror=alert(1)>'];
+    fs.mkdirSync(path.join(storage, 'users', 'ALICE'), { recursive: true });
+    for (const name of hostile) {
+      fs.writeFileSync(path.join(storage, 'users', 'ALICE', name), 'x');
+    }
+    const { cookie } = await login('ALICE', 'alice-pass');
+    const res = await request(app.getHttpServer())
+      .get('/files/browser')
+      .query({ path: 'ALICE' })
+      .set('Cookie', cookie!)
+      .expect(200);
+
+    expect(res.text).not.toContain('<img src=x onerror');
+    // No event-handler attributes at all (names may appear only as escaped text).
+    expect(res.text).not.toMatch(/\son[a-z]+="/);
+    const json =
+      /<script type="application\/json" id="browserData">(.*?)<\/script>/s.exec(
+        res.text,
+      )?.[1];
+    const data = JSON.parse(json!) as { files: { name: string }[] };
+    expect(data.files.map((f) => f.name)).toEqual(
+      expect.arrayContaining(hostile),
+    );
+  });
+
+  it('rate-limits repeated logins for one account', async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      const res = await request(app.getHttpServer())
+        .post('/auth/login')
+        .type('form')
+        .send({ username: 'MALLORY', password: `guess-${i}` });
+      statuses.push(res.status);
+    }
+    expect(statuses.slice(0, 10).every((s) => s === 302)).toBe(true);
+    expect(statuses[10]).toBe(429);
+  });
 });

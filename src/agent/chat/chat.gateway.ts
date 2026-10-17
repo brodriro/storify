@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, ServiceUnavailableException } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -94,7 +94,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         (error as Error).stack,
       );
       response =
-        'Lo siento, no he podido procesar tu petición en este momento. Inténtalo de nuevo.';
+        error instanceof ServiceUnavailableException
+          ? 'El asistente está desactivado en este servidor (falta configurar OPENAI_API_KEY).'
+          : 'Lo siento, no he podido procesar tu petición en este momento. Inténtalo de nuevo.';
     }
 
     history.push(
