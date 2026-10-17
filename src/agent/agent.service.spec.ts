@@ -57,6 +57,44 @@ const seen = (chat: jest.Mock, n: number) =>
   (chat.mock.calls[n] as unknown[])[0] as { role: string; content: unknown }[];
 
 describe('AgentService', () => {
+  it('runs the read-only tools of one turn concurrently, in call order', async () => {
+    // Each tool resolves only once both have started: in series this hangs.
+    let started = 0;
+    let releaseAll: () => void = () => {};
+    const bothStarted = new Promise<void>((resolve) => (releaseAll = resolve));
+    const slowTool = (name: string, result: string, delayMs: number) =>
+      fakeTool({
+        name,
+        run: jest.fn(async () => {
+          if (++started === 2) releaseAll();
+          await bothStarted;
+          await new Promise((r) => setTimeout(r, delayMs));
+          return result;
+        }),
+      });
+    // The first call finishes last: results must still follow call order.
+    const first = slowTool('first', 'A', 30);
+    const second = slowTool('second', 'B', 0);
+    const { agent, chat } = setup(
+      [first, second],
+      [
+        assistant(null, [toolCall('first', {}), toolCall('second', {})]),
+        assistant('listo'),
+      ],
+    );
+
+    const turn = await Promise.race([
+      agent.processMessage('dos cosas', [], ALICE),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('tools ran in series')), 1000),
+      ),
+    ]);
+
+    expect(turn.response).toBe('listo');
+    const toolMessages = seen(chat, 1).filter((m) => m.role === 'tool');
+    expect(toolMessages.map((m) => m.content)).toEqual(['A', 'B']);
+  });
+
   it('keeps every tool result in context across iterations (A4)', async () => {
     const list = fakeTool({
       name: 'list',

@@ -70,7 +70,7 @@ Storify incluye un asistente conversacional que interactúa con el NAS mediante 
 
 1. **Percepción**: el `ChatGateway` (Socket.IO) recibe el mensaje. El socket se autentica con la misma cookie de sesión que la web.
 2. **Razonamiento**: el LLM decide si responder o llamar a una o varias herramientas.
-3. **Acción**: las herramientas se ejecutan **como el usuario de la sesión**, con los mismos permisos que en el navegador de archivos.
+3. **Acción**: las herramientas se ejecutan **como el usuario de la sesión**, con los mismos permisos que en el navegador de archivos. Las de solo lectura que el LLM pide en un mismo paso se ejecutan en paralelo (hasta 4 a la vez).
 4. **Observación**: los resultados se añaden a la conversación y el LLM continúa.
 5. **Iteración**: hasta 12 pasos o 75 segundos por petición.
 
