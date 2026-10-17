@@ -193,4 +193,48 @@ describe('Storify (e2e)', () => {
     expect(statuses.slice(0, 10).every((s) => s === 302)).toBe(true);
     expect(statuses[10]).toBe(429);
   });
+
+  it('lets the admin create and download a backup', async () => {
+    fs.mkdirSync(path.join(storage, 'users', 'ALICE'), { recursive: true });
+    fs.writeFileSync(path.join(storage, 'users', 'ALICE', 'b.txt'), 'b');
+    const { cookie } = await login('ADMIN', 'admin-pass');
+    const server = app.getHttpServer();
+
+    await request(server)
+      .post('/admin/backup')
+      .set('Cookie', cookie!)
+      .expect(201, { success: true, inProgress: false });
+
+    for (let i = 0; i < 200; i++) {
+      const res = await request(server)
+        .get('/admin/backup/in-progress')
+        .set('Cookie', cookie!);
+      if (!(res.body as { inProgress: boolean }).inProgress) break;
+      await new Promise((r) => setTimeout(r, 25));
+    }
+
+    const list = await request(server)
+      .get('/admin/backup/list')
+      .set('Cookie', cookie!)
+      .expect(200);
+    expect((list.body as { backups: { kind: string }[] }).backups[0].kind).toBe(
+      'full',
+    );
+
+    const zip = await request(server)
+      .get('/admin/backup/download')
+      .set('Cookie', cookie!)
+      .buffer(true)
+      .parse((res, done) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => done(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+    expect(zip.headers['content-type']).toBe('application/zip');
+    // ZIP local file header signature "PK\x03\x04"
+    expect((zip.body as Buffer).subarray(0, 4)).toEqual(
+      Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+    );
+  });
 });

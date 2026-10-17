@@ -15,6 +15,8 @@ export interface AppConfig {
   cookieSecure: boolean;
   llm: LlmConfig;
   upload: { maxFileSizeMb: number; maxFiles: number };
+  /** Ideally on another disk than storagePath (default: <storagePath>/backups). */
+  backup: { path: string; keepFull: number };
   users: UserConfig[];
 }
 
@@ -121,9 +123,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     );
   }
 
+  const storagePath = env.STORAGE_PATH?.trim() || './public_storage';
   const config: AppConfig = {
     port: parsePositiveInt('PORT', env.PORT, 3000, errors),
-    storagePath: env.STORAGE_PATH?.trim() || './public_storage',
+    storagePath,
     totalStorageGb: parsePositiveInt(
       'TOTAL_STORAGE_GB',
       env.TOTAL_STORAGE_GB,
@@ -145,6 +148,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         'UPLOAD_MAX_FILES',
         env.UPLOAD_MAX_FILES,
         10,
+        errors,
+      ),
+    },
+    backup: {
+      path: env.BACKUP_PATH?.trim() || `${storagePath}/backups`,
+      keepFull: parsePositiveInt(
+        'BACKUP_KEEP_FULL',
+        env.BACKUP_KEEP_FULL,
+        3,
         errors,
       ),
     },

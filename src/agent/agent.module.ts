@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AdminModule } from '../admin/admin.module';
+import { BackupModule } from '../backup/backup.module';
 import { AuditModule } from '../audit/audit.module';
 import { StorageModule } from '../storage/storage.module';
 import { AgentService } from './agent.service';
@@ -13,7 +13,7 @@ import { AGENT_TOOLS, ToolRegistry } from './tools/tool-registry';
 @Module({
   imports: [
     LlmModule,
-    AdminModule,
+    BackupModule,
     AuditModule,
     StorageModule,
     DocumentReaderModule,

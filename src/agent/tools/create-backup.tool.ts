@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AdminService } from '../../admin/admin.service';
+import { BackupService } from '../../backup/backup.service';
 import type { AgentTool } from './agent-tool';
 
 @Injectable()
@@ -15,14 +15,14 @@ export class CreateBackupTool implements AgentTool {
   readonly mutates = true;
   readonly adminOnly = true;
 
-  constructor(private readonly admin: AdminService) {}
+  constructor(private readonly backups: BackupService) {}
 
   describe() {
     return 'Iniciar un backup incremental';
   }
 
   async run() {
-    const started = await this.admin.createBackup(true);
+    const started = await this.backups.start('incremental');
     return started
       ? { started: true }
       : { started: false, reason: 'Ya hay un backup en curso' };
