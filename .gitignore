@@ -43,3 +43,6 @@ storage/
 # Logs
 logs/
 *.log
+
+# Local audit / improvement plan (not versioned)
+plan-mejoras/
