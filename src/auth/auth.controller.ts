@@ -21,7 +21,10 @@ export class AuthController {
   @Post('login')
   @UseGuards(LoginThrottlerGuard)
   async login(@Body() body: LoginDto, @Res() res: Response): Promise<void> {
-    const user = this.authService.validateUser(body.username, body.password);
+    const user = await this.authService.validateUser(
+      body.username,
+      body.password,
+    );
     if (!user) {
       await this.auditService.recordEvent('login_failure', {
         username:

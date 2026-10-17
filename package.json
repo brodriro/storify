@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "hash-password": "node scripts/hash-password.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.7",
@@ -31,6 +32,7 @@
     "@nestjs/throttler": "6.7.1",
     "@nestjs/websockets": "^11.2.7",
     "archiver": "^7.0.1",
+    "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",

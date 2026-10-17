@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import bcrypt from 'bcryptjs';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
@@ -20,7 +21,8 @@ describe('Storify (e2e)', () => {
       JWT_SECRET: 'e2e-secret-e2e-secret-e2e-secret!',
       OPENAI_API_KEY: 'sk-e2e-dummy',
       USERS: 'ADMIN,ALICE,INVITADO',
-      USER_ADMIN: 'admin-pass',
+      // bcrypt hash of 'admin-pass' (cost 4): exercises hashed passwords end to end
+      USER_ADMIN: bcrypt.hashSync('admin-pass', 4),
       USER_ALICE: 'alice-pass',
       USER_INVITADO: 'guest-pass',
     });
