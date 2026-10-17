@@ -232,6 +232,23 @@
         </form>
     </dialog>
 
+    <!-- Move picker: browse folders, then "Move here" -->
+    <dialog id="moveModal" class="modal modal-move" aria-labelledby="moveModalTitle">
+        <div class="modal-header">
+            <h2 id="moveModalTitle" class="modal-title" tabindex="-1"></h2>
+            <button type="button" class="btn-close" data-action="close-move-modal" aria-label="{{t "browser.close"}}">&times;</button>
+        </div>
+        <nav class="move-path" aria-label="{{t "browser.breadcrumb"}}">
+            <ol id="moveBreadcrumb" class="breadcrumb"></ol>
+        </nav>
+        <ul id="moveFolderList" class="folder-list" aria-label="{{t "browser.folders"}}"></ul>
+        <p id="moveStatus" class="move-status" role="status" aria-live="polite"></p>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-action="close-move-modal">{{t "browser.cancel"}}</button>
+            <button type="button" class="btn btn-primary" id="moveHereBtn">{{t "browser.moveHere"}}</button>
+        </div>
+    </dialog>
+
     <div id="toastContainer" class="toast-container"></div>
 
     <!-- Selection -->

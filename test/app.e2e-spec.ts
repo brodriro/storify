@@ -279,6 +279,31 @@ describe('Storify (e2e)', () => {
     await get().set('If-None-Match', etag).expect(304);
   });
 
+  it('lists folders for the move picker', async () => {
+    fs.mkdirSync(path.join(storage, 'users', 'ADMIN', 'Destino', 'Sub'), {
+      recursive: true,
+    });
+    const { cookie } = await login('ADMIN', 'admin-pass');
+    const res = await request(app.getHttpServer())
+      .get('/files/folders')
+      .query({ path: 'ADMIN' })
+      .set('Cookie', cookie!)
+      .expect(200);
+    expect(res.body).toMatchObject({
+      path: 'ADMIN',
+      parentPath: '',
+      canWrite: true,
+      folders: expect.arrayContaining([
+        { name: 'Destino', path: 'ADMIN/Destino' },
+      ]) as unknown,
+    });
+    await request(app.getHttpServer())
+      .get('/files/folders')
+      .query({ path: '../..' })
+      .set('Cookie', cookie!)
+      .expect(403);
+  });
+
   it('rate-limits repeated logins for one account', async () => {
     const statuses: number[] = [];
     for (let i = 0; i < 11; i++) {

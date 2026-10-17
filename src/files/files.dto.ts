@@ -30,6 +30,10 @@ export class BrowserQueryDto {
   page?: number;
 }
 
+export class FolderQueryDto {
+  @IsOptional() @IsString() @MaxLength(MAX_PATH) path?: string;
+}
+
 export class PathQueryDto {
   @IsString() @MaxLength(MAX_PATH) path!: string;
 }

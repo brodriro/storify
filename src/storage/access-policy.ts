@@ -125,6 +125,15 @@ export class AccessPolicy {
     return name;
   }
 
+  /**
+   * Whether the user may write into an already-resolved folder. A plain rule
+   * check for the UI (no exception, no security event); writes themselves
+   * still go through resolve(..., 'write').
+   */
+  canWrite(user: AuthUser, target: ResolvedPath): boolean {
+    return this.allows(user, target.segments, 'write');
+  }
+
   /** Whether a directory entry should appear in a listing of `parent`. */
   isVisible(user: AuthUser, parent: ResolvedPath, entryName: string): boolean {
     if (entryName.startsWith('.')) return false;
