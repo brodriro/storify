@@ -4,9 +4,9 @@ import { FileSystemController } from './filesystem.controller';
 import { ClassificationModule } from '../agent/classification/classification.module';
 
 @Module({
-    imports: [ClassificationModule],
-    controllers: [FileSystemController],
-    providers: [FileSystemService],
-    exports: [FileSystemService],
+  imports: [ClassificationModule],
+  controllers: [FileSystemController],
+  providers: [FileSystemService],
+  exports: [FileSystemService],
 })
-export class FileSystemModule { }
+export class FileSystemModule {}

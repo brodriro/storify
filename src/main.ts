@@ -11,8 +11,12 @@ async function bootstrap() {
 
   // Use distribution paths if assets are copied
   const isDist = __dirname.includes('dist');
-  const staticPath = isDist ? join(__dirname, 'public') : join(__dirname, '..', 'public');
-  const viewsPath = isDist ? join(__dirname, 'views') : join(__dirname, '..', 'views');
+  const staticPath = isDist
+    ? join(__dirname, 'public')
+    : join(__dirname, '..', 'public');
+  const viewsPath = isDist
+    ? join(__dirname, 'views')
+    : join(__dirname, '..', 'views');
 
   app.useStaticAssets(staticPath);
   app.setBaseViewsDir(viewsPath);
@@ -24,7 +28,7 @@ async function bootstrap() {
   hbs.registerPartials(join(viewsPath, 'layouts'));
 
   hbs.registerHelper('if_eq', function (arg1, arg2, options) {
-    return (arg1 == arg2) ? options.fn(this) : options.inverse(this);
+    return arg1 == arg2 ? options.fn(this) : options.inverse(this);
   });
 
   app.use(cookieParser());

@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import OpenAI from 'openai';
 import * as dotenv from 'dotenv';
 import { AgentResponseDto } from '../dto/agent-response.dto';
@@ -14,7 +18,9 @@ export class LlmService {
 
   constructor() {
     if (!process.env.OPENAI_API_KEY) {
-      throw new InternalServerErrorException('OPENAI_API_KEY is not set in environment variables');
+      throw new InternalServerErrorException(
+        'OPENAI_API_KEY is not set in environment variables',
+      );
     }
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -28,12 +34,12 @@ export class LlmService {
   ): Promise<AgentResponseDto> {
     this.logger.log(`Getting agent action for message: ${userMessage}`);
 
-    const toolsForLlm: Array<Tool> = availableTools.map(tool => ({
+    const toolsForLlm: Array<Tool> = availableTools.map((tool) => ({
       type: 'function' as const,
       name: tool.name,
       description: tool.description,
       parameters: tool.parameters,
-      strict: false
+      strict: false,
     }));
 
     const messages = [
@@ -42,7 +48,10 @@ export class LlmService {
         content:
           'You are a helpful and friendly NAS assistant. You can perform various tasks related to NAS management by using the available tools. Decide whether to call a tool or provide a final answer to the user. If a tool call is needed, provide the tool name and parameters. If a final answer is sufficient, provide the message.',
       },
-      ...chatHistory.map(msg => ({ role: msg.role as 'user' | 'assistant', content: msg.content })),
+      ...chatHistory.map((msg) => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+      })),
       { role: 'user' as const, content: userMessage },
     ];
 
@@ -55,56 +64,76 @@ export class LlmService {
 
       const output = response.output;
 
-      const toolCall = output.find(
-        item => item.type === "function_call"
-      );
+      const toolCall = output.find((item) => item.type === 'function_call');
 
       if (toolCall) {
         return {
-          type: "action",
+          type: 'action',
           action: toolCall.name,
           params: JSON.parse(toolCall.arguments),
-          message: null
+          message: null,
         };
-
       } else {
-        const message = response.output_text ?? null // textOutput?.content[0]["text"]?? null
-        Logger.log(`Message ==> ${message}`, "LlmService")
+        const message = response.output_text ?? null; // textOutput?.content[0]["text"]?? null
+        Logger.log(`Message ==> ${message}`, 'LlmService');
         return {
-          type: "final",
+          type: 'final',
           action: null,
           params: null,
-          message: message
+          message: message,
         };
-
       }
     } catch (error) {
-      this.logger.error(`Error getting agent action from LLM: ${error.message}`, error.stack);
-      throw new InternalServerErrorException('Error communicating with LLM for agent action.');
+      this.logger.error(
+        `Error getting agent action from LLM: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Error communicating with LLM for agent action.',
+      );
     }
   }
 
-  async generateResponse(prompt: string, context: string = ''): Promise<string> {
+  async generateResponse(
+    prompt: string,
+    context: string = '',
+  ): Promise<string> {
     this.logger.log(`Generating final response for prompt: ${prompt}`);
     try {
       const completion = await this.openai.chat.completions.create({
         messages: [
-          { role: 'system', content: 'You are a helpful and friendly NAS assistant. Provide a concise and helpful response based on the user\'s request and the provided context. Format your response in Markdown.' },
-          { role: 'user', content: context ? `${prompt}\n\nContext: ${context}` : prompt }
+          {
+            role: 'system',
+            content:
+              "You are a helpful and friendly NAS assistant. Provide a concise and helpful response based on the user's request and the provided context. Format your response in Markdown.",
+          },
+          {
+            role: 'user',
+            content: context ? `${prompt}\n\nContext: ${context}` : prompt,
+          },
         ],
         model: 'gpt-5-mini',
       });
 
       const content = completion.choices?.[0]?.message?.content;
       if (!content) {
-        this.logger.error('LLM response content is null or undefined for generateResponse');
-        throw new InternalServerErrorException('LLM response content is null or undefined');
+        this.logger.error(
+          'LLM response content is null or undefined for generateResponse',
+        );
+        throw new InternalServerErrorException(
+          'LLM response content is null or undefined',
+        );
       }
       this.logger.log(`Generated response: ${content}`);
       return content.trim();
     } catch (error) {
-      this.logger.error(`Error generating response from LLM: ${error.message}`, error.stack);
-      throw new InternalServerErrorException('Error generating response from LLM.');
+      this.logger.error(
+        `Error generating response from LLM: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Error generating response from LLM.',
+      );
     }
   }
 
@@ -113,22 +142,35 @@ export class LlmService {
     try {
       const completion = await this.openai.chat.completions.create({
         messages: [
-          { role: 'system', content: 'You are a helpful assistant that summarizes documents. Summarize the following text in no more than 200 words.' },
-          { role: 'user', content: text }
+          {
+            role: 'system',
+            content:
+              'You are a helpful assistant that summarizes documents. Summarize the following text in no more than 200 words.',
+          },
+          { role: 'user', content: text },
         ],
         model: 'gpt-5-mini',
       });
 
       const content = completion.choices?.[0]?.message?.content;
       if (!content) {
-        this.logger.error('LLM response content is null or undefined for summarizeText');
-        throw new InternalServerErrorException('LLM response content is null or undefined');
+        this.logger.error(
+          'LLM response content is null or undefined for summarizeText',
+        );
+        throw new InternalServerErrorException(
+          'LLM response content is null or undefined',
+        );
       }
       this.logger.log(`Generated summary: ${content}`);
       return content.trim();
     } catch (error) {
-      this.logger.error(`Error summarizing text with LLM: ${error.message}`, error.stack);
-      throw new InternalServerErrorException('Error summarizing text with LLM.');
+      this.logger.error(
+        `Error summarizing text with LLM: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Error summarizing text with LLM.',
+      );
     }
   }
 
@@ -151,16 +193,25 @@ export class LlmService {
 
       const content = completion.choices?.[0]?.message?.content;
       if (!content) {
-        this.logger.error('LLM response content is null or undefined for classifyFile');
-        throw new InternalServerErrorException('LLM response content is null or undefined');
+        this.logger.error(
+          'LLM response content is null or undefined for classifyFile',
+        );
+        throw new InternalServerErrorException(
+          'LLM response content is null or undefined',
+        );
       }
 
       this.logger.log(`Classification result received`);
       return JSON.parse(content) as FileClassificationResponse;
     } catch (error) {
       if (error instanceof InternalServerErrorException) throw error;
-      this.logger.error(`Error classifying file with LLM: ${error.message}`, error.stack);
-      throw new InternalServerErrorException('Error classifying file with LLM.');
+      this.logger.error(
+        `Error classifying file with LLM: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Error classifying file with LLM.',
+      );
     }
   }
 }

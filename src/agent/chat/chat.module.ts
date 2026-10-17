@@ -8,7 +8,14 @@ import { FileReaderModule } from '../file-reader/file-reader.module';
 import { AgentModule } from '../agent.module';
 
 @Module({
-  imports: [LlmModule, FileSystemModule, AdminModule, LogsModule, FileReaderModule, AgentModule],
+  imports: [
+    LlmModule,
+    FileSystemModule,
+    AdminModule,
+    LogsModule,
+    FileReaderModule,
+    AgentModule,
+  ],
   providers: [ChatGateway],
 })
 export class ChatModule {}

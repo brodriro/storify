@@ -8,9 +8,15 @@ import { FileReaderModule } from './file-reader/file-reader.module';
 import { ClassificationModule } from './classification/classification.module';
 
 @Module({
-  imports: [LlmModule, AdminModule, LogsModule, FileSystemModule, FileReaderModule, ClassificationModule],
+  imports: [
+    LlmModule,
+    AdminModule,
+    LogsModule,
+    FileSystemModule,
+    FileReaderModule,
+    ClassificationModule,
+  ],
   providers: [AgentService],
   exports: [AgentService],
 })
-export class AgentModule { }
-
+export class AgentModule {}
