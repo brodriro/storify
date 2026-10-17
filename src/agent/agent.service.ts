@@ -1,3 +1,4 @@
+import { mapWithConcurrency } from '../common/concurrency';
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import type { AuthUser } from '../auth/auth-user';
@@ -10,6 +11,8 @@ const MAX_ITERATIONS = 12;
 const TIME_BUDGET_MS = 75_000;
 /** Tool output sent back to the model is truncated to bound token usage. */
 const MAX_TOOL_RESULT_CHARS = 8_000;
+/** Read-only tools of one turn run in parallel, at most this many at once. */
+const TOOL_CONCURRENCY = 4;
 
 export interface ProposedAction {
   tool: string;
@@ -124,41 +127,45 @@ export class AgentService {
         return { response: reply.content?.trim() || 'No tengo una respuesta.' };
       }
 
+      // Validate in call order; read-only tools then run concurrently (a few
+      // at a time: summarize_document makes its own LLM call) and their
+      // results are added in call order. Mutating tools wait for the user.
       const parked: PendingRun['calls'] = [];
-      for (const toolCall of toolCalls) {
+      const results: (string | PreparedCall)[] = toolCalls.map((toolCall) => {
         if (toolCall.type !== 'function') {
-          messages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: 'Error: unsupported tool call type',
-          });
-          continue;
+          return 'Error: unsupported tool call type';
         }
-        let call: PreparedCall;
         try {
-          call = this.tools.prepare(
+          const call = this.tools.prepare(
             user,
             toolCall.function.name,
             toolCall.function.arguments,
           );
+          if (call.tool.mutates) {
+            parked.push({ toolCallId: toolCall.id, call });
+            return '';
+          }
+          return call;
         } catch (error) {
-          messages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: `Error: ${(error as Error).message}`,
-          });
-          continue;
+          return `Error: ${(error as Error).message}`;
         }
-        if (call.tool.mutates) {
-          parked.push({ toolCallId: toolCall.id, call });
-        } else {
-          messages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: await this.execute(call, user),
-          });
-        }
-      }
+      });
+      const outputs = await mapWithConcurrency(
+        results,
+        TOOL_CONCURRENCY,
+        (result) =>
+          typeof result === 'string'
+            ? Promise.resolve(result)
+            : this.execute(result, user),
+      );
+      toolCalls.forEach((toolCall, index) => {
+        if (parked.some((p) => p.toolCallId === toolCall.id)) return;
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: outputs[index],
+        });
+      });
 
       if (parked.length > 0) {
         const confirmation: Confirmation = {
