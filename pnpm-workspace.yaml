@@ -1,9 +1,15 @@
 allowBuilds:
   # Only prints an Open Collective banner.
   '@nestjs/core': false
+  # Optional jest watch-mode dependency; prebuilt binaries ship as optional
+  # deps, the script only compiles from source as a fallback.
+  '@parcel/watcher': false
   # Prebuilt binaries come from the @img/* optional dependencies; the install
   # script only compiles from source when a global libvips is detected, and
   # fails without a native toolchain.
   sharp: false
   # Native resolver used by jest; postinstall links the platform binding.
   unrs-resolver: true
+
+# Supply-chain guard: never resolve versions published less than 14 days ago.
+minimumReleaseAge: 20160
