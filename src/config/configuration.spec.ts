@@ -29,11 +29,43 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...base, ...override })).toThrow(message);
   });
 
-  it('disables AI without an API key and enables it with one', () => {
-    expect(loadConfig(base).openaiApiKey).toBeNull();
+  it('disables AI without an API key or base URL', () => {
+    expect(loadConfig(base).llm).toMatchObject({
+      enabled: false,
+      model: 'gpt-5-mini',
+    });
+  });
+
+  it('enables OpenAI with an API key', () => {
     expect(
-      loadConfig({ ...base, OPENAI_API_KEY: 'sk-test' }).openaiApiKey,
-    ).toBe('sk-test');
+      loadConfig({ ...base, OPENAI_API_KEY: 'sk-test' }).llm,
+    ).toMatchObject({
+      enabled: true,
+      apiKey: 'sk-test',
+      baseUrl: null,
+      providerLabel: 'OpenAI',
+    });
+  });
+
+  it('supports a local OpenAI-compatible endpoint without a key', () => {
+    expect(
+      loadConfig({
+        ...base,
+        LLM_BASE_URL: 'http://nas.local:11434/v1',
+        LLM_MODEL: 'qwen3:8b',
+      }).llm,
+    ).toMatchObject({
+      enabled: true,
+      apiKey: null,
+      model: 'qwen3:8b',
+      providerLabel: 'nas.local:11434',
+    });
+  });
+
+  it('rejects a malformed LLM_BASE_URL', () => {
+    expect(() => loadConfig({ ...base, LLM_BASE_URL: 'ftp://x' })).toThrow(
+      'LLM_BASE_URL',
+    );
   });
 
   it('only marks cookies secure in production', () => {

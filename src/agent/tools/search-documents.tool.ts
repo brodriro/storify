@@ -1,0 +1,35 @@
+import { Injectable } from '@nestjs/common';
+import { StorageService } from '../../storage/storage.service';
+import type { AgentTool, ToolContext } from './agent-tool';
+
+const DOCUMENT_EXTENSIONS = ['.txt', '.docx', '.pdf'];
+const MAX_RESULTS = 50;
+
+@Injectable()
+export class SearchDocumentsTool implements AgentTool<{ name: string }> {
+  readonly name = 'list_documents_by_name';
+  readonly description =
+    'Busca documentos (.txt, .docx, .pdf) cuyo nombre contenga el texto indicado. Devuelve rutas relativas.';
+  readonly parameters = {
+    type: 'object' as const,
+    properties: {
+      name: {
+        type: 'string' as const,
+        description: 'Texto a buscar en el nombre del documento.',
+      },
+    },
+    required: ['name'],
+  };
+  readonly mutates = false;
+
+  constructor(private readonly storage: StorageService) {}
+
+  async run({ name }: { name: string }, { user }: ToolContext) {
+    const files = await this.storage.searchFiles(
+      user,
+      name,
+      DOCUMENT_EXTENSIONS,
+    );
+    return files.slice(0, MAX_RESULTS).map((f) => f.path);
+  }
+}

@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
-import { AgentService } from './agent.service';
-import { LlmModule } from './llm/llm.module';
 import { AdminModule } from '../admin/admin.module';
 import { AuditModule } from '../audit/audit.module';
 import { StorageModule } from '../storage/storage.module';
-import { DocumentReaderModule } from './documents/document-reader.module';
+import { AgentService } from './agent.service';
 import { ClassificationModule } from './classification/classification.module';
+import { DocumentReaderModule } from './documents/document-reader.module';
+import { LlmModule } from './llm/llm.module';
+import type { AgentTool } from './tools/agent-tool';
+import { AGENT_TOOL_CLASSES } from './tools';
+import { AGENT_TOOLS, ToolRegistry } from './tools/tool-registry';
 
 @Module({
   imports: [
@@ -16,7 +19,16 @@ import { ClassificationModule } from './classification/classification.module';
     DocumentReaderModule,
     ClassificationModule,
   ],
-  providers: [AgentService],
+  providers: [
+    ...AGENT_TOOL_CLASSES,
+    {
+      provide: AGENT_TOOLS,
+      useFactory: (...tools: AgentTool[]) => tools,
+      inject: AGENT_TOOL_CLASSES,
+    },
+    ToolRegistry,
+    AgentService,
+  ],
   exports: [AgentService],
 })
 export class AgentModule {}

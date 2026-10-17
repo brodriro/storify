@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import type { AuditService } from '../audit/audit.service';
 import type { AuthUser } from '../auth/auth-user';
+import type { AppConfig } from '../config/configuration';
 import { AccessPolicy } from './access-policy';
 import { StorageService } from './storage.service';
 
@@ -44,7 +45,7 @@ describe('StorageService access control', () => {
         { username: 'BOB', role: 'member' },
         { username: 'INVITADO', role: 'guest' },
       ],
-    });
+    }) as unknown as ConfigService<AppConfig, true>;
     recordEvent = jest.fn().mockResolvedValue(undefined);
     const logs = { recordEvent } as unknown as AuditService;
     service = new StorageService(config, new AccessPolicy(config, logs));
