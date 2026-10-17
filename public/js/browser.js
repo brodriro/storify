@@ -519,18 +519,23 @@
         if (!e.target.closest('.file-menu')) closeMenus();
     });
 
-    // Broken thumbnails fall back to the generic image icon ('error' doesn't bubble).
+    // Broken thumbnails fall back to the generic image icon ('error' doesn't
+    // bubble). Images that failed before this script ran (a fast 415 beats the
+    // script at the end of the page) are caught by the scan below.
+    function showFallback(img) {
+        img.hidden = true;
+        if (img.nextElementSibling) img.nextElementSibling.hidden = false;
+    }
     document.addEventListener(
         'error',
         (e) => {
-            const img = e.target;
-            if (img.tagName === 'IMG' && img.classList.contains('file-thumbnail')) {
-                img.hidden = true;
-                if (img.nextElementSibling) img.nextElementSibling.hidden = false;
-            }
+            if (e.target.tagName === 'IMG' && e.target.classList.contains('file-thumbnail')) showFallback(e.target);
         },
         true,
     );
+    document.querySelectorAll('img.file-thumbnail').forEach((img) => {
+        if (img.complete && img.naturalWidth === 0) showFallback(img);
+    });
 
     // --- Drag & drop (mouse shortcut; the ⋯ menu is the keyboard/touch path) --
 

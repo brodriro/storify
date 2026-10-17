@@ -55,6 +55,28 @@ describe('ThumbnailService (C3)', () => {
     expect(edited.etag).not.toBe(first.etag);
   });
 
+  it('answers 415 for files it cannot decode, without retrying them', async () => {
+    const broken = path.join(storage, 'broken.jpg');
+    fs.writeFileSync(broken, 'not an image');
+    await expect(
+      service.get(broken, fs.statSync(broken)),
+    ).rejects.toMatchObject({ status: 415 });
+    const markers = fs
+      .readdirSync(path.join(storage, '.thumbs'))
+      .filter((f) => f.endsWith('.failed'));
+    expect(markers).toHaveLength(1);
+
+    // Second visit: refused from the marker (an mtime in the past proves no
+    // new attempt rewrote it).
+    const marker = path.join(storage, '.thumbs', markers[0]);
+    const past = new Date(Date.now() - 60_000);
+    fs.utimesSync(marker, past, past);
+    await expect(
+      service.get(broken, fs.statSync(broken)),
+    ).rejects.toMatchObject({ status: 415 });
+    expect(fs.statSync(marker).mtimeMs).toBe(past.getTime());
+  });
+
   it('prunes old thumbnails and leftover partials', async () => {
     const thumb = await service.get(image, fs.statSync(image));
     const partial = path.join(storage, '.thumbs', 'x.webp.1.partial');
