@@ -48,6 +48,18 @@ a:hover {
     display: none !important;
 }
 
+/* Browser surfaces carry the palette too. */
+:root {
+    accent-color: var(--accent);
+    caret-color: var(--accent-text);
+    scrollbar-color: var(--border-strong) transparent;
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--on-accent);
+}
+
 /* One visible focus style for every control (U3, WCAG 2.4.7). */
 :focus-visible {
     outline: 2px solid var(--focus-ring);
@@ -1161,20 +1173,34 @@ a:hover {
     animation: slideUp 400ms var(--ease-out);
 }
 
-/* Users who ask for less motion get none: no entrance animations, hover
-   lifts or slides (WCAG 2.3.3). Transitions collapse to an instant change. */
+/* Reduced motion: nothing slides, lifts or rotates, but state changes keep
+   a short opacity fade (not motion) so appearing toasts, menus and panels
+   still read as changes (WCAG 2.3.3). */
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
+    html {
+        scroll-behavior: auto;
+    }
+
+    .animate-slide-up {
+        animation-name: fadeIn;
     }
 
     .file-card:hover {
         transform: none;
+    }
+
+    .order-icon {
+        transition: none;
+    }
+
+    .toast {
+        transform: none;
+        opacity: 0;
+        transition: opacity var(--transition-fast);
+    }
+
+    .toast.show {
+        opacity: 1;
     }
 }
 

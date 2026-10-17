@@ -21,6 +21,8 @@ Principios:
 | `public/css/chat.css` | Widget del asistente; solo se carga con sesión. |
 | `src/i18n/es.ts` | Todos los textos de la interfaz (decisión D5). |
 
+Las superficies del navegador también usan la paleta: `accent-color` en casillas y barras de progreso, el cursor de texto, la selección de texto (acento con su texto) y las barras de scroll. El favicon (`public/favicon.svg`) es el logo, con el verde de cada tema.
+
 No hay estilos inline ni bloques `<style>` en las vistas: la CSP es `style-src 'self'`. Un test e2e lo comprueba.
 
 ## Tema
@@ -56,7 +58,8 @@ Tokens semánticos (valores en `tokens.css`):
 
 - Espaciado: `--space-xs` (4 px) a `--space-2xl` (48 px).
 - Radios: `--rounded-sm` 6 px, `--rounded-md` 10 px, `--rounded-lg` 16 px; tarjetas de archivo 12 px; botones 8 px.
-- Objetivos táctiles: `--target-min` 44 px para botones normales; 36 px en botones pequeños y en ⋯; 24 px en la casilla de selección (WCAG 2.5.8).
+- Objetivos táctiles: `--target-min` 44 px para botones normales. Con puntero fino (ratón), los botones pequeños, ⋯ y las migas de pan miden 32-40 px; con puntero grueso (`pointer: coarse`) todos llegan a 44 px. La casilla de selección mide 24 px (WCAG 2.5.8).
+- Botón flotante del chat: `--fab-size` y `--fab-offset` (64 px y 32 px; 56 px y 16 px en pantallas pequeñas). Todo lo que se ancla abajo (avisos, barra de selección en móvil, panel del chat) deja `--fab-clearance` para no taparlo.
 
 ## Superficies y profundidad
 
@@ -64,7 +67,7 @@ Paneles y tarjetas son sólidos. El desenfoque (`backdrop-filter`) se reserva pa
 
 ## Componentes y patrones de interacción
 
-- **Tarjeta de archivo**: el control principal ocupa toda la tarjeta; es un enlace en las carpetas y un botón (abre la vista previa) en los archivos. Encima van la casilla de selección y el botón ⋯. Con ratón aparecen al pasar por encima o al enfocar; sin ratón (`hover: none`) están siempre visibles.
+- **Tarjeta de archivo**: todas comparten una caja de 4:3 para la miniatura o el icono, así las filas quedan alineadas. El nombre ocupa como mucho 2 líneas (`overflow-wrap: anywhere`), con el nombre completo como `title`, y los tamaños usan cifras tabulares. El control principal ocupa toda la tarjeta; es un enlace en las carpetas y un botón (abre la vista previa) en los archivos. Encima van la casilla de selección y el botón ⋯. Con ratón aparecen al pasar por encima o al enfocar; sin ratón (`hover: none`) están siempre visibles.
 - **Menú ⋯**: patrón *menu button* de WAI-ARIA. Enter o flecha abajo lo abren con el foco en la primera opción; las flechas, Inicio y Fin recorren las opciones; Escape lo cierra y devuelve el foco al botón.
 - **Diálogos**: `<dialog>` nativo con `showModal()`, que da el foco atrapado, el cierre con Escape y el resto de la página inerte. Al cerrarse, el foco vuelve a la tarjeta. Los avisos y confirmaciones son un formulario, así que Enter confirma. El botón de confirmar es rojo cuando la acción es destructiva.
 - **Mover**: arrastrar es un atajo de ratón. ⋯ → Mover (o la selección → Mover) abre un selector de carpetas en un `<dialog>`: migas de pan, subcarpetas como botones (flechas para recorrerlas, Retroceso para subir de nivel) y "Mover aquí". El botón se desactiva, explicando el motivo en una región `status`, cuando no hay permiso de escritura, cuando el elemento ya está en esa carpeta o cuando se intentaría meter una carpeta dentro de sí misma. Las carpetas que se están moviendo aparecen desactivadas.
@@ -75,7 +78,7 @@ Paneles y tarjetas son sólidos. El desenfoque (`backdrop-filter`) se reserva pa
 
 ## Movimiento
 
-Una sola curva, `--ease-out` (exponencial), en `--transition-fast` (150 ms) y `--transition-medium` (250 ms). Las transiciones enumeran las propiedades que animan, nunca `all`. Con `prefers-reduced-motion: reduce` no hay animaciones de entrada, desplazamientos al pasar el ratón ni scroll suave.
+Una sola curva, `--ease-out` (exponencial), en `--transition-fast` (150 ms) y `--transition-medium` (250 ms). Las transiciones enumeran las propiedades que animan, nunca `all`. Con `prefers-reduced-motion: reduce` nada se desliza, se eleva ni gira, y no hay scroll suave. Los cambios de estado conservan un fundido corto de opacidad (los avisos, el panel del chat y la entrada de la página), y los puntos de "escribiendo…" laten en opacidad en vez de en escala.
 
 ## Textos
 
