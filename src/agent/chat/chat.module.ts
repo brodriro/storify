@@ -1,21 +1,11 @@
 import { Module } from '@nestjs/common';
-import { ChatGateway } from './chat.gateway';
-import { LlmModule } from '../llm/llm.module';
-import { FileSystemModule } from '../../filesystem/filesystem.module';
-import { AdminModule } from '../../admin/admin.module';
-import { LogsModule } from '../logs/logs.module';
-import { FileReaderModule } from '../file-reader/file-reader.module';
+import { AuthModule } from '../../auth/auth.module';
 import { AgentModule } from '../agent.module';
+import { LogsModule } from '../logs/logs.module';
+import { ChatGateway } from './chat.gateway';
 
 @Module({
-  imports: [
-    LlmModule,
-    FileSystemModule,
-    AdminModule,
-    LogsModule,
-    FileReaderModule,
-    AgentModule,
-  ],
+  imports: [AgentModule, AuthModule, LogsModule],
   providers: [ChatGateway],
 })
 export class ChatModule {}

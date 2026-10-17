@@ -22,49 +22,49 @@ pnpm test -- path/or/pattern -t "test name"   # single test file / single test
 pnpm run test:e2e           # jest --config test/jest-e2e.json
 ```
 
-CI (`.github/workflows/ci.yml`) runs build, unit, e2e and `prettier --check`. ESLint still reports ~200 `no-unsafe-*` errors from untyped `any` usage, so it runs non-blocking for now.
+CI (`.github/workflows/ci.yml`) runs build, unit, e2e and `prettier --check`. ESLint still reports ~20 `no-unsafe-*` errors in older code (LLM/admin services), so it runs non-blocking for now.
 
-Some tests are `it.failing`: they pin known security bugs and spec gaps (S4, S9, S9b, D1 in the local improvement plan). When a fix makes one start passing, Jest reports it as a failure; convert it to a plain `it`.
+The e2e suite boots the real `AppModule` against a temp `STORAGE_PATH`. Env vars must be set before `AppModule` is required, because configuration is read at import time. `src/app.setup.ts` (`configureApp`) holds the Express setup (helmet/CSP, static assets, `/vendor/*`, hbs, cookies) shared by `main.ts` and the tests.
 
-The e2e suite boots the real `AppModule` against a temp `STORAGE_PATH`. Env vars must be set before `AppModule` is required, because configuration is read at import time. `src/app.setup.ts` (`configureApp`) holds the Express/hbs setup shared by `main.ts` and the tests.
+`pnpm-workspace.yaml` sets `minimumReleaseAge` to 14 days: pnpm refuses to resolve versions younger than that. Don't bypass it to grab a fresh release.
 
 ## Configuration
 
-`.env` (see `.env.example`) is read by `@nestjs/config` and also directly via `process.env` / `dotenv` in places. Key variables: `USERS` (comma list) + `USER_<NAME>` (plaintext password per user), `STORAGE_PATH`, `TOTAL_STORAGE_GB`, `ADMIN_EMAIL`, `JWT_SECRET`, `OPENAI_API_KEY`, `PORT`.
+`src/config/configuration.ts` (`loadConfig`) is the only place that reads `process.env`. It returns a typed `AppConfig` and **throws at startup** on invalid config: `JWT_SECRET` must be 32+ characters, every user in `USERS` needs a non-empty `USER_<NAME>`, and usernames are restricted to `[A-Za-z0-9_-]`. Consume config with `ConfigService<AppConfig, true>` and `get('key', { infer: true })`; never read raw env keys. See `.env.example` for all variables.
 
-`src/config/configuration.ts` maps env to a typed object (`storagePath`, `totalStorageGb`, `users`, …), but some services read raw env keys through `ConfigService` instead (`STORAGE_PATH`, `TOTAL_STORAGE_GB`, `ADMIN_EMAIL`, `JWT_SECRET`) and `FileReaderService` hardcodes `./public_storage`. When touching config, check every consumer — the two naming styles have different defaults.
-
-`LlmService` throws in its constructor if `OPENAI_API_KEY` is unset, so the whole app fails to boot without it.
+`OPENAI_API_KEY` is optional. Without it `LlmService` throws `ServiceUnavailableException` on use, and the rest of the app works.
 
 ## Architecture
 
 ### Roles and access control
-Roles come from the username in `configuration.ts`: `ADMIN` → `admin`, `INVITADO` → `public`, everyone else → `moderator`. `FileSystemController` then maps roles to a string `userRole` of `admin | moderator | guest` (repeated inline in every handler) and passes it to `FileSystemService`.
+`roleForUsername`: `ADMIN` → `admin`, `INVITADO` → `guest`, anyone else → `member`. The JWT only carries the username; `AuthService.userFromPayload` reloads the role from config on every request/socket. Handlers get an `AuthUser { username, role }` via `@CurrentUser()`; admin-only routes use `@UseGuards(JwtAuthGuard, RolesGuard)` + `@Roles('admin')`.
 
-All ACL logic lives in `FileSystemService` (`resolveRoot`, `ensureUserAccess`, the filter in `listFiles`, and per-method `startsWith(root)` checks):
-- `admin` and `moderator` operate on `<STORAGE_PATH>/users`; `guest` is rooted at `<STORAGE_PATH>/public`.
-- Moderators can reach every user folder except `ADMIN`'s; the "regular user = own folder only" branch described in README/docs is effectively unreachable because no role maps to it.
-- Any new filesystem operation must go through `resolveRoot` + `ensureUserAccess` + the root containment check; services in `src/agent/` currently bypass these and resolve paths themselves.
+**Every filesystem access goes through `AccessPolicy` (`src/filesystem/access-policy.ts`)**, for both the HTTP API and the agent:
+- `resolve(user, relPath, 'read'|'write')` normalizes first, checks containment with `path.relative` and symlinks with `realpath`, then applies the rules. admin: all of `users/`. member: all of `users/` except top-level folders named after another configured user. guest: read-only on `public/`.
+- `assertMutable` blocks delete/rename/move of a storage root, and of a user home folder for non-admins. `assertValidName` validates single names and stops non-admins creating a top-level folder named after another user.
+- Denials throw `ForbiddenException` and are recorded as `access_denied` security events.
+- `FileSystemService` methods take an `AuthUser` and work with paths relative to the user's root. To read a file from another module, use `resolveReadableFile`; never `path.join` storage paths yourself.
 
-Auth: `POST /auth/login` validates against env users, signs a JWT (1 day) and stores it in the `jwt` cookie; `JwtStrategy` reads it from the cookie. `JwtAuthGuard` is applied at controller level on `files` and `admin`. There is no role guard — admin checks are done ad hoc inside handlers.
+`src/filesystem/filesystem.service.spec.ts` is the table of ACL cases; extend it when you change rules.
 
 ### Storage layout
-`<STORAGE_PATH>/users/<USERNAME>/…` (created on login), `<STORAGE_PATH>/public/` (guest root), `<STORAGE_PATH>/backups/` (ZIPs + `last_backup_timestamp.json`). Uploads land in `./temp_uploads` (multer) and are `rename`d into place; name collisions become `name_duplicado[N].ext`.
+`<STORAGE_PATH>/users/<USERNAME>/…` (home created on login for non-guests), `public/` (guest root), `backups/` (ZIPs + `last_backup_timestamp.json`), `.tmp/` (multer temp dir, same volume so the final `rename` works), `.audit/events.jsonl` (security events). Upload limits come from config. Name collisions become `name_duplicado[N].ext`, reserved atomically with `O_EXCL`.
 
 ### Agent (`src/agent/`)
-- `chat/chat.gateway.ts`: Socket.IO `chat` event → keeps per-socket history in memory → `AgentService.processMessage` → emits `chatResponse`.
-- `agent.service.ts`: ReAct-style loop (`maxIterations`). Tool schemas are declared in the `availableTools` array and dispatched in the `executeTool` switch — adding a tool requires editing both. Mutating tools (`move_file`, `create_folder`) call `FileSystemService` as user `ADMIN` with role `admin`.
-- `llm/llm.service.ts`: OpenAI client. Agent decisions use the Responses API (`gpt-5-mini`); summaries use Chat Completions; classification uses `gpt-4o-mini` with JSON mode. Model names are hardcoded.
-- `classification/` builds a Spanish prompt from file metadata + extracted text (`file-reader/` handles `.txt`, `.docx` via mammoth, `.pdf` via pdf-parse) and returns `FileClassificationResponse`. Also exposed over HTTP as `POST /files/classify`.
-- `logs/` (`LogsService`): Nest logger wrapper plus a security-event trail appended as JSONL to `<STORAGE_PATH>/.audit/events.jsonl` (`recordEvent`). `getSuspiciousActivity()` (agent tool `get_suspicious_activity`) detects bursts of `login_failure` / `access_denied` per user.
+- `chat/chat.gateway.ts`: authenticates the socket in `handleConnection` from the `jwt` cookie (no CORS), keeps a bounded per-socket history (cleared on disconnect), calls `AgentService.processMessage(text, previousTurns, user)`, and replies only to that socket.
+- `agent.service.ts`: ReAct-style loop. Tool schemas live in `availableTools` and are dispatched in the `executeTool` switch; adding a tool means editing both. Tools run as the session user through `FileSystemService`/`AccessPolicy`. `create_incremental_backup` and `get_suspicious_activity` are admin-only.
+- `llm/llm.service.ts`: OpenAI client. Agent decisions use the Responses API (`gpt-5-mini`), summaries use Chat Completions, classification uses `gpt-4o-mini` with JSON mode. Model names are hardcoded.
+- `classification/` builds a Spanish prompt from file metadata, extracted text and the folders the user can see, and owns `POST /files/classify` (kept out of `FileSystemModule` so the core doesn't depend on the LLM). `file-reader/` extracts text from `.txt`/`.docx`/`.pdf` and does **no** ACL checks: pass it only already-resolved paths.
+- `logs/` (`LogsService`): logger wrapper plus `recordEvent` (JSONL). `getSuspiciousActivity()` detects bursts of `login_failure` / `access_denied` per user.
 - Use relative imports; jest has no `moduleNameMapper` for `src/...` paths.
 
 ### Views and frontend
-- `main.ts` sets up hbs: partials from `views/partials` and `views/layouts` (layouts are used as partial blocks: `{{#> main}} … {{/main}}`), and an `if_eq` helper. Paths switch between `dist/` and project root based on `__dirname`.
-- `views/browser.hbs` is the file browser and contains most client-side logic inline (large `<script>` block, inline `onclick` handlers, `fetch` calls to `/files/*`). `views/dashboard.hbs` is the admin dashboard.
-- `public/js/chat.js` is the chat widget, loaded on every page via `layouts/main.hbs` together with socket.io and marked from CDNs.
-- Styling: `public/css/style.css` (imports `style-ux.css`) and `chat.css`. Tokens follow `design-system/storify-nas/MASTER.md` (Fira Sans/Fira Code, `--color-*` variables); dark mode is toggled by a `dark` class on `body` stored in `localStorage`.
+- **No inline JavaScript.** The CSP is `script-src 'self'`. Views load `public/js/*.js` (`browser.js`, `dashboard.js`, `theme.js`, `chat.js`) and use `data-action` / `data-path` attributes with event delegation. Never put user data in `on*=` attributes or build HTML from it; use `textContent` / `dataset`.
+- `browser.hbs` receives pre-encoded `thumbnailUrl` / `downloadUrl` and an inert `<script type="application/json" id="browserData">` with `<` escaped (built in `FileSystemController.browser`).
+- The chat widget and its scripts render only when `user` is set. Model output goes through `DOMPurify.sanitize(marked.parse(...))`. marked and DOMPurify are served from `node_modules` under `/vendor/`, and the socket.io client from `/socket.io/`; no CDNs.
+- Layouts are hbs partial blocks (`{{#> main}} … {{/main}}`). `if_eq` helper is registered in `app.setup.ts`.
+- Styling: `public/css/style.css` (imports `style-ux.css`) and `chat.css`. Tokens follow `design-system/storify-nas/MASTER.md`. Dark mode is a `dark` class on `body`, applied by `theme.js` before first paint.
 
 ## Docs
 
-`docs/base.md` is the original functional spec (roles, visibility rules, dashboard). `docs/file_classification.md` documents the classification tool. `docs/build_agent.md`, `docs/evaluate_agent.md` and `analysis_result.json` describe the agentic-pattern analysis. The README overstates some things (e.g. 3 agent iterations — code uses 12; per-user quotas are displayed, not enforced).
+`docs/base.md` is the original functional spec (roles, visibility rules, dashboard). `docs/file_classification.md` documents the classification tool. `docs/build_agent.md`, `docs/evaluate_agent.md` and `analysis_result.json` describe the agentic-pattern analysis. The README overstates some things (e.g. 3 agent iterations — code uses 12; per-user quotas are displayed, not enforced) and still describes the old role model.
