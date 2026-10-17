@@ -1049,6 +1049,23 @@ a:hover {
     animation: slideUp 400ms var(--ease-out);
 }
 
+/* Users who ask for less motion get none: no entrance animations, hover
+   lifts or slides (WCAG 2.3.3). Transitions collapse to an instant change. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .file-card:hover {
+        transform: none;
+    }
+}
+
 /* ---- Small screens ------------------------------------------------------- */
 
 @media (max-width: 768px) {

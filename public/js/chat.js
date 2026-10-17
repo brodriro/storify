@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             chatHistory.scrollTo({
                 top: chatHistory.scrollHeight,
-                behavior: 'smooth'
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
             });
         }, 50);
     }
