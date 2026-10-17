@@ -8,7 +8,7 @@ Storify is a multi-user "mini NAS" file manager: NestJS 11 backend rendering Han
 
 ## Commands
 
-Package manager is **pnpm** (`.npmrc` sets `node-linker=hoisted`). A stray `package-lock.json` also exists; don't use npm to install.
+Package manager is **pnpm**, pinned via `packageManager` in `package.json` (`.npmrc` sets `node-linker=hoisted`; `pnpm-workspace.yaml` lists which dependency build scripts are allowed). Don't use npm to install.
 
 ```bash
 pnpm install
@@ -22,7 +22,11 @@ pnpm test -- path/or/pattern -t "test name"   # single test file / single test
 pnpm run test:e2e           # jest --config test/jest-e2e.json
 ```
 
-Known state as of 2026-10: `build` fails (missing `src/agent/logs/*`, missing `@nestjs/websockets` dependency), the only unit/e2e tests are stale NestJS starter tests that do not compile/pass, and most of the codebase isn't prettier-formatted yet (lint reports ~1300 errors, mostly `prettier/prettier`). Don't assume a green baseline.
+CI (`.github/workflows/ci.yml`) runs build, unit, e2e and `prettier --check`. ESLint still reports ~200 `no-unsafe-*` errors from untyped `any` usage, so it runs non-blocking for now.
+
+Some tests are `it.failing`: they pin known security bugs and spec gaps (S4, S9, S9b, D1 in the local improvement plan). When a fix makes one start passing, Jest reports it as a failure; convert it to a plain `it`.
+
+The e2e suite boots the real `AppModule` against a temp `STORAGE_PATH`. Env vars must be set before `AppModule` is required, because configuration is read at import time. `src/app.setup.ts` (`configureApp`) holds the Express/hbs setup shared by `main.ts` and the tests.
 
 ## Configuration
 
@@ -52,8 +56,8 @@ Auth: `POST /auth/login` validates against env users, signs a JWT (1 day) and st
 - `agent.service.ts`: ReAct-style loop (`maxIterations`). Tool schemas are declared in the `availableTools` array and dispatched in the `executeTool` switch — adding a tool requires editing both. Mutating tools (`move_file`, `create_folder`) call `FileSystemService` as user `ADMIN` with role `admin`.
 - `llm/llm.service.ts`: OpenAI client. Agent decisions use the Responses API (`gpt-5-mini`); summaries use Chat Completions; classification uses `gpt-4o-mini` with JSON mode. Model names are hardcoded.
 - `classification/` builds a Spanish prompt from file metadata + extracted text (`file-reader/` handles `.txt`, `.docx` via mammoth, `.pdf` via pdf-parse) and returns `FileClassificationResponse`. Also exposed over HTTP as `POST /files/classify`.
-- `src/agent/logs/` (`LogsModule`/`LogsService`, used for `get_suspicious_activity`) is imported but not in the repo: the `.gitignore` rule `logs/` excludes it. If you recreate it, add a negation (`!src/agent/logs/`) or it will stay untracked.
-- Imports under `src/agent` sometimes use the absolute form `src/...` (relies on `baseUrl`); prefer relative imports, jest has no `moduleNameMapper` for it.
+- `logs/` (`LogsService`): Nest logger wrapper plus a security-event trail appended as JSONL to `<STORAGE_PATH>/.audit/events.jsonl` (`recordEvent`). `getSuspiciousActivity()` (agent tool `get_suspicious_activity`) detects bursts of `login_failure` / `access_denied` per user.
+- Use relative imports; jest has no `moduleNameMapper` for `src/...` paths.
 
 ### Views and frontend
 - `main.ts` sets up hbs: partials from `views/partials` and `views/layouts` (layouts are used as partial blocks: `{{#> main}} … {{/main}}`), and an `if_eq` helper. Paths switch between `dist/` and project root based on `__dirname`.
