@@ -82,7 +82,7 @@ Las herramientas que **modifican datos** (mover, crear carpetas, iniciar un back
 
 | Herramienta | Descripción | Notas |
 |---|---|---|
-| `get_disk_usage` | Uso de disco del NAS | |
+| `get_disk_usage` | Lo que ocupan los archivos y el tamaño y espacio libre del disco | |
 | `get_recent_files` | Archivos modificados recientemente | Solo los visibles para el usuario, máx. 50 |
 | `list_documents_by_name` | Busca documentos `.txt`, `.docx`, `.pdf` por nombre | Solo los visibles para el usuario |
 | `summarize_document` | Resume un documento | |
@@ -121,7 +121,7 @@ Copia `.env.example` a `.env` y ajústalo. La aplicación **valida la configurac
 | `USERS` | Sí | Lista separada por comas, p. ej. `"ADMIN,ALICE,INVITADO"` |
 | `USER_<NOMBRE>` | Sí, una por usuario | Contraseña de cada usuario. Recomendado: hash bcrypt (ver abajo) |
 | `STORAGE_PATH` | No | Raíz del almacenamiento (por defecto `./public_storage`) |
-| `TOTAL_STORAGE_GB` | No | Capacidad mostrada en el dashboard (por defecto 10) |
+| `TOTAL_STORAGE_GB` | No | Límite de almacenamiento en GB. Si se define, las subidas que lo superarían se rechazan (507); sin definir, se muestran 10 GB en el dashboard solo como referencia |
 | `UPLOAD_MAX_FILE_SIZE_MB` / `UPLOAD_MAX_FILES` | No | Límites de subida (2048 MB por archivo, 10 archivos por petición) |
 | `BACKUP_PATH` | No | Carpeta de backups (por defecto `<STORAGE_PATH>/backups`); idealmente en otro disco |
 | `BACKUP_KEEP_FULL` | No | Backups completos que se conservan (por defecto 3) |
@@ -151,6 +151,7 @@ Copia el resultado **con las comillas simples** en `.env`, p. ej. `USER_ALICE='$
 ├── public/            espacio del invitado (solo lectura)
 ├── backups/           backups ZIP + manifiestos (si no se define BACKUP_PATH)
 ├── .tmp/              subidas en curso
+├── .thumbs/           caché de miniaturas (se regenera sola; se puede borrar)
 └── .audit/            registro de eventos de seguridad
 ```
 
