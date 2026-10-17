@@ -23,15 +23,14 @@ jobs:
 
       - run: pnpm run build
 
-      - run: pnpm test
+      # ts-jest compiles in isolatedModules mode and skips type checking.
+      - run: pnpm run typecheck
 
-      - run: pnpm run test:e2e
-
-      # Non-blocking until the typing work of phase 2 removes the remaining
-      # no-unsafe-* errors (see plan); formatting is already clean.
-      - name: Lint
-        run: pnpm exec eslint "{src,test}/**/*.ts"
-        continue-on-error: true
+      - run: pnpm run lint:check
 
       - name: Formatting
         run: pnpm exec prettier --check "src/**/*.ts" "test/**/*.ts"
+
+      - run: pnpm test
+
+      - run: pnpm run test:e2e

@@ -36,9 +36,10 @@ export class DocumentReaderService {
 
       return this.cleanText(content);
     } catch (error) {
+      const err = error as Error;
       Logger.error(
-        `Error reading file ${filePath}: ${error.message}`,
-        error.stack,
+        `Error reading file ${filePath}: ${err.message}`,
+        err.stack,
         'DocumentReaderService',
       );
       throw new InternalServerErrorException(

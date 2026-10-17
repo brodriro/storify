@@ -39,7 +39,7 @@ describe('Storify (e2e)', () => {
     const nestApp = moduleRef.createNestApplication<NestExpressApplication>();
     await configureApp(nestApp);
     await nestApp.init();
-    app = nestApp as unknown as INestApplication<App>;
+    app = nestApp;
   });
 
   afterAll(async () => {

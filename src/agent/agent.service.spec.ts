@@ -149,7 +149,7 @@ describe('AgentService', () => {
       const move = fakeTool({
         name: 'move',
         mutates: true,
-        describe: (p) => `Mover ${String(p.path)}`,
+        describe: (p: { path?: unknown }) => `Mover ${String(p.path)}`,
       });
       const read = fakeTool({ name: 'read' });
       const { agent, chat } = setup(

@@ -46,7 +46,7 @@ export class AdminController {
 
     const userUsageMb: Record<string, number> = {};
     for (const [key, value] of Object.entries(stats.userUsage)) {
-      userUsageMb[key] = Math.round((value as number) / (1024 * 1024));
+      userUsageMb[key] = Math.round(value / (1024 * 1024));
     }
 
     return {

@@ -3,7 +3,7 @@ import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateBackupDto {
   @IsOptional()
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     value === 'true' ? true : value === 'false' ? false : value,
   )
   @IsBoolean()

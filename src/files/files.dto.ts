@@ -64,7 +64,9 @@ export class BulkMoveDto extends BulkDeleteDto {
 
 export class RecentQueryDto {
   @IsOptional()
-  @Transform(({ value }) => (value === undefined ? undefined : Number(value)))
+  @Transform(({ value }: { value: unknown }) =>
+    value === undefined ? undefined : Number(value),
+  )
   @IsInt()
   @Min(1)
   @Max(3650)
