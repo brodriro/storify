@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const typingIndicator = document.getElementById('typing-indicator');
 
     let isChatInitialized = false;
+    let responseTimer = null;
+    const RESPONSE_TIMEOUT_MS = 90000;
 
     const socket = io({
         transports: ['websocket'],
@@ -56,14 +58,30 @@ document.addEventListener('DOMContentLoaded', () => {
             socket.emit('chat', message);
             toggleInputState(true);
             showTypingIndicator();
+            clearTimeout(responseTimer);
+            responseTimer = setTimeout(() => {
+                finishWaiting();
+                appendMessage('No he recibido respuesta del asistente. Inténtalo de nuevo.', 'ai');
+            }, RESPONSE_TIMEOUT_MS);
         }
     }
 
-    socket.on('chatResponse', (data) => {
+    function finishWaiting() {
+        clearTimeout(responseTimer);
         hideTypingIndicator();
         toggleInputState(false);
-        appendMessage(data.response, 'ai');
+    }
+
+    socket.on('chatResponse', (data) => {
+        finishWaiting();
+        appendMessage(String((data && data.response) || ''), 'ai');
         chatMessageInput.focus();
+    });
+
+    socket.on('disconnect', () => {
+        if (!typingIndicator.classList.contains('visible')) return;
+        finishWaiting();
+        appendMessage('Se ha perdido la conexión con el asistente.', 'ai');
     });
 
     function getTimestamp() {
@@ -77,13 +95,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const meta = document.createElement('div');
         meta.className = 'msg-meta';
         const name = sender === 'user' ? 'You' : 'Storify AI';
-        meta.innerHTML = `<span>${name}</span> &middot; <span>${getTimestamp()}</span>`;
+        const nameEl = document.createElement('span');
+        nameEl.textContent = name;
+        const timeEl = document.createElement('span');
+        timeEl.textContent = getTimestamp();
+        meta.append(nameEl, ' · ', timeEl);
 
         const msgBubble = document.createElement('div');
         msgBubble.className = `chat-message ${sender}`;
 
         if (sender === 'ai') {
-            msgBubble.innerHTML = marked.parse(message);
+            // Model output is untrusted (it can echo document contents): sanitize.
+            msgBubble.innerHTML = DOMPurify.sanitize(marked.parse(message));
         } else {
             msgBubble.textContent = message;
         }

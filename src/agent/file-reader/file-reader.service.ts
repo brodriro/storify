@@ -10,6 +10,11 @@ import { PDFParse } from 'pdf-parse';
 
 @Injectable()
 export class FileReaderService {
+  /**
+   * Extracts plain text from .txt/.docx/.pdf. `filePath` must be an absolute
+   * path already authorized through the access policy
+   * (FileSystemService.resolveReadableFile); this service does no ACL checks.
+   */
   async readFileContent(filePath: string): Promise<string> {
     const ext = path.extname(filePath).toLowerCase();
     let content = '';
@@ -36,64 +41,13 @@ export class FileReaderService {
         error.stack,
         'FileReaderService',
       );
-      throw new InternalServerErrorException(`Failed to read file ${filePath}`);
+      throw new InternalServerErrorException(
+        `Failed to read file ${path.basename(filePath)}`,
+      );
     }
   }
 
   private cleanText(text: string): string {
     return text.replace(/\s+/g, ' ').trim();
-  }
-
-  async listDocumentsByName(searchName: string): Promise<string[]> {
-    const directoryPath = path.join('./public_storage', 'users');
-    const matchingDocuments: string[] = [];
-
-    try {
-      await this.findDocumentsRecursively(
-        directoryPath,
-        searchName,
-        matchingDocuments,
-      );
-      return matchingDocuments;
-    } catch (error) {
-      Logger.error(
-        `Error listing documents in ${directoryPath}: ${error.message}`,
-        error.stack,
-        'FileReaderService',
-      );
-      throw new InternalServerErrorException(
-        `Failed to list documents in ${directoryPath}`,
-      );
-    }
-  }
-
-  private static readonly SUPPORTED_EXTENSIONS = ['.txt', '.docx', '.pdf'];
-
-  private async findDocumentsRecursively(
-    directory: string,
-    searchName: string,
-    matchingDocuments: string[],
-  ): Promise<void> {
-    const entries = await fs.readdir(directory, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = path.join(directory, entry.name);
-      if (entry.isDirectory()) {
-        await this.findDocumentsRecursively(
-          fullPath,
-          searchName,
-          matchingDocuments,
-        );
-      } else if (
-        entry.isFile() &&
-        entry.name.toLowerCase().includes(searchName.toLowerCase()) &&
-        !entry.name.startsWith('.') &&
-        FileReaderService.SUPPORTED_EXTENSIONS.includes(
-          path.extname(entry.name).toLowerCase(),
-        )
-      ) {
-        matchingDocuments.push(fullPath);
-      }
-    }
   }
 }

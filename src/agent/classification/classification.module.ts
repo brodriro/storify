@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
-import { ClassificationService } from './classification.service';
-import { LlmModule } from '../llm/llm.module';
+import { FileSystemModule } from '../../filesystem/filesystem.module';
 import { FileReaderModule } from '../file-reader/file-reader.module';
+import { LlmModule } from '../llm/llm.module';
+import { ClassificationController } from './classification.controller';
+import { ClassificationService } from './classification.service';
 
 @Module({
-  imports: [LlmModule, FileReaderModule],
+  imports: [LlmModule, FileReaderModule, FileSystemModule],
+  controllers: [ClassificationController],
   providers: [ClassificationService],
   exports: [ClassificationService],
 })

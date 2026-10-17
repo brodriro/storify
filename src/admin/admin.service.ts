@@ -9,6 +9,7 @@ import {
   resolveStoragePath,
 } from '../shared/utils/path.utils';
 import archiver from 'archiver';
+import type { AppConfig } from '../config/configuration';
 
 @Injectable()
 export class AdminService {
@@ -19,11 +20,12 @@ export class AdminService {
 
   constructor(
     private fileSystemService: FileSystemService,
-    private configService: ConfigService,
+    private configService: ConfigService<AppConfig, true>,
     private notificationService: NotificationService,
   ) {
-    this.baseStoragePath =
-      this.configService.get<string>('STORAGE_PATH') ?? './public_storage';
+    this.baseStoragePath = this.configService.get('storagePath', {
+      infer: true,
+    });
     this.backupDir = resolveStoragePath(this.baseStoragePath, 'backups');
 
     // Initialize lastBackupTimestamp from a file if it exists
@@ -88,9 +90,9 @@ export class AdminService {
     output.on('close', async () => {
       try {
         await this.saveLastBackupTimestamp(timestamp); // Save timestamp after successful backup
-        const adminEmail =
-          this.configService.get<string>('ADMIN_EMAIL') ||
-          'admin@storify.local';
+        const adminEmail = this.configService.get('adminEmail', {
+          infer: true,
+        });
         await this.notificationService.sendEmail(
           adminEmail,
           isIncremental ? 'Incremental Backup Created' : 'Full Backup Created',

@@ -1,31 +1,86 @@
 import {
-  Injectable,
-  Logger,
-  NotFoundException,
   BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import sharp from 'sharp';
+import type { AuthUser } from '../auth/auth-user';
+import type { AppConfig } from '../config/configuration';
 import {
   ensureDirectoryExists,
   resolveStoragePath,
 } from '../shared/utils/path.utils';
+import { AccessPolicy, ResolvedPath } from './access-policy';
 
-import * as mammoth from 'mammoth';
-const PdfParse = require('pdf-parse');
-import sharp from 'sharp';
+const IMAGE_EXTENSIONS = [
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.bmp',
+  '.svg',
+  '.heic',
+  '.heif',
+];
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov'];
+/** Raster formats sharp can turn into thumbnails (SVG is excluded on purpose). */
+const THUMBNAIL_EXTENSIONS = [
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.gif',
+  '.tiff',
+  '.heic',
+  '.heif',
+  '.bmp',
+];
+
+export interface FileEntry {
+  name: string;
+  isDirectory: boolean;
+  size: number;
+  sizeMb: number;
+  modifiedAt: Date;
+  extension: string;
+  isImage: boolean;
+  isVideo: boolean;
+}
+
+export interface FoundFile {
+  /** Path relative to the user's root, '/'-separated. */
+  path: string;
+  name: string;
+  size: number;
+  modifiedAt: Date;
+  extension: string;
+}
+
+export interface UploadedTempFile {
+  path: string;
+  originalname: string;
+}
+
+function isNotFound(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException)?.code === 'ENOENT';
+}
 
 @Injectable()
 export class FileSystemService {
-  private baseStoragePath: string;
+  private readonly baseStoragePath: string;
 
-  constructor(private configService: ConfigService) {
-    this.baseStoragePath =
-      this.configService.get<string>('storagePath') ?? './public_storage';
-
+  constructor(
+    configService: ConfigService<AppConfig, true>,
+    private readonly policy: AccessPolicy,
+  ) {
+    this.baseStoragePath = configService.get('storagePath', { infer: true });
     ensureDirectoryExists(this.baseStoragePath);
-    // Ensure standard "users" subdirectory structure
     resolveStoragePath(this.baseStoragePath, 'users');
     resolveStoragePath(this.baseStoragePath, 'public');
   }
@@ -34,414 +89,202 @@ export class FileSystemService {
     return resolveStoragePath(this.baseStoragePath, 'users', username);
   }
 
-  private getUsersRoot(): string {
-    return resolveStoragePath(this.baseStoragePath, 'users');
-  }
-
-  private resolveRoot(username: string, userRole: string): string {
-    if (userRole === 'guest') {
-      return path.join(this.baseStoragePath, 'public');
-    }
-    return this.getUsersRoot();
-  }
-
-  private ensureUserAccess(
-    username: string,
-    relativePath: string,
-    userRole: string,
-  ): void {
-    const ADMIN_USERNAME = this.configService.get<string>(
-      'adminUsername',
-      'ADMIN',
-    );
-    const usersConfig = this.configService.get<any[]>('users') || [];
-    const knownUsernames = new Set<string>(usersConfig.map((u) => u.username));
-
-    if (userRole === 'admin') {
-      return;
-    }
-
-    if (userRole === 'guest') {
-      const normalized = relativePath.replace(/\\/g, '/');
-      const segments = normalized.split('/').filter(Boolean);
-      if (segments.length > 0 && knownUsernames.has(segments[0])) {
-        throw new Error(
-          'Access denied: Guests cannot access user-specific folders.',
-        );
-      }
-      return;
-    }
-
-    if (!relativePath) {
-      return;
-    }
-
-    const normalized = relativePath.replace(/\\/g, '/');
-    const segments = normalized.split('/').filter(Boolean);
-    if (segments.length === 0) {
-      return;
-    }
-
-    const firstSegment = segments[0];
-
-    if (userRole === 'moderator') {
-      if (firstSegment === ADMIN_USERNAME) {
-        throw new Error(
-          'Access denied: Moderators cannot access admin folder.',
-        );
-      }
-      // Moderators can access other user folders, no further restriction needed here
-      return;
-    }
-
-    // Default user (non-admin, non-moderator, non-guest) logic
-    if (firstSegment !== username) {
-      throw new Error('Access denied');
-    }
-  }
-
-  async listFiles(
-    username: string,
-    relativePath: string = '',
-    userRole: string,
-    sortBy: 'name' | 'date' = 'name',
-    order: 'asc' | 'desc' = 'asc',
-  ) {
-    const root = this.resolveRoot(username, userRole);
-
-    // Enforce that non-admin users can only browse inside their own
-    // user folder when specifying a relativePath.
-    this.ensureUserAccess(username, relativePath, userRole);
-
-    const target = path.join(root, relativePath);
-
-    // Security check
-    if (!target.startsWith(root)) {
-      throw new Error('Access denied');
-    }
-
-    if (!fs.existsSync(target)) return [];
-
-    const items = await fs.promises.readdir(target, { withFileTypes: true });
-    const mappedItems = items
-      .filter((item) => !item.name.startsWith('.'))
-      .map((item) => {
-        const fullItemPath = path.join(target, item.name);
-        const ext = item.isDirectory()
-          ? ''
-          : path.extname(item.name).toLowerCase();
-        const stats = fs.statSync(fullItemPath);
-        const sizeBytes = item.isDirectory() ? 0 : stats.size;
-        const sizeMb = item.isDirectory()
-          ? 0
-          : Math.max(1, Math.round(sizeBytes / (1024 * 1024)));
-        return {
-          name: item.name,
-          isDirectory: item.isDirectory(),
-          size: sizeBytes,
-          sizeMb,
-          modifiedAt: stats.mtime,
-          extension: ext,
-          isImage: [
-            '.jpg',
-            '.jpeg',
-            '.png',
-            '.gif',
-            '.webp',
-            '.bmp',
-            '.svg',
-            '.heic',
-            '.heif',
-          ].includes(ext),
-          isVideo: ['.mp4', '.webm', '.ogg', '.mov'].includes(ext),
-        };
-      });
-
-    // Filter out other users' folders for non-admin users at root level
-    const usersConfig = this.configService.get<any[]>('users') || [];
-    const knownUsernames = new Set<string>(usersConfig.map((u) => u.username));
-
-    const filteredItems = mappedItems.filter((item) => {
-      const ADMIN_USERNAME = this.configService.get<string>(
-        'adminUsername',
-        'ADMIN',
-      );
-
-      if (userRole === 'admin') return true;
-
-      if (userRole === 'moderator') {
-        // Moderators can see all user folders except admin's
-        if (item.isDirectory && item.name === ADMIN_USERNAME) {
-          return false;
-        }
-        return true;
-      }
-
-      if (userRole === 'guest') {
-        // Guests can only see items in 'public' directory or non-user-specific directories
-        // This logic assumes resolveRoot has already pointed them to the 'public' directory if no relativePath
-        // If they are in a subfolder of public, they should see everything
-        if (
-          relativePath.startsWith('public') ||
-          root === path.join(this.baseStoragePath, 'public')
-        ) {
-          return true;
-        }
-        // Otherwise, they cannot see user-specific folders
-        if (item.isDirectory && knownUsernames.has(item.name)) {
-          return false;
-        }
-        return true;
-      }
-
-      // Default user (non-admin, non-moderator, non-guest) behavior - only see their own folder and non-user-specific items
-      if (relativePath === '') {
-        // At root level: hide directories whose name matches a configured user
-        // different from the current user. Directories with names that are not
-        // configured usernames are considered global and are visible.
-        if (item.isDirectory) {
-          if (knownUsernames.has(item.name) && item.name !== username) {
-            return false;
-          }
-        }
-      }
-      return true;
-    });
-
-    return filteredItems.sort((a, b) => {
-      if (a.isDirectory && !b.isDirectory) return -1;
-      if (!a.isDirectory && b.isDirectory) return 1;
-
-      let comparison = 0;
-      if (sortBy === 'name') {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortBy === 'date') {
-        comparison = a.modifiedAt.getTime() - b.modifiedAt.getTime();
-      }
-
-      return order === 'asc' ? comparison : -comparison;
-    });
-  }
-
-  async createFolder(
-    username: string,
-    relativePath: string,
-    folderName: string,
-    userRole: string,
-  ) {
-    const root = this.resolveRoot(username, userRole);
-
-    // Ensure non-admin users cannot create folders under other users' trees.
-    this.ensureUserAccess(
-      username,
-      path.join(relativePath || '', folderName),
-      userRole,
-    );
-
-    const target = path.join(root, relativePath, folderName);
-
-    if (!target.startsWith(root)) throw new Error('Access denied');
-
-    if (!fs.existsSync(target)) {
-      await fs.promises.mkdir(target, { recursive: true });
-    }
-  }
-
-  async handleUpload(
-    username: string,
-    file: any,
-    relativePath: string,
-    userRole: string,
-  ) {
-    const root = this.resolveRoot(username, userRole);
-
-    // Ensure non-admin users cannot upload into other users' folders.
-    this.ensureUserAccess(username, relativePath, userRole);
-
-    let targetDir = path.join(root, relativePath);
-
-    if (!targetDir.startsWith(root)) throw new Error('Access denied');
-
-    if (!fs.existsSync(targetDir)) {
-      await fs.promises.mkdir(targetDir, { recursive: true });
-    }
-
-    let finalName = file.originalname;
-    let targetPath = path.join(targetDir, finalName);
-    let counter = 1;
-    const ext = path.extname(finalName);
-    const name = path.basename(finalName, ext);
-
-    while (fs.existsSync(targetPath)) {
-      finalName = `${name}_duplicado${counter > 1 ? counter : ''}${ext}`;
-      targetPath = path.join(targetDir, finalName);
-      counter++;
-    }
-
-    await fs.promises.rename(file.path, targetPath);
-    return finalName;
-  }
-
-  async downloadFile(
-    username: string,
-    relativePath: string,
-    userRole: string,
-  ): Promise<string> {
-    const root = this.resolveRoot(username, userRole);
-
-    // Ensure non-admin users cannot download from other users' folders.
-    this.ensureUserAccess(username, relativePath, userRole);
-
-    const target = path.join(root, relativePath);
-
-    if (!target.startsWith(root)) {
-      throw new Error('Access denied');
-    }
-
-    if (!fs.existsSync(target) || fs.statSync(target).isDirectory()) {
-      throw new Error('File not found');
-    }
-
+  /** Resolves a path for reading by other modules (e.g. the agent). */
+  async resolveReadableFile(user: AuthUser, relativePath: unknown) {
+    const target = await this.policy.resolve(user, relativePath, 'read');
+    await this.statFile(target);
     return target;
   }
 
-  async getThumbnail(
-    username: string,
-    relativePath: string,
-    userRole: string,
-  ): Promise<Buffer> {
-    const root = this.resolveRoot(username, userRole);
+  async listFiles(
+    user: AuthUser,
+    relativePath: unknown = '',
+    sortBy: 'name' | 'date' = 'name',
+    order: 'asc' | 'desc' = 'asc',
+  ): Promise<FileEntry[]> {
+    const dir = await this.policy.resolve(user, relativePath, 'read');
 
-    // Ensure non-admin users cannot download from other users' folders.
-    this.ensureUserAccess(username, relativePath, userRole);
-
-    const target = path.join(root, relativePath);
-
-    if (!target.startsWith(root)) {
-      throw new Error('Access denied');
+    let entries: fs.Dirent[];
+    try {
+      entries = await fs.promises.readdir(dir.absolute, {
+        withFileTypes: true,
+      });
+    } catch (error) {
+      if (isNotFound(error)) return [];
+      throw error;
     }
 
-    if (!fs.existsSync(target) || fs.statSync(target).isDirectory()) {
-      throw new Error('File not found');
+    const items = await Promise.all(
+      entries
+        .filter((entry) => this.policy.isVisible(user, dir, entry.name))
+        .map(async (entry): Promise<FileEntry | null> => {
+          try {
+            const stats = await fs.promises.stat(
+              path.join(dir.absolute, entry.name),
+            );
+            const isDirectory = stats.isDirectory();
+            const extension = isDirectory
+              ? ''
+              : path.extname(entry.name).toLowerCase();
+            const size = isDirectory ? 0 : stats.size;
+            return {
+              name: entry.name,
+              isDirectory,
+              size,
+              sizeMb: isDirectory
+                ? 0
+                : Math.max(1, Math.round(size / (1024 * 1024))),
+              modifiedAt: stats.mtime,
+              extension,
+              isImage: IMAGE_EXTENSIONS.includes(extension),
+              isVideo: VIDEO_EXTENSIONS.includes(extension),
+            };
+          } catch (error) {
+            // Entry vanished or is a dangling symlink: skip it.
+            if (isNotFound(error)) return null;
+            throw error;
+          }
+        }),
+    );
+
+    return items
+      .filter((item): item is FileEntry => item !== null)
+      .sort((a, b) => {
+        if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+        const comparison =
+          sortBy === 'date'
+            ? a.modifiedAt.getTime() - b.modifiedAt.getTime()
+            : a.name.localeCompare(b.name);
+        return order === 'asc' ? comparison : -comparison;
+      });
+  }
+
+  async createFolder(user: AuthUser, parentPath: unknown, folderName: unknown) {
+    const parent = await this.policy.resolve(user, parentPath, 'write');
+    const name = this.policy.assertValidName(user, parent, folderName);
+    await fs.promises.mkdir(path.join(parent.absolute, name), {
+      recursive: true,
+    });
+  }
+
+  async handleUpload(
+    user: AuthUser,
+    file: UploadedTempFile,
+    relativePath: unknown,
+  ): Promise<string> {
+    try {
+      const dir = await this.policy.resolve(user, relativePath, 'write');
+      const original = this.policy.assertValidName(
+        user,
+        dir,
+        path.basename(file.originalname),
+      );
+      await fs.promises.mkdir(dir.absolute, { recursive: true });
+
+      const ext = path.extname(original);
+      const base = path.basename(original, ext);
+      let finalName = original;
+      for (let counter = 1; ; counter++) {
+        try {
+          // 'wx' fails if the name is taken, so concurrent uploads can't clash.
+          await fs.promises
+            .open(path.join(dir.absolute, finalName), 'wx')
+            .then((handle) => handle.close());
+          break;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+          finalName = `${base}_duplicado${counter > 1 ? counter : ''}${ext}`;
+        }
+      }
+
+      await fs.promises.rename(file.path, path.join(dir.absolute, finalName));
+      return finalName;
+    } finally {
+      await fs.promises.rm(file.path, { force: true });
+    }
+  }
+
+  /** Returns the absolute path of a readable regular file. */
+  async downloadFile(user: AuthUser, relativePath: unknown): Promise<string> {
+    const target = await this.policy.resolve(user, relativePath, 'read');
+    await this.statFile(target);
+    return target.absolute;
+  }
+
+  async getThumbnail(user: AuthUser, relativePath: unknown): Promise<Buffer> {
+    const target = await this.policy.resolve(user, relativePath, 'read');
+    await this.statFile(target);
+
+    const ext = path.extname(target.absolute).toLowerCase();
+    if (!THUMBNAIL_EXTENSIONS.includes(ext)) {
+      throw new UnsupportedMediaTypeException(
+        'No thumbnail for this file type',
+      );
     }
 
-    const ext = path.extname(target).toLowerCase();
-    if (
-      ![
-        '.jpg',
-        '.jpeg',
-        '.png',
-        '.webp',
-        '.gif',
-        '.tiff',
-        '.heic',
-        '.heif',
-        '.bmp',
-      ].includes(ext)
-    ) {
-      throw new Error('Unsupported image format for thumbnail');
-    }
-
-    return await sharp(target)
-      .resize(300, 300, {
-        fit: sharp.fit.inside,
-        withoutEnlargement: true,
-      })
-      .webp({ quality: 80 }) // Provide webp format for better compression/quality ratio generally, controllers can set content type, but it returns webp now or jpeg. Let's return JPEG as controller expects image/jpeg.
+    return sharp(target.absolute)
+      .resize(300, 300, { fit: sharp.fit.inside, withoutEnlargement: true })
+      .webp({ quality: 80 })
       .toBuffer();
   }
 
-  async deleteItem(username: string, relativePath: string, userRole: string) {
-    const root = this.resolveRoot(username, userRole);
-
-    // Ensure non-admin users cannot delete items from other users' folders.
-    this.ensureUserAccess(username, relativePath, userRole);
-
-    const target = path.join(root, relativePath);
-
-    if (!target.startsWith(root)) {
-      throw new Error('Access denied');
-    }
-
-    if (!fs.existsSync(target)) {
-      throw new Error('Item not found');
-    }
-
-    await fs.promises.rm(target, { recursive: true, force: true });
+  async deleteItem(user: AuthUser, relativePath: unknown) {
+    const target = await this.policy.resolve(user, relativePath, 'write');
+    this.policy.assertMutable(user, target);
+    await this.statExisting(target);
+    await fs.promises.rm(target.absolute, { recursive: true, force: true });
   }
 
-  async renameItem(
-    username: string,
-    currentPath: string,
-    newName: string,
-    userRole: string,
-  ) {
-    const root = this.resolveRoot(username, userRole);
+  async renameItem(user: AuthUser, currentPath: unknown, newName: unknown) {
+    const source = await this.policy.resolve(user, currentPath, 'write');
+    this.policy.assertMutable(user, source);
+    const parent = await this.policy.resolve(
+      user,
+      source.segments.slice(0, -1).join('/'),
+      'write',
+    );
+    const name = this.policy.assertValidName(user, parent, newName);
 
-    // Ensure non-admin users cannot rename items outside their folder.
-    this.ensureUserAccess(username, currentPath, userRole);
-
-    const oldTarget = path.join(root, currentPath);
-    const dir = path.dirname(oldTarget);
-    const newTarget = path.join(dir, newName);
-
-    if (!oldTarget.startsWith(root) || !newTarget.startsWith(root)) {
-      throw new Error('Access denied');
+    await this.statExisting(source);
+    const destination = path.join(parent.absolute, name);
+    if (await this.exists(destination)) {
+      throw new ConflictException('Target name already exists');
     }
-
-    if (!fs.existsSync(oldTarget)) {
-      throw new Error('Item not found');
-    }
-
-    if (fs.existsSync(newTarget)) {
-      throw new Error('Target name already exists');
-    }
-
-    await fs.promises.rename(oldTarget, newTarget);
+    await fs.promises.rename(source.absolute, destination);
   }
 
-  async moveItem(
-    username: string,
-    currentPath: string,
-    destinationPath: string,
-    userRole: string,
-  ) {
-    const root = this.resolveRoot(username, userRole);
+  async moveItem(user: AuthUser, currentPath: unknown, destination: unknown) {
+    const source = await this.policy.resolve(user, currentPath, 'write');
+    this.policy.assertMutable(user, source);
+    const destDir = await this.policy.resolve(user, destination, 'write');
+    const name = source.segments[source.segments.length - 1];
+    // Re-validate the final location (e.g. a top-level name reserved for a user).
+    this.policy.assertValidName(user, destDir, name);
 
-    // Ensure non-admin users cannot move items between other users' folders
-    // or into folders belonging to other users.
-    this.ensureUserAccess(username, currentPath, userRole);
-    this.ensureUserAccess(username, destinationPath, userRole);
-
-    const source = path.join(root, currentPath);
-    // destinationPath is relative to root. If destinationPath is '..', we handle logical parent in UI or here?
-    // Better to treat destinationPath as the target directory relative to root.
-
-    // If user says "move file.txt to /subfolder", destinationPath is "subfolder"
-    const destDir = path.join(root, destinationPath);
-    const filename = path.basename(source);
-    const finalDest = path.join(destDir, filename);
-
-    if (!source.startsWith(root) || !finalDest.startsWith(root)) {
-      throw new Error('Access denied');
+    if (
+      destDir.relative === source.relative ||
+      destDir.relative.startsWith(`${source.relative}/`)
+    ) {
+      throw new BadRequestException('Cannot move a folder into itself');
     }
 
-    if (!fs.existsSync(source)) {
-      throw new Error('Source item not found');
+    await this.statExisting(source);
+    const destStats = await fs.promises
+      .stat(destDir.absolute)
+      .catch(() => null);
+    if (!destStats?.isDirectory()) {
+      throw new NotFoundException('Destination folder does not exist');
     }
-
-    if (!fs.existsSync(destDir)) {
-      throw new Error('Destination folder does not exist');
+    const finalDest = path.join(destDir.absolute, name);
+    if (await this.exists(finalDest)) {
+      throw new ConflictException('File with same name exists in destination');
     }
-
-    if (fs.existsSync(finalDest)) {
-      throw new Error('File with same name exists in destination');
-    }
-
-    await fs.promises.rename(source, finalDest);
+    await fs.promises.rename(source.absolute, finalDest);
   }
+
+  /** Storage-wide statistics for the admin dashboard. */
   async getGlobalStats() {
-    const root = this.getUsersRoot();
+    const root = path.join(this.baseStoragePath, 'users');
     const stats = {
       totalSize: 0,
       totalFiles: 0,
@@ -449,32 +292,28 @@ export class FileSystemService {
       userUsage: {} as Record<string, number>,
     };
 
-    if (!fs.existsSync(root)) return stats;
-
-    const processDir = async (dirPath: string, username?: string) => {
-      const items = await fs.promises.readdir(dirPath, { withFileTypes: true });
-
+    const processDir = async (dirPath: string, owner?: string) => {
+      let items: fs.Dirent[];
+      try {
+        items = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      } catch (error) {
+        if (isNotFound(error)) return;
+        throw error;
+      }
       for (const item of items) {
         const fullPath = path.join(dirPath, item.name);
         if (item.isDirectory()) {
-          // If we are at the root 'users' dir, the next level is the username
-          const nextUsername =
-            username || (dirPath === root ? item.name : undefined);
-          await processDir(fullPath, nextUsername);
-        } else {
-          const size = fs.statSync(fullPath).size;
+          // Top-level folders under users/ are attributed to that name
+          await processDir(fullPath, owner ?? item.name);
+        } else if (item.isFile()) {
+          const { size } = await fs.promises.stat(fullPath);
           stats.totalSize += size;
           stats.totalFiles++;
-
           const ext = path.extname(item.name).toLowerCase() || 'unknown';
           stats.fileTypes[ext] = (stats.fileTypes[ext] || 0) + 1;
-
-          if (username) {
-            stats.userUsage[username] = (stats.userUsage[username] || 0) + size;
-          } else {
-            // Archivos que no pertenecen a ningún usuario directo (p.ej. en la raíz compartida)
-            stats.userUsage['OTROS'] = (stats.userUsage['OTROS'] || 0) + size;
-          }
+          // Files directly in the shared root belong to no user
+          const key = owner ?? 'OTROS';
+          stats.userUsage[key] = (stats.userUsage[key] || 0) + size;
         }
       }
     };
@@ -488,64 +327,91 @@ export class FileSystemService {
     return { totalBytes: stats.totalSize };
   }
 
-  async getRecentFiles(days: number = 7): Promise<any[]> {
-    const root = this.getUsersRoot();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+  /** Files modified in the last `days` days that the user can read. */
+  async getRecentFiles(user: AuthUser, days = 7): Promise<FoundFile[]> {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return this.findFiles(user, (file) => file.modifiedAt.getTime() > cutoff);
+  }
 
-    const recentFiles: any[] = [];
+  /** Readable files whose name contains `search` (case-insensitive). */
+  async searchFiles(
+    user: AuthUser,
+    search: string,
+    extensions?: string[],
+  ): Promise<FoundFile[]> {
+    const needle = search.toLowerCase();
+    return this.findFiles(
+      user,
+      (file) =>
+        file.name.toLowerCase().includes(needle) &&
+        (!extensions || extensions.includes(file.extension)),
+    );
+  }
 
-    const traverseDirectory = async (dirPath: string) => {
-      const items = await fs.promises.readdir(dirPath, { withFileTypes: true });
-
-      for (const item of items) {
-        if (item.name.startsWith('.')) continue;
-        const fullPath = path.join(dirPath, item.name);
-        const stats = fs.statSync(fullPath);
-
-        if (stats.isDirectory()) {
-          await traverseDirectory(fullPath);
-        } else if (stats.mtime > cutoffDate) {
-          recentFiles.push({
-            name: item.name,
-            path: fullPath,
+  private async findFiles(
+    user: AuthUser,
+    predicate: (file: FoundFile) => boolean,
+  ): Promise<FoundFile[]> {
+    const results: FoundFile[] = [];
+    const walk = async (dir: ResolvedPath) => {
+      let entries: fs.Dirent[];
+      try {
+        entries = await fs.promises.readdir(dir.absolute, {
+          withFileTypes: true,
+        });
+      } catch (error) {
+        if (isNotFound(error)) return;
+        throw error;
+      }
+      for (const entry of entries) {
+        // Symlinks are skipped so the walk can't leave the user's root.
+        if (entry.isSymbolicLink()) continue;
+        if (!this.policy.isVisible(user, dir, entry.name)) continue;
+        const child: ResolvedPath = {
+          absolute: path.join(dir.absolute, entry.name),
+          relative: dir.relative ? `${dir.relative}/${entry.name}` : entry.name,
+          segments: [...dir.segments, entry.name],
+        };
+        if (entry.isDirectory()) {
+          await walk(child);
+        } else if (entry.isFile()) {
+          const stats = await fs.promises.stat(child.absolute);
+          const file: FoundFile = {
+            path: child.relative,
+            name: entry.name,
             size: stats.size,
             modifiedAt: stats.mtime,
-            extension: path.extname(item.name).toLowerCase(),
-          });
+            extension: path.extname(entry.name).toLowerCase(),
+          };
+          if (predicate(file)) results.push(file);
         }
       }
     };
-
-    if (fs.existsSync(root)) {
-      await traverseDirectory(root);
-    }
-
-    return recentFiles;
+    await walk(await this.policy.resolve(user, '', 'read'));
+    return results;
   }
 
-  async readDocumentContent(filePath: string): Promise<string> {
-    const fullPath = path.join(this.baseStoragePath, 'users', filePath);
-    const ext = path.extname(fullPath).toLowerCase();
+  private async statFile(target: ResolvedPath): Promise<fs.Stats> {
+    const stats = await this.statExisting(target);
+    if (!stats.isFile()) throw new NotFoundException('File not found');
+    return stats;
+  }
 
-    if (!fs.existsSync(fullPath)) {
-      throw new NotFoundException(`File not found: ${filePath}`);
+  private async statExisting(target: ResolvedPath): Promise<fs.Stats> {
+    try {
+      return await fs.promises.stat(target.absolute);
+    } catch (error) {
+      if (isNotFound(error)) throw new NotFoundException('Item not found');
+      throw error;
     }
+  }
 
-    switch (ext) {
-      case '.txt':
-        return (await fs.promises.readFile(fullPath, 'utf8')).trim();
-      case '.docx':
-        const result = await mammoth.extractRawText({ path: fullPath });
-        return result.value.trim();
-      case '.pdf':
-        const dataBuffer = await fs.promises.readFile(fullPath);
-        const pdf = await PdfParse.default(dataBuffer);
-        return pdf.text.trim();
-      default:
-        throw new BadRequestException(
-          `Unsupported file type for reading content: ${ext}`,
-        );
+  private async exists(absolute: string): Promise<boolean> {
+    try {
+      await fs.promises.access(absolute);
+      return true;
+    } catch {
+      return false;
     }
   }
 }
