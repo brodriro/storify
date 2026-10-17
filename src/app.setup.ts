@@ -38,12 +38,9 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
           // No inline scripts anywhere: views load /js/*.js only.
           scriptSrc: ["'self'"],
           // Inline style attributes remain in the views (plan U11).
-          styleSrc: [
-            "'self'",
-            "'unsafe-inline'",
-            'https://fonts.googleapis.com',
-          ],
-          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          // Fonts are self-hosted (/vendor/fira-*): no Google Fonts.
+          fontSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
           mediaSrc: ["'self'", 'blob:'],
           connectSrc: ["'self'"],
@@ -67,6 +64,15 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
   app.useStaticAssets(dirname(require.resolve('dompurify')), {
     prefix: '/vendor/dompurify/',
   });
+  for (const font of ['fira-sans', 'fira-code']) {
+    app.useStaticAssets(
+      join(
+        dirname(require.resolve(`@fontsource/${font}/package.json`)),
+        'files',
+      ),
+      { prefix: `/vendor/${font}/`, maxAge: '30d', immutable: true },
+    );
+  }
   app.setBaseViewsDir(viewsPath);
   app.setViewEngine('hbs');
 

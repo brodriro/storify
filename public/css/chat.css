@@ -203,8 +203,6 @@
 /* AI Message */
 .chat-message.ai {
     background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     color: var(--text-main);
     border-radius: 16px 16px 16px 2px;
@@ -357,7 +355,6 @@
 .typing-dots {
     display: flex;
     background: var(--glass-bg);
-    backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     padding: 0.6rem 1rem;
     border-radius: 16px;

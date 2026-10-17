@@ -102,7 +102,7 @@
                 {{#if canWrite}}
                 {{#if currentPath}}
                 {{#if files.length}}
-                <li class="glass-panel file-card parent-drop-card" data-drop-target="parent">
+                <li class="file-card parent-drop-card" data-drop-target="parent">
                     <div class="file-icon">
                         <svg class="icon-lg" style="color: var(--text-muted);" viewBox="0 0 24 24">
                             <circle cx="6" cy="12" r="1.8"></circle>
@@ -116,7 +116,7 @@
                 {{/if}}
                 {{/if}}
                 {{#each files}}
-                <li class="glass-panel file-card" data-name="{{this.name}}" data-path="{{this.path}}"
+                <li class="file-card" data-name="{{this.name}}" data-path="{{this.path}}"
                     {{#if this.isDirectory}}data-kind="dir" style="cursor: pointer;"
                     {{else}}data-kind="file"{{#if ../canWrite}} draggable="true"{{/if}}{{/if}}>
 

@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-@import url('./style-ux.css');
+/* Loaded after fonts.css; style-ux.css is linked separately (no @import chains). */
 
 :root {
     /* Color Palette - Design System */
@@ -29,7 +28,7 @@
     --space-3xl: 4rem;
 
     /* Glassmorphism Variables */
-    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-bg: rgba(255, 255, 255, 0.92);
     --glass-border: rgba(255, 255, 255, 0.5);
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 
@@ -52,7 +51,7 @@ body.dark {
     --text-main: var(--color-text);
     --text-muted: #94a3b8;
 
-    --glass-bg: rgba(15, 23, 42, 0.6);
+    --glass-bg: rgba(15, 23, 42, 0.92);
     /* Slate-900 with opacity */
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
@@ -88,10 +87,10 @@ body:not(.dark) {
 }
 
 /* Utilities */
+/* Solid surface: blur is reserved for single overlaid surfaces (modal
+   backdrop, chat, open menu, toasts), never for repeated elements. */
 .glass-panel {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
     border-radius: var(--rounded-lg);
@@ -440,8 +439,6 @@ a:hover {
 
 .login-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
     padding: 2rem;
     border-radius: var(--rounded-lg);
