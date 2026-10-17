@@ -10,6 +10,8 @@ export interface AppConfig {
   port: number;
   storagePath: string;
   totalStorageGb: number;
+  /** Upload limit in bytes: only when TOTAL_STORAGE_GB is set explicitly. */
+  storageLimitBytes: number | null;
   adminEmail: string;
   jwtSecret: string;
   cookieSecure: boolean;
@@ -124,15 +126,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
 
   const storagePath = env.STORAGE_PATH?.trim() || './public_storage';
+  const totalStorageGb = parsePositiveInt(
+    'TOTAL_STORAGE_GB',
+    env.TOTAL_STORAGE_GB,
+    10,
+    errors,
+  );
   const config: AppConfig = {
     port: parsePositiveInt('PORT', env.PORT, 3000, errors),
     storagePath,
-    totalStorageGb: parsePositiveInt(
-      'TOTAL_STORAGE_GB',
-      env.TOTAL_STORAGE_GB,
-      10,
-      errors,
-    ),
+    totalStorageGb,
+    storageLimitBytes: env.TOTAL_STORAGE_GB?.trim()
+      ? totalStorageGb * 1024 ** 3
+      : null,
     adminEmail: env.ADMIN_EMAIL?.trim() || 'admin@storify.local',
     jwtSecret,
     cookieSecure: env.NODE_ENV === 'production',

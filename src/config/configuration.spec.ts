@@ -68,6 +68,15 @@ describe('loadConfig', () => {
     );
   });
 
+  it('only limits uploads when TOTAL_STORAGE_GB is set', () => {
+    const unset = loadConfig(base);
+    expect(unset.totalStorageGb).toBe(10);
+    expect(unset.storageLimitBytes).toBeNull();
+    expect(
+      loadConfig({ ...base, TOTAL_STORAGE_GB: '2' }).storageLimitBytes,
+    ).toBe(2 * 1024 ** 3);
+  });
+
   it('only marks cookies secure in production', () => {
     expect(loadConfig(base).cookieSecure).toBe(false);
     expect(loadConfig({ ...base, NODE_ENV: 'production' }).cookieSecure).toBe(

@@ -274,6 +274,83 @@ describe('StorageService access control', () => {
     });
   });
 
+  describe('upload storage limit (TOTAL_STORAGE_GB)', () => {
+    const fixturesBytes =
+      'admin-secret'.length +
+      'alice'.length +
+      'bob'.length +
+      'team'.length +
+      'shared'.length;
+    const withLimit = (limit: number | null) => {
+      const config = new ConfigService({
+        storagePath: storage,
+        storageLimitBytes: limit,
+        users: [{ username: 'ALICE', role: 'member' }],
+      }) as unknown as ConfigService<AppConfig, true>;
+      const logs = { recordEvent } as unknown as AuditService;
+      return new StorageService(
+        config,
+        new AccessPolicy(config, logs),
+        new ThumbnailService(config),
+      );
+    };
+    const tempFile = (name: string, bytes: number) => {
+      const file = path.join(storage, `${name}.upload`);
+      fs.writeFileSync(file, Buffer.alloc(bytes));
+      return { path: file, originalname: name, size: bytes };
+    };
+
+    it('accepts uploads up to the limit', async () => {
+      const limited = withLimit(fixturesBytes + 10);
+      await expect(
+        limited.handleUpload(ALICE, tempFile('ten.bin', 10), 'ALICE'),
+      ).resolves.toBe('ten.bin');
+      expect(exists(usersRoot, 'ALICE/ten.bin')).toBe(true);
+    });
+
+    it('rejects an upload that would exceed it with 507 and drops the temp file', async () => {
+      const limited = withLimit(fixturesBytes + 10);
+      const file = tempFile('big.bin', 11);
+      await expect(
+        limited.handleUpload(ALICE, file, 'ALICE'),
+      ).rejects.toMatchObject({
+        status: 507,
+      });
+      expect(fs.existsSync(file.path)).toBe(false);
+      expect(exists(usersRoot, 'ALICE/big.bin')).toBe(false);
+    });
+
+    it('counts concurrent uploads against each other', async () => {
+      const limited = withLimit(fixturesBytes + 10);
+      const results = await Promise.allSettled([
+        limited.handleUpload(ALICE, tempFile('a.bin', 6), 'ALICE'),
+        limited.handleUpload(ALICE, tempFile('b.bin', 6), 'ALICE'),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([
+        'fulfilled',
+        'rejected',
+      ]);
+    });
+
+    it('sees space freed by a delete', async () => {
+      const limited = withLimit(fixturesBytes);
+      await expect(
+        limited.handleUpload(ALICE, tempFile('one.bin', 1), 'ALICE'),
+      ).rejects.toMatchObject({ status: 507 });
+      await limited.deleteItem(ALICE, 'ALICE/own.txt');
+      await expect(
+        limited.handleUpload(ALICE, tempFile('one.bin', 1), 'ALICE'),
+      ).resolves.toBe('one.bin');
+    });
+
+    it('does not limit uploads when TOTAL_STORAGE_GB is unset', async () => {
+      const unlimited = withLimit(null);
+      await expect(
+        unlimited.handleUpload(ALICE, tempFile('huge.bin', 1000), 'ALICE'),
+      ).resolves.toBe('huge.bin');
+    });
+  });
+
   describe('search and recent files', () => {
     it('only returns files the user can read, as relative paths', async () => {
       const found = await service.searchFiles(ALICE, '.txt');

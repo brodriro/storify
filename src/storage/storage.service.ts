@@ -1,8 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
+  OnApplicationBootstrap,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -69,6 +73,7 @@ export interface DiskUsage {
 export interface UploadedTempFile {
   path: string;
   originalname: string;
+  size: number;
 }
 
 function isNotFound(error: unknown): boolean {
@@ -76,11 +81,15 @@ function isNotFound(error: unknown): boolean {
 }
 
 @Injectable()
-export class StorageService {
+export class StorageService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(StorageService.name);
   private readonly baseStoragePath: string;
   private statsCache: { value: GlobalStats; at: number } | null = null;
   private statsInFlight: Promise<GlobalStats> | null = null;
   private statsGeneration = 0;
+  private readonly storageLimitBytes: number | null;
+  /** Bytes of uploads being moved into place, counted against the limit. */
+  private reservedBytes = 0;
 
   constructor(
     configService: ConfigService<AppConfig, true>,
@@ -88,9 +97,28 @@ export class StorageService {
     private readonly thumbnails: ThumbnailService,
   ) {
     this.baseStoragePath = configService.get('storagePath', { infer: true });
+    this.storageLimitBytes =
+      configService.get('storageLimitBytes', { infer: true }) ?? null;
     ensureDirectoryExists(this.baseStoragePath);
     resolveStoragePath(this.baseStoragePath, 'users');
     resolveStoragePath(this.baseStoragePath, 'public');
+  }
+
+  onApplicationBootstrap() {
+    if (this.storageLimitBytes === null) return;
+    const limit = this.storageLimitBytes;
+    // Not awaited: walking a big tree must not delay startup. Warms the cache.
+    void this.getGlobalStats()
+      .then(({ totalSize }) => {
+        if (totalSize > limit) {
+          this.logger.warn(
+            `Storage use (${formatSize(totalSize)}) is above TOTAL_STORAGE_GB (${formatSize(limit)}): uploads will be rejected until space is freed or the limit is raised`,
+          );
+        }
+      })
+      .catch((error: unknown) =>
+        this.logger.error(`Could not compute storage use: ${String(error)}`),
+      );
   }
 
   getUserPath(username: string): string {
@@ -186,29 +214,62 @@ export class StorageService {
         path.basename(file.originalname),
       );
       await fs.promises.mkdir(dir.absolute, { recursive: true });
-
-      const ext = path.extname(original);
-      const base = path.basename(original, ext);
-      let finalName = original;
-      for (let counter = 1; ; counter++) {
-        try {
-          // 'wx' fails if the name is taken, so concurrent uploads can't clash.
-          await fs.promises
-            .open(path.join(dir.absolute, finalName), 'wx')
-            .then((handle) => handle.close());
-          break;
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-          finalName = `${base}_duplicado${counter > 1 ? counter : ''}${ext}`;
-        }
+      const release = await this.reserveSpace(file.size);
+      try {
+        return await this.placeUpload(file, dir, original);
+      } finally {
+        release();
       }
-
-      await fs.promises.rename(file.path, path.join(dir.absolute, finalName));
-      this.invalidateStats();
-      return finalName;
     } finally {
       await fs.promises.rm(file.path, { force: true });
     }
+  }
+
+  /** Moves the temp file into `dir`, renaming it if the name is taken. */
+  private async placeUpload(
+    file: UploadedTempFile,
+    dir: ResolvedPath,
+    original: string,
+  ): Promise<string> {
+    const ext = path.extname(original);
+    const base = path.basename(original, ext);
+    let finalName = original;
+    for (let counter = 1; ; counter++) {
+      try {
+        // 'wx' fails if the name is taken, so concurrent uploads can't clash.
+        await fs.promises
+          .open(path.join(dir.absolute, finalName), 'wx')
+          .then((handle) => handle.close());
+        break;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+        finalName = `${base}_duplicado${counter > 1 ? counter : ''}${ext}`;
+      }
+    }
+
+    await fs.promises.rename(file.path, path.join(dir.absolute, finalName));
+    this.invalidateStats();
+    return finalName;
+  }
+
+  /**
+   * Enforces TOTAL_STORAGE_GB (when set) on uploads. Usage comes from the
+   * stats cache, which every write invalidates; concurrent uploads count
+   * each other through the reservation until their file is in place.
+   */
+  private async reserveSpace(bytes: number): Promise<() => void> {
+    if (this.storageLimitBytes === null) return () => {};
+    const { totalSize } = await this.getGlobalStats();
+    if (totalSize + this.reservedBytes + bytes > this.storageLimitBytes) {
+      throw new HttpException(
+        `Storage limit reached (${formatSize(this.storageLimitBytes)}): free some space or ask the administrator to raise TOTAL_STORAGE_GB`,
+        HttpStatus.INSUFFICIENT_STORAGE,
+      );
+    }
+    this.reservedBytes += bytes;
+    return () => {
+      this.reservedBytes -= bytes;
+    };
   }
 
   /** Returns the absolute path of a readable regular file. */
