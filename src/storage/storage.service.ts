@@ -70,6 +70,21 @@ export interface DiskUsage {
   volume: { sizeBytes: number; freeBytes: number };
 }
 
+export interface StorageSummary {
+  usedBytes: number;
+  totalBytes: number;
+  /** 0-100, rounded. */
+  percent: number;
+}
+
+function summary(usedBytes: number, totalBytes: number): StorageSummary {
+  const percent =
+    totalBytes > 0
+      ? Math.min(100, Math.round((usedBytes / totalBytes) * 100))
+      : 0;
+  return { usedBytes, totalBytes, percent };
+}
+
 export interface UploadedTempFile {
   path: string;
   originalname: string;
@@ -399,6 +414,23 @@ export class StorageService implements OnApplicationBootstrap {
         freeBytes: volume.bavail * volume.bsize,
       },
     };
+  }
+
+  /**
+   * What the file browser shows as "storage used": against TOTAL_STORAGE_GB
+   * when it is enforced (from the stats cache), otherwise the real volume
+   * (statfs, instant).
+   */
+  async getStorageSummary(): Promise<StorageSummary> {
+    if (this.storageLimitBytes !== null) {
+      const { totalSize } = await this.getGlobalStats();
+      return summary(totalSize, this.storageLimitBytes);
+    }
+    const volume = await fs.promises.statfs(this.baseStoragePath);
+    return summary(
+      (volume.blocks - volume.bfree) * volume.bsize,
+      volume.blocks * volume.bsize,
+    );
   }
 
   private invalidateStats() {

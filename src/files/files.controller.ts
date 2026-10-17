@@ -20,6 +20,7 @@ import * as path from 'path';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { formatSize } from '../common/file-types';
 import { StorageService, UploadedTempFile } from '../storage/storage.service';
 import {
   BrowserQueryDto,
@@ -81,12 +82,10 @@ export class FilesController {
     const order = query.order ?? 'asc';
     const currentPath = (query.path ?? '').replace(/^\/+/, '');
 
-    const files = await this.storageService.listFiles(
-      user,
-      currentPath,
-      sortBy,
-      order,
-    );
+    const [files, storage] = await Promise.all([
+      this.storageService.listFiles(user, currentPath, sortBy, order),
+      this.storageService.getStorageSummary(),
+    ]);
 
     const parts = currentPath.split('/').filter((p) => p);
     const breadcrumbs = parts.map((name, i) => ({
@@ -154,6 +153,11 @@ export class FilesController {
       currentPath,
       breadcrumbs,
       pagination,
+      storage: {
+        usedLabel: formatSize(storage.usedBytes),
+        totalLabel: formatSize(storage.totalBytes),
+        percent: storage.percent,
+      },
       userRole: user.role,
       canWrite: user.role !== 'guest',
       sortBy,

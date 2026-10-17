@@ -56,9 +56,7 @@
                 <strong>{{totalSizeMb}} MB</strong>
             </div>
 
-            <div class="usage-bar-container">
-                <div class="usage-bar-fill" style="width: {{usagePercent}}%;"></div>
-            </div>
+            <progress class="usage-bar" max="100" value="{{usagePercent}}" aria-label="Storage used"></progress>
             <p class="usage-note">
                 Usage relative to {{config.totalStorageGb}}GB limit
             </p>

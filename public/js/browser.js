@@ -286,7 +286,6 @@
     };
 
     const pageActions = {
-        'coming-soon': () => showToast('Próximamente...', 'success'),
         'toggle-order': () => {
             const order = new URL(window.location.href).searchParams.get('order') || 'asc';
             setQueryParam('order', order === 'asc' ? 'desc' : 'asc');

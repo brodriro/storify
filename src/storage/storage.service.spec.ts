@@ -264,6 +264,29 @@ describe('StorageService access control', () => {
       readdir.mockRestore();
     });
 
+    it('summarizes against TOTAL_STORAGE_GB when set, else the volume', async () => {
+      const volume = await service.getStorageSummary();
+      expect(volume.totalBytes).toBeGreaterThan(0);
+      expect(volume.percent).toBeGreaterThanOrEqual(0);
+
+      const config = new ConfigService({
+        storagePath: storage,
+        storageLimitBytes: 100,
+        users: [],
+      }) as unknown as ConfigService<AppConfig, true>;
+      const limited = new StorageService(
+        config,
+        new AccessPolicy(config, { recordEvent } as unknown as AuditService),
+        new ThumbnailService(config),
+      );
+      // Fixtures: 'admin-secret' + 'alice' + 'bob' + 'team' + 'shared' = 30 bytes
+      expect(await limited.getStorageSummary()).toEqual({
+        usedBytes: 30,
+        totalBytes: 100,
+        percent: 30,
+      });
+    });
+
     it('reports the volume behind STORAGE_PATH', async () => {
       const usage = await service.getDiskUsage();
       expect(usage.totalBytes).toBeGreaterThan(0);
