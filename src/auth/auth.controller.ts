@@ -6,6 +6,7 @@ import type { AppConfig } from '../config/configuration';
 import { StorageService } from '../storage/storage.service';
 import { SESSION_TTL_SECONDS } from './auth.constants';
 import { AuthService } from './auth.service';
+import { LoginDto } from './login.dto';
 import { LoginThrottlerGuard } from './login-throttler.guard';
 
 @Controller('auth')
@@ -19,10 +20,7 @@ export class AuthController {
 
   @Post('login')
   @UseGuards(LoginThrottlerGuard)
-  async login(
-    @Body() body: { username?: unknown; password?: unknown },
-    @Res() res: Response,
-  ): Promise<void> {
+  async login(@Body() body: LoginDto, @Res() res: Response): Promise<void> {
     const user = this.authService.validateUser(body.username, body.password);
     if (!user) {
       await this.auditService.recordEvent('login_failure', {

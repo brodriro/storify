@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { createReadStream } from 'fs';
 import * as path from 'path';
 import { BackupService } from '../backup/backup.service';
+import { CreateBackupDto, DownloadBackupQueryDto } from './admin.dto';
 import { StorageService } from '../storage/storage.service';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -61,11 +62,9 @@ export class AdminController {
   }
 
   @Post('backup')
-  async createBackup(@Body('isIncremental') isIncremental: unknown) {
+  async createBackup(@Body() body: CreateBackupDto) {
     const started = await this.backupService.start(
-      isIncremental === true || isIncremental === 'true'
-        ? 'incremental'
-        : 'full',
+      body.isIncremental ? 'incremental' : 'full',
     );
     return { success: started, inProgress: !started };
   }
@@ -87,10 +86,8 @@ export class AdminController {
 
   /** Newest full backup by default, or a specific one from the list. */
   @Get('backup/download')
-  async downloadBackup(@Query('name') name: unknown) {
-    const zip = await this.backupService.zipPath(
-      typeof name === 'string' && name ? name : undefined,
-    );
+  async downloadBackup(@Query() { name }: DownloadBackupQueryDto) {
+    const zip = await this.backupService.zipPath(name || undefined);
     return new StreamableFile(createReadStream(zip), {
       type: 'application/zip',
       disposition: `attachment; filename="${path.basename(zip)}"`,

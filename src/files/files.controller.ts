@@ -19,25 +19,34 @@ import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StorageService, UploadedTempFile } from '../storage/storage.service';
-
-type PathBody = { path?: unknown };
+import {
+  BrowserQueryDto,
+  BulkDeleteDto,
+  BulkMoveDto,
+  MkdirDto,
+  MoveDto,
+  PathBodyDto,
+  PathQueryDto,
+  RecentQueryDto,
+  RenameDto,
+  UploadBodyDto,
+} from './files.dto';
 
 /** Runs an operation per path and reports partial failures instead of a bare 500. */
 async function settleAll(
-  paths: unknown,
-  run: (p: unknown) => Promise<void>,
+  list: string[],
+  run: (p: string) => Promise<void>,
 ): Promise<{
   success: boolean;
   count: number;
   failed: { path: string; error: string }[];
 }> {
-  const list = Array.isArray(paths) ? (paths as unknown[]) : [];
   const results = await Promise.allSettled(list.map((p) => run(p)));
   const failed = results.flatMap((result, i) =>
     result.status === 'rejected'
       ? [
           {
-            path: String(list[i]),
+            path: list[i],
             error:
               result.reason instanceof Error
                 ? result.reason.message
@@ -62,16 +71,11 @@ export class FilesController {
   @Render('browser')
   async browser(
     @CurrentUser() user: AuthUser,
-    @Query('path') requestedPath: unknown,
-    @Query('sort') sort: unknown,
-    @Query('order') orderParam: unknown,
+    @Query() query: BrowserQueryDto,
   ) {
-    const sortBy = sort === 'date' ? 'date' : 'name';
-    const order = orderParam === 'desc' ? 'desc' : 'asc';
-    const currentPath =
-      typeof requestedPath === 'string'
-        ? requestedPath.replace(/^\/+/, '')
-        : '';
+    const sortBy = query.sort ?? 'name';
+    const order = query.order ?? 'asc';
+    const currentPath = (query.path ?? '').replace(/^\/+/, '');
 
     const files = await this.storageService.listFiles(
       user,
@@ -130,7 +134,7 @@ export class FilesController {
   @UseInterceptors(FilesInterceptor('files'))
   async uploadFile(
     @UploadedFiles() files: UploadedTempFile[] = [],
-    @Body() body: PathBody,
+    @Body() body: UploadBodyDto,
     @CurrentUser() user: AuthUser,
   ) {
     const uploaded: { original: string; final: string }[] = [];
@@ -146,17 +150,14 @@ export class FilesController {
   }
 
   @Post('mkdir')
-  async createFolder(
-    @Body() body: PathBody & { name?: unknown },
-    @CurrentUser() user: AuthUser,
-  ) {
+  async createFolder(@Body() body: MkdirDto, @CurrentUser() user: AuthUser) {
     await this.storageService.createFolder(user, body.path ?? '', body.name);
     return { success: true };
   }
 
   @Get('download')
   async download(
-    @Query('path') filePath: unknown,
+    @Query() { path: filePath }: PathQueryDto,
     @CurrentUser() user: AuthUser,
   ) {
     const fullPath = await this.storageService.downloadFile(user, filePath);
@@ -169,7 +170,7 @@ export class FilesController {
   @Header('Content-Type', 'image/webp')
   @Header('Cache-Control', 'private, max-age=300')
   async getThumbnail(
-    @Query('path') filePath: unknown,
+    @Query() { path: filePath }: PathQueryDto,
     @CurrentUser() user: AuthUser,
   ) {
     // No fallback to serving the original inline: user-uploaded SVG/HTML on
@@ -180,41 +181,32 @@ export class FilesController {
   }
 
   @Delete('delete')
-  async deleteItem(@Body() body: PathBody, @CurrentUser() user: AuthUser) {
+  async deleteItem(@Body() body: PathBodyDto, @CurrentUser() user: AuthUser) {
     await this.storageService.deleteItem(user, body.path);
     return { success: true };
   }
 
   @Post('rename')
-  async renameItem(
-    @Body() body: PathBody & { newName?: unknown },
-    @CurrentUser() user: AuthUser,
-  ) {
+  async renameItem(@Body() body: RenameDto, @CurrentUser() user: AuthUser) {
     await this.storageService.renameItem(user, body.path, body.newName);
     return { success: true };
   }
 
   @Post('move')
-  async moveItem(
-    @Body() body: PathBody & { destination?: unknown },
-    @CurrentUser() user: AuthUser,
-  ) {
+  async moveItem(@Body() body: MoveDto, @CurrentUser() user: AuthUser) {
     await this.storageService.moveItem(user, body.path, body.destination);
     return { success: true };
   }
 
   @Post('bulk-delete')
-  bulkDelete(@Body() body: { paths?: unknown }, @CurrentUser() user: AuthUser) {
+  bulkDelete(@Body() body: BulkDeleteDto, @CurrentUser() user: AuthUser) {
     return settleAll(body.paths, (p) =>
       this.storageService.deleteItem(user, p),
     );
   }
 
   @Post('bulk-move')
-  bulkMove(
-    @Body() body: { paths?: unknown; destination?: unknown },
-    @CurrentUser() user: AuthUser,
-  ) {
+  bulkMove(@Body() body: BulkMoveDto, @CurrentUser() user: AuthUser) {
     return settleAll(body.paths, (p) =>
       this.storageService.moveItem(user, p, body.destination),
     );
@@ -222,14 +214,10 @@ export class FilesController {
 
   @Get('recent')
   async getRecentFiles(
-    @Query('days') days: unknown,
+    @Query() { days }: RecentQueryDto,
     @CurrentUser() user: AuthUser,
   ) {
-    const parsed = Number(days);
-    const files = await this.storageService.getRecentFiles(
-      user,
-      Number.isFinite(parsed) && parsed > 0 ? parsed : 7,
-    );
+    const files = await this.storageService.getRecentFiles(user, days ?? 7);
     return { success: true, files };
   }
 

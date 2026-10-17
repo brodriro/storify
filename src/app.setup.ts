@@ -1,9 +1,12 @@
+import { ValidationPipe } from '@nestjs/common';
+import { HttpAdapterHost } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { existsSync } from 'fs';
 import hbs from 'hbs';
 import helmet from 'helmet';
 import { dirname, join } from 'path';
+import { ViewExceptionFilter } from './common/view-exception.filter';
 
 /**
  * Resolves an asset directory both when running the compiled build (nest-cli
@@ -84,4 +87,15 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
   );
 
   app.use(cookieParser());
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.useGlobalFilters(
+    new ViewExceptionFilter(app.get(HttpAdapterHost).httpAdapter),
+  );
 }

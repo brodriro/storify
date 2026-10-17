@@ -237,4 +237,62 @@ describe('Storify (e2e)', () => {
       Buffer.from([0x50, 0x4b, 0x03, 0x04]),
     );
   });
+
+  describe('page navigations get redirects, API calls get JSON (A7)', () => {
+    it('sends an anonymous visitor to the login page', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/files/browser')
+        .set('Accept', 'text/html')
+        .expect(302);
+      expect(res.headers.location).toBe('/');
+    });
+
+    it('sends a member who opens the dashboard back to the browser', async () => {
+      const { cookie } = await login('ALICE', 'alice-pass');
+      const res = await request(app.getHttpServer())
+        .get('/admin/dashboard')
+        .set('Accept', 'text/html')
+        .set('Cookie', cookie!)
+        .expect(302);
+      expect(res.headers.location).toBe('/files/browser');
+    });
+
+    it('keeps JSON errors for fetch calls', async () => {
+      await request(app.getHttpServer())
+        .get('/files/recent')
+        .set('Accept', 'application/json')
+        .expect(401);
+    });
+  });
+
+  describe('input validation (C8)', () => {
+    let cookie: string;
+    beforeAll(async () => {
+      cookie = (await login('ALICE', 'alice-pass')).cookie!;
+    });
+
+    it.each([
+      ['post', '/files/bulk-delete', { paths: 'ALICE/a.txt' }],
+      ['post', '/files/bulk-delete', { paths: [1, 2] }],
+      ['post', '/files/rename', { path: 'ALICE/a.txt' }],
+      ['post', '/files/mkdir', { name: 'x', admin: true }],
+      ['delete', '/files/delete', {}],
+    ] as const)('rejects %s %s %j with 400', async (method, url, body) => {
+      await request(app.getHttpServer())
+        [method](url)
+        .set('Cookie', cookie)
+        .send(body)
+        .expect(400);
+    });
+
+    it.each(['/files/browser?sort=evil', '/files/recent?days=-1'])(
+      'rejects bad query %s',
+      async (url) => {
+        await request(app.getHttpServer())
+          .get(url)
+          .set('Cookie', cookie)
+          .expect(400);
+      },
+    );
+  });
 });
