@@ -7,6 +7,7 @@ import type { AuthUser } from '../auth/auth-user';
 import type { AppConfig } from '../config/configuration';
 import { AccessPolicy } from './access-policy';
 import { StorageService } from './storage.service';
+import { ThumbnailService } from './thumbnail.service';
 
 const ADMIN: AuthUser = { username: 'ADMIN', role: 'admin' };
 const ALICE: AuthUser = { username: 'ALICE', role: 'member' };
@@ -48,7 +49,11 @@ describe('StorageService access control', () => {
     }) as unknown as ConfigService<AppConfig, true>;
     recordEvent = jest.fn().mockResolvedValue(undefined);
     const logs = { recordEvent } as unknown as AuditService;
-    service = new StorageService(config, new AccessPolicy(config, logs));
+    service = new StorageService(
+      config,
+      new AccessPolicy(config, logs),
+      new ThumbnailService(config),
+    );
 
     write(usersRoot, 'ADMIN/secret.txt', 'admin-secret');
     write(usersRoot, 'ALICE/own.txt', 'alice');

@@ -8,7 +8,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import sharp from 'sharp';
 import type { AuthUser } from '../auth/auth-user';
 import type { AppConfig } from '../config/configuration';
 import {
@@ -17,6 +16,7 @@ import {
 } from '../common/path.utils';
 import { mapWithConcurrency } from '../common/concurrency';
 import { AccessPolicy, ResolvedPath } from './access-policy';
+import { Thumbnail, ThumbnailService } from './thumbnail.service';
 
 /** Parallel fs calls per request; see mapWithConcurrency. */
 const FS_CONCURRENCY = 32;
@@ -103,6 +103,7 @@ export class StorageService {
   constructor(
     configService: ConfigService<AppConfig, true>,
     private readonly policy: AccessPolicy,
+    private readonly thumbnails: ThumbnailService,
   ) {
     this.baseStoragePath = configService.get('storagePath', { infer: true });
     ensureDirectoryExists(this.baseStoragePath);
@@ -237,9 +238,12 @@ export class StorageService {
     return target.absolute;
   }
 
-  async getThumbnail(user: AuthUser, relativePath: unknown): Promise<Buffer> {
+  async getThumbnail(
+    user: AuthUser,
+    relativePath: unknown,
+  ): Promise<Thumbnail> {
     const target = await this.policy.resolve(user, relativePath, 'read');
-    await this.statFile(target);
+    const stats = await this.statFile(target);
 
     const ext = path.extname(target.absolute).toLowerCase();
     if (!THUMBNAIL_EXTENSIONS.includes(ext)) {
@@ -248,10 +252,7 @@ export class StorageService {
       );
     }
 
-    return sharp(target.absolute)
-      .resize(300, 300, { fit: sharp.fit.inside, withoutEnlargement: true })
-      .webp({ quality: 80 })
-      .toBuffer();
+    return this.thumbnails.get(target.absolute, stats);
   }
 
   async deleteItem(user: AuthUser, relativePath: unknown) {

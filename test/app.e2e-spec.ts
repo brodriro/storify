@@ -6,6 +6,7 @@ import * as os from 'os';
 import * as path from 'path';
 import bcrypt from 'bcryptjs';
 import request from 'supertest';
+import sharp from 'sharp';
 import { App } from 'supertest/types';
 
 describe('Storify (e2e)', () => {
@@ -218,6 +219,27 @@ describe('Storify (e2e)', () => {
     const last = await page({ page: '9' });
     expect(names(last.text)).toEqual(['f200.txt']);
     expect(last.text).toContain('Página 2 de 2');
+  });
+
+  it('serves cached WebP thumbnails with ETag revalidation (C3)', async () => {
+    await sharp({
+      create: { width: 640, height: 480, channels: 3, background: '#888' },
+    })
+      .jpeg()
+      .toFile(path.join(storage, 'users', 'ADMIN', 'foto.jpg'));
+    const { cookie } = await login('ADMIN', 'admin-pass');
+    const get = () =>
+      request(app.getHttpServer())
+        .get('/files/thumbnail')
+        .query({ path: 'ADMIN/foto.jpg' })
+        .set('Cookie', cookie!);
+
+    const first = await get().expect(200);
+    expect(first.headers['content-type']).toBe('image/webp');
+    const etag = first.headers.etag;
+    expect(etag).toMatch(/^"[0-9a-f]{32}"$/);
+
+    await get().set('If-None-Match', etag).expect(304);
   });
 
   it('rate-limits repeated logins for one account', async () => {

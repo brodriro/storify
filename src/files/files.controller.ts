@@ -3,16 +3,18 @@ import {
   Controller,
   Delete,
   Get,
-  Header,
   Post,
   Query,
   Render,
+  Req,
+  Res,
   StreamableFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import type { Request, Response } from 'express';
 import { createReadStream } from 'fs';
 import * as path from 'path';
 import type { AuthUser } from '../auth/auth-user';
@@ -196,17 +198,25 @@ export class FilesController {
   }
 
   @Get('thumbnail')
-  @Header('Content-Type', 'image/webp')
-  @Header('Cache-Control', 'private, max-age=300')
   async getThumbnail(
     @Query() { path: filePath }: PathQueryDto,
     @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
     // No fallback to serving the original inline: user-uploaded SVG/HTML on
     // this origin would be a stored XSS vector.
-    return new StreamableFile(
-      await this.storageService.getThumbnail(user, filePath),
-    );
+    const thumbnail = await this.storageService.getThumbnail(user, filePath);
+    // The ETag changes with the file, so the browser may keep it but must
+    // revalidate after max-age; a match costs one stat, not a resize.
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('ETag', thumbnail.etag);
+    if (req.headers['if-none-match'] === thumbnail.etag) {
+      res.status(304);
+      return;
+    }
+    res.setHeader('Content-Type', 'image/webp');
+    return new StreamableFile(createReadStream(thumbnail.path));
   }
 
   @Delete('delete')
