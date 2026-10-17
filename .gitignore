@@ -44,9 +44,9 @@ coverage/
 temp_uploads/
 *.tmp
 
-# User storage directories (images and files uploaded by users)
-public_storage/
-storage/
+# User storage directories (anchored to the root so src/storage/ stays tracked)
+/public_storage/
+/storage/
 
 # Logs (anchored to the root so src/agent/logs/ stays tracked)
 /logs/
