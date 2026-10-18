@@ -17,11 +17,17 @@
     {{#if user}}<link rel="stylesheet" href="/css/chat.css">{{/if}}
 </head>
 
-<body class="container">
+<body>
     <a class="skip-link" href="#main">{{t "app.skipToContent"}}</a>
-    {{> header}}
 
     {{#if user}}
+    <div class="app-shell">
+        {{> sidebar}}
+        <main id="main" class="main-content">
+        {{> @partial-block }}
+        </main>
+    </div>
+
     <button type="button" id="chat-button" class="chat-button" aria-label="{{t "chat.open"}}"
         aria-expanded="false" aria-controls="chat-sidebar">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -73,11 +79,12 @@
             </button>
         </div>
     </aside>
-    {{/if}}
-
-    <main id="main" class="main-content">
+    {{else}}
+    {{> header}}
+    <main id="main" class="main-content main-content-single">
     {{> @partial-block }}
     </main>
+    {{/if}}
 
     {{#if user}}
     <!-- Served by the Socket.IO server itself, so the version always matches -->

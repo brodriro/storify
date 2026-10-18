@@ -2,8 +2,9 @@
 // page can run under a strict Content-Security-Policy and file names are only
 // ever treated as data (dataset / textContent), never as code or HTML.
 //
-// Keyboard model: folders and breadcrumbs are links; a file card is a button
-// that opens the preview; ⋯ is a WAI-ARIA menu button (arrows, Home/End,
+// Keyboard model: folders and breadcrumbs are links; a file (a row in the
+// list, a card in the grid; both are .file-item) is a button that opens the
+// preview; ⋯ is a WAI-ARIA menu button (arrows, Home/End,
 // Escape); dialogs are native <dialog> (focus trap, Escape, inert page).
 (function () {
     'use strict';
@@ -14,7 +15,7 @@
     let previewIndex = -1;
 
     const $ = (id) => document.getElementById(id);
-    const cardOf = (el) => el.closest('.file-card[data-path]');
+    const cardOf = (el) => el.closest('.file-item[data-path]');
     const isPreviewable = (f) => f.isImage || f.isVideo;
 
     // --- Server calls -------------------------------------------------------
@@ -141,7 +142,9 @@
         window.location.href = url.toString();
     }
 
-    $('sortSelect').addEventListener('change', (e) => setQueryParam('sort', e.target.value));
+    // The grid sorts with this select; the list sorts with its column headers.
+    const sortSelect = $('sortSelect');
+    if (sortSelect) sortSelect.addEventListener('change', (e) => setQueryParam('sort', e.target.value));
 
     // --- Selection ----------------------------------------------------------
 
@@ -153,7 +156,13 @@
             $('selectionCount').textContent = t('browser.selectedCount', { count: selected.size });
         } else {
             document.querySelectorAll('.bulk-checkbox').forEach((cb) => (cb.checked = false));
-            document.querySelectorAll('.file-card.selected').forEach((c) => c.classList.remove('selected'));
+            document.querySelectorAll('.file-item.selected').forEach((c) => c.classList.remove('selected'));
+        }
+        const all = document.querySelector('.select-all');
+        if (all) {
+            const total = document.querySelectorAll('.bulk-checkbox').length;
+            all.checked = total > 0 && selected.size === total;
+            all.indeterminate = selected.size > 0 && selected.size < total;
         }
     }
 
@@ -167,6 +176,10 @@
         updateSelectionBar();
     }
 
+    function setAllSelected(isSelected) {
+        document.querySelectorAll('.file-item[data-path]').forEach((card) => setSelected(card, isSelected));
+    }
+
     // --- Preview ------------------------------------------------------------
 
     const previewModal = $('previewModal');
@@ -176,6 +189,9 @@
         if (!file) return;
         previewIndex = index;
         $('modalTitle').textContent = file.name;
+        const meta = $('modalMeta');
+        meta.textContent = `${file.sizeLabel} · ${file.modifiedLabel}`;
+        meta.title = t('browser.bytes', { bytes: file.sizeBytesLabel });
         $('modalDownloadLink').href = file.downloadUrl;
         const body = $('modalBody');
         body.replaceChildren();
@@ -209,7 +225,7 @@
         if (video) video.pause();
         // Return focus to the card that opened the preview.
         const file = files[previewIndex];
-        const card = file && document.querySelector(`.file-card[data-path="${CSS.escape(file.path)}"] .file-open`);
+        const card = file && document.querySelector(`.file-item[data-path="${CSS.escape(file.path)}"] .file-open`);
         if (card) card.focus();
     });
     previewModal.addEventListener('keydown', (e) => {
@@ -235,7 +251,7 @@
             if (toggle === except) return;
             toggle.setAttribute('aria-expanded', 'false');
             menuOf(toggle).hidden = true;
-            toggle.closest('.file-card').classList.remove('menu-open');
+            toggle.closest('.file-item').classList.remove('menu-open');
         });
     }
 
@@ -244,7 +260,7 @@
         const menu = menuOf(toggle);
         toggle.setAttribute('aria-expanded', 'true');
         menu.hidden = false;
-        toggle.closest('.file-card').classList.add('menu-open');
+        toggle.closest('.file-item').classList.add('menu-open');
         const items = menu.querySelectorAll('[role="menuitem"]');
         items[focusLast ? items.length - 1 : 0].focus();
     }
@@ -493,6 +509,10 @@
             setSelected(card, e.target.checked);
             return;
         }
+        if (e.target.classList.contains('select-all')) {
+            setAllSelected(e.target.checked);
+            return;
+        }
 
         // While selecting, activating a card toggles it instead of opening it.
         const open = e.target.closest('.file-open');
@@ -565,7 +585,7 @@
             e.dataTransfer.effectAllowed = 'move';
         });
 
-        const dropTargetOf = (el) => el.closest('.file-card[data-kind="dir"], [data-drop-target="parent"]');
+        const dropTargetOf = (el) => el.closest('.file-item[data-kind="dir"], [data-drop-target="parent"]');
 
         document.addEventListener('dragover', (e) => {
             const target = dropTargetOf(e.target);

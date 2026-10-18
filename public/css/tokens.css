@@ -1,6 +1,8 @@
 /*
- * Design tokens (D6: the dark "technical NAS" master, with a derived light
- * theme). Components use only these semantic names, never raw colours.
+ * Design tokens: a professional NAS console. Graphite neutrals, one blue
+ * accent, red only for destructive actions and critical storage, amber for
+ * the storage warning. Components use only these semantic names, never raw
+ * colours.
  *
  * The theme is html[data-theme], set by theme.js before first paint from the
  * saved choice or the system preference; without JavaScript the media query
@@ -13,41 +15,46 @@
 :root {
     color-scheme: light;
 
-    --bg: #f8fafc;
-    --bg-glow-1: hsla(210, 100%, 96%, 1);
-    --bg-glow-2: hsla(220, 100%, 98%, 1);
+    --bg: #f3f4f6;
     --surface: #ffffff;
-    --surface-sunken: #f1f5f9;
-    --surface-hover: #f1f5f9;
-    --overlay: rgba(15, 23, 42, 0.6);
-    --border: #e2e8f0;
+    --surface-sunken: #eef0f3;
+    --surface-hover: #e9ecf0;
+    /* Selected rows and the current navigation item. */
+    --surface-selected: #e5edf9;
+    --overlay: rgba(16, 19, 23, 0.55);
+    --border: #dde1e6;
     /* Borders that identify a control (inputs, checkboxes): 3:1 required. */
-    --border-strong: #64748b;
+    --border-strong: #6b7380;
 
-    --text: #0f172a;
-    --text-muted: #475569;
+    --text: #15181d;
+    --text-muted: #525a66;
 
-    /* The master's #22c55e fails with white text (2.28:1) on light: a darker
-       green per theme instead (U3). */
-    --accent: #15803d;
-    --accent-hover: #166534;
+    /* One accent, a steady blue: primary actions, links, location and
+       selection. Nothing decorative uses it. */
+    --accent: #1f5fbf;
+    --accent-hover: #194f9f;
     --on-accent: #ffffff;
-    --accent-text: #15803d;
-    --accent-soft: rgba(21, 128, 61, 0.1);
+    --accent-text: #1d58b0;
+    --accent-soft: rgba(31, 95, 191, 0.1);
 
-    --danger: #b91c1c;
-    --danger-hover: #991b1b;
+    --danger: #b42318;
+    --danger-hover: #912018;
     --on-danger: #ffffff;
-    --danger-text: #b91c1c;
-    --danger-soft: rgba(185, 28, 28, 0.08);
+    --danger-text: #b42318;
+    --danger-soft: rgba(180, 35, 24, 0.08);
 
-    --code-text: #0369a1;
-    --focus-ring: #15803d;
+    /* Storage meters from 75 % (critical uses --danger). */
+    --warning: #b25e09;
 
-    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-    --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08);
-    --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1);
-    --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.14);
+    --code-text: #1d58b0;
+    --focus-ring: #1f5fbf;
+
+    /* Shadows only for what floats above the page: menus, dialogs, toasts,
+       the chat. Panels are separated by borders. */
+    --shadow-sm: 0 1px 2px rgba(16, 19, 23, 0.06);
+    --shadow-md: 0 4px 12px rgba(16, 19, 23, 0.08);
+    --shadow-lg: 0 8px 24px rgba(16, 19, 23, 0.12);
+    --shadow-xl: 0 16px 40px rgba(16, 19, 23, 0.16);
 
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;
@@ -56,12 +63,25 @@
     --space-xl: 2rem;
     --space-2xl: 3rem;
 
-    --rounded-sm: 6px;
-    --rounded-md: 10px;
-    --rounded-lg: 16px;
+    --rounded-sm: 4px;
+    --rounded-md: 6px;
+    --rounded-lg: 8px;
 
     --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
     --font-mono: 'Fira Code', ui-monospace, monospace;
+
+    /* Type scale for a dense tool: 14 px is the working size (tables,
+       controls), 13 px for metadata, headings stay modest. */
+    --text-xs: 0.75rem;
+    --text-sm: 0.8125rem;
+    --text-md: 0.875rem;
+    --text-lg: 1rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+
+    --sidebar-width: 232px;
+    /* Height of a list row: a 32 px thumbnail plus padding. */
+    --row-height: 48px;
 
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --transition-fast: 150ms var(--ease-out);
@@ -72,14 +92,14 @@
 
     /* Floating chat button, and the room bottom-anchored overlays (toasts,
        selection bar, chat panel) leave so they never cover it or its target. */
-    --fab-size: 64px;
-    --fab-offset: var(--space-xl);
+    --fab-size: 56px;
+    --fab-offset: var(--space-lg);
     --fab-clearance: calc(var(--fab-offset) + var(--fab-size) + var(--space-md));
 }
 
 @media (max-width: 640px) {
     :root {
-        --fab-size: 56px;
+        --fab-size: 52px;
         --fab-offset: var(--space-md);
     }
 }
@@ -87,38 +107,39 @@
 :root[data-theme='dark'] {
     color-scheme: dark;
 
-    --bg: #020617;
-    --bg-glow-1: hsla(222, 47%, 11%, 1);
-    --bg-glow-2: hsla(222, 47%, 8%, 1);
-    --surface: #0f172a;
-    --surface-sunken: #020617;
-    --surface-hover: #1e293b;
-    --overlay: rgba(2, 6, 23, 0.8);
-    --border: #1e293b;
-    --border-strong: #64748b;
+    --bg: #101317;
+    --surface: #171b20;
+    --surface-sunken: #0c0f12;
+    --surface-hover: #222830;
+    --surface-selected: #1b2a40;
+    --overlay: rgba(5, 7, 9, 0.7);
+    --border: #2a3038;
+    --border-strong: #7b8490;
 
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
+    --text: #e7e9ec;
+    --text-muted: #9ba3ae;
 
-    --accent: #22c55e;
-    --accent-hover: #4ade80;
-    --on-accent: #052e16;
-    --accent-text: #4ade80;
-    --accent-soft: rgba(34, 197, 94, 0.12);
+    --accent: #5c9bef;
+    --accent-hover: #7fb1f3;
+    --on-accent: #0a1628;
+    --accent-text: #7fb1f3;
+    --accent-soft: rgba(92, 155, 239, 0.14);
 
-    --danger: #dc2626;
-    --danger-hover: #b91c1c;
-    --on-danger: #ffffff;
-    --danger-text: #f87171;
-    --danger-soft: rgba(248, 113, 113, 0.12);
+    --danger: #e5484d;
+    --danger-hover: #f06a6e;
+    --on-danger: #14080a;
+    --danger-text: #ff8b8b;
+    --danger-soft: rgba(255, 139, 139, 0.12);
 
-    --code-text: #38bdf8;
-    --focus-ring: #4ade80;
+    --warning: #e0a03a;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.35);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+    --code-text: #7fb1f3;
+    --focus-ring: #7fb1f3;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.6);
 }
 
 /* No JavaScript: follow the system. Same values as [data-theme='dark']. */
@@ -126,37 +147,38 @@
     :root:not([data-theme]) {
         color-scheme: dark;
 
-        --bg: #020617;
-        --bg-glow-1: hsla(222, 47%, 11%, 1);
-        --bg-glow-2: hsla(222, 47%, 8%, 1);
-        --surface: #0f172a;
-        --surface-sunken: #020617;
-        --surface-hover: #1e293b;
-        --overlay: rgba(2, 6, 23, 0.8);
-        --border: #1e293b;
-        --border-strong: #64748b;
+        --bg: #101317;
+        --surface: #171b20;
+        --surface-sunken: #0c0f12;
+        --surface-hover: #222830;
+        --surface-selected: #1b2a40;
+        --overlay: rgba(5, 7, 9, 0.7);
+        --border: #2a3038;
+        --border-strong: #7b8490;
 
-        --text: #f8fafc;
-        --text-muted: #94a3b8;
+        --text: #e7e9ec;
+        --text-muted: #9ba3ae;
 
-        --accent: #22c55e;
-        --accent-hover: #4ade80;
-        --on-accent: #052e16;
-        --accent-text: #4ade80;
-        --accent-soft: rgba(34, 197, 94, 0.12);
+        --accent: #5c9bef;
+        --accent-hover: #7fb1f3;
+        --on-accent: #0a1628;
+        --accent-text: #7fb1f3;
+        --accent-soft: rgba(92, 155, 239, 0.14);
 
-        --danger: #dc2626;
-        --danger-hover: #b91c1c;
-        --on-danger: #ffffff;
-        --danger-text: #f87171;
-        --danger-soft: rgba(248, 113, 113, 0.12);
+        --danger: #e5484d;
+        --danger-hover: #f06a6e;
+        --on-danger: #14080a;
+        --danger-text: #ff8b8b;
+        --danger-soft: rgba(255, 139, 139, 0.12);
 
-        --code-text: #38bdf8;
-        --focus-ring: #4ade80;
+        --warning: #e0a03a;
 
-        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.35);
-        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
-        --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+        --code-text: #7fb1f3;
+        --focus-ring: #7fb1f3;
+
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+        --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.6);
     }
 }

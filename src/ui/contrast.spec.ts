@@ -44,11 +44,14 @@ const pairs: [string, string, number][] = [
   ['--text', '--bg', TEXT],
   ['--text', '--surface', TEXT],
   ['--text', '--surface-hover', TEXT],
+  ['--text', '--surface-selected', TEXT],
   ['--text-muted', '--bg', TEXT],
   ['--text-muted', '--surface', TEXT],
   ['--text-muted', '--surface-hover', TEXT],
+  ['--text-muted', '--surface-selected', TEXT],
   ['--accent-text', '--bg', TEXT],
   ['--accent-text', '--surface', TEXT],
+  ['--accent-text', '--surface-selected', TEXT],
   ['--on-accent', '--accent', TEXT],
   ['--on-accent', '--accent-hover', TEXT],
   ['--on-danger', '--danger', TEXT],
@@ -61,6 +64,9 @@ const pairs: [string, string, number][] = [
   ['--focus-ring', '--bg', UI],
   ['--focus-ring', '--surface', UI],
   ['--accent', '--surface', UI],
+  ['--accent', '--border', UI],
+  ['--warning', '--surface', UI],
+  ['--danger', '--surface', UI],
 ];
 
 describe.each([
