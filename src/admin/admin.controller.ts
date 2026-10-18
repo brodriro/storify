@@ -1,4 +1,5 @@
 import { formatSize } from '../common/file-types';
+import { usageLevel } from '../files/browser-view';
 import { t } from '../i18n';
 import {
   Body,
@@ -63,7 +64,9 @@ export class AdminController {
       limitEnforced:
         this.configService.get('storageLimitBytes', { infer: true }) !== null,
       isAdmin: true,
+      section: 'admin',
       usagePercent,
+      usageLevel: usageLevel(usagePercent),
       totalSizeLabel: formatSize(stats.totalSize),
     };
   }

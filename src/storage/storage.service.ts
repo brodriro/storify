@@ -165,7 +165,7 @@ export class StorageService implements OnApplicationBootstrap {
   async listFiles(
     user: AuthUser,
     relativePath: unknown = '',
-    sortBy: 'name' | 'date' = 'name',
+    sortBy: 'name' | 'date' | 'size' = 'name',
     order: 'asc' | 'desc' = 'asc',
   ): Promise<FileEntry[]> {
     const dir = await this.policy.resolve(user, relativePath, 'read');
@@ -218,7 +218,9 @@ export class StorageService implements OnApplicationBootstrap {
         const comparison =
           sortBy === 'date'
             ? a.modifiedAt.getTime() - b.modifiedAt.getTime()
-            : a.name.localeCompare(b.name);
+            : sortBy === 'size' && a.size !== b.size
+              ? a.size - b.size
+              : a.name.localeCompare(b.name);
         return order === 'asc' ? comparison : -comparison;
       });
   }

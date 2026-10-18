@@ -19,8 +19,9 @@ const MAX_BULK = 500;
 
 export class BrowserQueryDto {
   @IsOptional() @IsString() @MaxLength(MAX_PATH) path?: string;
-  @IsOptional() @IsIn(['name', 'date']) sort?: 'name' | 'date';
+  @IsOptional() @IsIn(['name', 'date', 'size']) sort?: 'name' | 'date' | 'size';
   @IsOptional() @IsIn(['asc', 'desc']) order?: 'asc' | 'desc';
+  @IsOptional() @IsIn(['list', 'grid']) view?: 'list' | 'grid';
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     value === undefined ? undefined : Number(value),
