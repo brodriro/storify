@@ -20,17 +20,17 @@
                     <dd class="stat-value">{{stats.totalFiles}}</dd>
                 </div>
                 <div class="stat">
-                    <dt class="stat-label">{{t "dashboard.capacity"}}</dt>
-                    <dd class="stat-value">{{t "dashboard.capacityValue" gb=config.totalStorageGb}}</dd>
+                    <dt class="stat-label">{{t "dashboard.free"}}</dt>
+                    <dd class="stat-value">{{storage.freeLabel}}</dd>
                 </div>
             </dl>
-            <div class="storage-meter meter-{{usageLevel}}">
+            <div class="storage-meter meter-{{storage.level}}">
                 <div class="meter-label">
-                    <span>{{t "browser.storageUsed"}}</span>
-                    <span class="meter-value">{{usagePercent}} %</span>
+                    <span>{{#if limitEnforced}}{{t "dashboard.againstLimit"}}{{else}}{{t "dashboard.againstVolume"}}{{/if}}</span>
+                    <span class="meter-value">{{storage.percent}} %</span>
                 </div>
-                <progress class="usage-bar" max="100" value="{{usagePercent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
-                <small class="meter-detail">{{#if limitEnforced}}{{t "dashboard.usageLimit" gb=config.totalStorageGb}}{{else}}{{t "dashboard.usageReference" gb=config.totalStorageGb}}{{/if}}</small>
+                <progress class="usage-bar" max="100" value="{{storage.percent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
+                <small class="meter-detail">{{t "browser.usedOfFree" used=storage.usedLabel total=storage.totalLabel free=storage.freeLabel}}</small>
             </div>
         </section>
 
@@ -38,7 +38,7 @@
             <h2 id="backup-title" class="panel-title">{{t "dashboard.backup"}}</h2>
             <p class="panel-text">{{t "dashboard.backupText"}}</p>
             <div class="panel-actions">
-                <button type="button" class="btn btn-primary" id="createBackupBtn">
+                <button type="button" class="btn btn-primary" id="createBackupBtn" {{#if backupRunning}}disabled data-running{{/if}}>
                     <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="17 8 12 3 7 8"></polyline>
@@ -46,6 +46,7 @@
                     </svg>
                     {{t "dashboard.createBackup"}}
                 </button>
+                {{#if backups.length}}
                 <a href="/admin/backup/download" class="btn btn-secondary">
                     <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -54,8 +55,48 @@
                     </svg>
                     {{t "dashboard.downloadBackup"}}
                 </a>
+                {{/if}}
             </div>
-            <p id="backupToast" class="backup-status" role="status" aria-live="polite"></p>
+            <p id="backupToast" class="backup-status" role="status" aria-live="polite">{{#if backupRunning}}{{t "dashboard.running"}}{{/if}}</p>
+
+            <h3 class="panel-subtitle">{{t "dashboard.history"}}</h3>
+            {{#if backups.length}}
+            <table class="data-table backup-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{t "dashboard.date"}}</th>
+                        <th scope="col">{{t "dashboard.kind"}}</th>
+                        <th scope="col" class="num">{{t "dashboard.size"}}</th>
+                        <th scope="col" class="num col-files">{{t "dashboard.count"}}</th>
+                        <th scope="col" class="col-download"><span class="visually-hidden">{{t "browser.download"}}</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each backups}}
+                    <tr>
+                        <th scope="row"><time datetime="{{this.createdIso}}">{{this.createdLabel}}</time></th>
+                        <td>{{#if this.isFull}}{{t "dashboard.full"}}{{else}}{{t "dashboard.incremental"}}{{/if}}</td>
+                        <td class="num">{{this.sizeLabel}}</td>
+                        <td class="num col-files">{{this.fileCount}}</td>
+                        <td class="col-download">
+                            <a class="btn btn-ghost btn-icon btn-sm" href="{{this.downloadUrl}}" aria-label="{{t "dashboard.downloadOne" date=this.createdLabel}}">
+                                <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                            </a>
+                        </td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+            {{#if backupsHidden}}
+            <p class="panel-note">{{t "dashboard.olderBackups" count=backupsHidden}}</p>
+            {{/if}}
+            {{else}}
+            <p class="panel-note">{{t "dashboard.noBackups"}}</p>
+            {{/if}}
         </section>
 
         <section class="panel" aria-labelledby="quotas-title">

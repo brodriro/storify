@@ -228,7 +228,7 @@ Desde el dashboard (o el asistente, con confirmación) el administrador puede la
 - **Escritura atómica**: el ZIP se escribe como `.zip.partial` y solo se renombra al terminar. Un backup fallido nunca sustituye ni borra los anteriores.
 - **Retención**: tras cada backup completo correcto, se conservan los `BACKUP_KEEP_FULL` completos más recientes y sus incrementales.
 - Cada backup tiene un manifiesto JSON con el estado de los archivos.
-- "Download Latest Backup" descarga el **último backup completo**. `GET /admin/backup/list` lista todos.
+- El dashboard muestra el **historial** de los 10 backups más recientes (fecha, tipo, tamaño y archivos), cada uno descargable, y se actualiza solo cuando termina el que está en curso. "Descargar el último backup completo" descarga el más reciente de tipo completo; `GET /admin/backup/list` lista todos.
 
 ---
 
