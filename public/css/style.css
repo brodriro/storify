@@ -591,6 +591,29 @@ a:hover {
     transform: rotate(180deg);
 }
 
+/* Upload in progress: beside the buttons that started it. */
+.upload-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.upload-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 18rem;
+}
+
+.upload-bar {
+    width: 120px;
+    flex-shrink: 0;
+}
+
 /* List / grid switch: two links in an inset track, the current one marked
    aria-current. */
 .segmented {
@@ -1441,12 +1464,6 @@ a:hover {
     border-radius: var(--rounded-lg);
 }
 
-.login-eyebrow {
-    margin: 0 0 var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-}
-
 .login-title {
     margin: 0 0 var(--space-xs);
     font-size: var(--text-2xl);
@@ -1534,6 +1551,29 @@ a:hover {
 
 .usage-panel .storage-meter {
     width: 100%;
+}
+
+.panel-subtitle {
+    margin: var(--space-lg) 0 var(--space-sm);
+    font-size: var(--text-md);
+    color: var(--text-muted);
+}
+
+.panel-note {
+    margin: var(--space-sm) 0 0;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+
+.backup-table th[scope='row'] {
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.backup-table .col-download {
+    width: 40px;
+    text-align: right;
 }
 
 .backup-status {
@@ -1726,8 +1766,22 @@ a:hover {
         width: 100%;
     }
 
+    /* Who is signed in stays visible: the name only, without icon or role. */
     .account-id {
+        margin: 0;
+        padding: 0 var(--space-xs);
+    }
+
+    .account-id .icon,
+    .account-role {
         display: none;
+    }
+
+    .account-name {
+        max-width: 8rem;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--text-muted);
     }
 
     /* Account controls keep their text as the accessible name. */
@@ -1796,6 +1850,10 @@ a:hover {
 
     .stat-row {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .backup-table .col-files {
+        display: none;
     }
 
     .selection-action-bar {

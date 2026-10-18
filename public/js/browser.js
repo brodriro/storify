@@ -292,24 +292,84 @@
 
     // --- File operations ----------------------------------------------------
 
+    /** POST with upload progress (fetch cannot report it); same errors as api(). */
+    function uploadWithProgress(form, onProgress) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/files/upload');
+            xhr.responseType = 'json';
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) onProgress(e.loaded / e.total);
+            });
+            xhr.addEventListener('load', () => {
+                const payload = xhr.response || {};
+                if (xhr.status >= 200 && xhr.status < 300) return resolve(payload);
+                const message = Array.isArray(payload.message) ? payload.message.join(', ') : payload.message;
+                reject(new Error(message || t('browser.requestFailed', { status: xhr.status })));
+            });
+            xhr.addEventListener('error', () => reject(new Error(t('browser.networkError'))));
+            xhr.send(form);
+        });
+    }
+
+    let uploading = false;
+    // Leaving the page would cancel the upload: ask first.
+    window.addEventListener('beforeunload', (e) => {
+        if (uploading) e.preventDefault();
+    });
+
     function uploadFiles(fileList) {
-        if (!canWrite || !fileList || !fileList.length) return;
+        if (!canWrite || !fileList || !fileList.length || uploading) return;
+        const list = Array.from(fileList);
         const form = new FormData();
-        Array.from(fileList).forEach((file) => form.append('files', file));
+        list.forEach((file) => form.append('files', file));
         form.append('path', currentPath);
+
+        const statusBox = $('uploadStatus');
+        const text = $('uploadText');
+        const bar = $('uploadBar');
+        const uploadButton = document.querySelector('[data-action="upload"]');
+        // The status text is a live region: update it in 10 % steps only, the
+        // bar on every event.
+        let announced = -1;
+        const progress = (ratio) => {
+            const percent = Math.round(ratio * 100);
+            bar.value = percent;
+            const step = percent >= 100 ? 100 : Math.floor(percent / 10) * 10;
+            if (step === announced) return;
+            announced = step;
+            text.textContent =
+                step >= 100
+                    ? t('browser.uploadSaving')
+                    : list.length === 1
+                      ? t('browser.uploadingOne', { name: list[0].name, percent: step })
+                      : t('browser.uploadingMany', { count: list.length, percent: step });
+        };
+
+        uploading = true;
+        statusBox.hidden = false;
+        if (uploadButton) uploadButton.disabled = true;
+        progress(0);
         run(async () => {
-            const result = await api('/files/upload', 'POST', form);
-            const renamed = (result.uploaded || []).filter((u) => u.original !== u.final);
-            if (renamed.length) {
-                sessionStorageSafeSet(
-                    'pendingToast',
-                    JSON.stringify({
-                        type: 'success',
-                        message: `${t('browser.renamedDuplicates')}\n${renamed.map((u) => `«${u.original}» → «${u.final}»`).join('\n')}`,
-                    }),
-                );
+            try {
+                const result = await uploadWithProgress(form, progress);
+                const renamed = (result.uploaded || []).filter((u) => u.original !== u.final);
+                if (renamed.length) {
+                    sessionStorageSafeSet(
+                        'pendingToast',
+                        JSON.stringify({
+                            type: 'success',
+                            message: `${t('browser.renamedDuplicates')}\n${renamed.map((u) => `«${u.original}» → «${u.final}»`).join('\n')}`,
+                        }),
+                    );
+                }
+                uploading = false;
+                window.location.reload();
+            } finally {
+                uploading = false;
+                statusBox.hidden = true;
+                if (uploadButton) uploadButton.disabled = false;
             }
-            window.location.reload();
         }, t('browser.uploadFailed'));
     }
 

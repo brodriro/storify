@@ -1,5 +1,5 @@
 import { formatSize } from '../common/file-types';
-import { usageLevel } from '../files/browser-view';
+import { formatDateTime, usageLevel } from '../files/browser-view';
 import { t } from '../i18n';
 import {
   Body,
@@ -23,6 +23,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/roles.guard';
 import type { AppConfig } from '../config/configuration';
 
+/** Backups listed on the dashboard, newest first. */
+const BACKUP_HISTORY = 10;
+
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
@@ -36,15 +39,16 @@ export class AdminController {
   @Get('dashboard')
   @Render('dashboard')
   async dashboard(@CurrentUser() user: AuthUser) {
-    const stats = await this.storageService.getGlobalStats();
-    const totalStorageGb = this.configService.get('totalStorageGb', {
+    // The meter is the browser's: against TOTAL_STORAGE_GB when enforced,
+    // otherwise the real volume. No made-up reference capacity.
+    const [stats, storage, backups] = await Promise.all([
+      this.storageService.getGlobalStats(),
+      this.storageService.getStorageSummary(),
+      this.backupService.list(),
+    ]);
+    const limitBytes = this.configService.get('storageLimitBytes', {
       infer: true,
     });
-    const totalBytesLimit = totalStorageGb * 1024 ** 3;
-    const usagePercent =
-      totalBytesLimit > 0
-        ? Math.min(100, Math.round((stats.totalSize / totalBytesLimit) * 100))
-        : 0;
 
     // Same adaptive units as the browser (a 2 KB total used to read "0 MB").
     const userUsage = Object.fromEntries(
@@ -58,16 +62,31 @@ export class AdminController {
       pageTitle: t('dashboard.title'),
       user,
       userRole: user.role,
+      section: 'admin',
       stats,
       userUsage,
-      config: { totalStorageGb },
-      limitEnforced:
-        this.configService.get('storageLimitBytes', { infer: true }) !== null,
-      isAdmin: true,
-      section: 'admin',
-      usagePercent,
-      usageLevel: usageLevel(usagePercent),
       totalSizeLabel: formatSize(stats.totalSize),
+      limitEnforced: limitBytes !== null,
+      storage: {
+        usedLabel: formatSize(storage.usedBytes),
+        totalLabel: formatSize(storage.totalBytes),
+        freeLabel: formatSize(
+          Math.max(0, storage.totalBytes - storage.usedBytes),
+        ),
+        percent: storage.percent,
+        level: usageLevel(storage.percent),
+      },
+      backupRunning: this.backupService.isRunning(),
+      backups: backups.slice(0, BACKUP_HISTORY).map((b) => ({
+        name: b.name,
+        isFull: b.kind === 'full',
+        createdIso: new Date(b.createdAt).toISOString(),
+        createdLabel: formatDateTime(new Date(b.createdAt)),
+        sizeLabel: formatSize(b.sizeBytes),
+        fileCount: b.fileCount,
+        downloadUrl: `/admin/backup/download?name=${encodeURIComponent(b.name)}`,
+      })),
+      backupsHidden: Math.max(0, backups.length - BACKUP_HISTORY),
     };
   }
 

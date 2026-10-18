@@ -68,7 +68,7 @@ No hay estilos inline ni bloques `<style>` en las vistas: la CSP es `style-src '
 
 ## Estructura
 
-- **Con sesión:** barra lateral fija a la izquierda (marca, navegación "Archivos" / "Administración" con `aria-current="page"`, y abajo la cuenta: usuario, rol, tema, cerrar sesión) y el contenido a la derecha. Por debajo de 900 px la barra lateral pasa a ser una barra superior; por debajo de 640 px, la marca y los controles de la cuenta (solo icono, con el texto como nombre accesible) van en la primera línea y la navegación en la segunda.
+- **Con sesión:** barra lateral fija a la izquierda (marca, navegación "Archivos" / "Administración" con `aria-current="page"`, y abajo la cuenta: usuario, rol, tema, cerrar sesión) y el contenido a la derecha. Por debajo de 900 px la barra lateral pasa a ser una barra superior; por debajo de 640 px, la marca, el nombre del usuario (sin rol) y los controles de la cuenta (solo icono, con el texto como nombre accesible) van en la primera línea y la navegación en la segunda.
 - **Sin sesión:** barra superior con la marca y el tema, y el formulario centrado.
 - **Cabecera de página:** migas de pan pequeñas encima del título y, a la derecha, el medidor de almacenamiento.
 
@@ -76,14 +76,16 @@ No hay estilos inline ni bloques `<style>` en las vistas: la CSP es `style-src '
 
 - **Medidor de almacenamiento**: `<progress>` nativo con etiqueta, porcentaje y "usado de total · libres". El nivel lo calcula el servidor (`usageLevel`: `ok`, `warning` desde el 75 %, `critical` desde el 90 %) y cambia el relleno a ámbar o rojo.
 - **Barra de herramientas**: acciones primarias a la izquierda (Subir, Nueva carpeta); a la derecha, en cuadrícula, el orden (selector + sentido) y el segmentado Lista / Cuadrícula (dos enlaces, el actual con `aria-current`). La vista se guarda en la cookie `browserView`.
+- **Subida**: junto a los botones aparece el estado («Subiendo «nombre»… 40 %» o «Subiendo N archivos…», y «Guardando en el NAS…» al llegar al 100 %) con una barra de progreso (XHR, porque `fetch` no informa del envío). El texto es un `role="status"` que solo cambia cada 10 %; la barra, en cada evento. Mientras sube, «Subir» está desactivado y salir de la página pide confirmación.
 - **Lista**: `<table>` con casilla, Nombre, Tamaño, Modificado y Tipo. Las cabeceras ordenables son enlaces con `aria-sort` (la activa cambia de sentido; otra empieza ascendente por nombre y descendente por tamaño y fecha). La casilla de la cabecera selecciona todo y muestra el estado intermedio. La fila de "Carpeta superior" va primero; el pie (`tfoot`) da los totales. Las carpetas son enlaces y los archivos botones (abren la vista previa). En móvil se ocultan Tamaño, Modificado y Tipo y su información pasa a una línea bajo el nombre.
 - **Cuadrícula**: tarjetas con una caja de 4:3 para la miniatura o el icono (los archivos sin miniatura muestran su extensión), nombre en 2 líneas como máximo y tamaño. La casilla y ⋯ aparecen al pasar el ratón o al enfocar; sin ratón (`hover: none`) están siempre visibles. Debajo, la misma línea de totales.
 - **Menú ⋯**: patrón *menu button* de WAI-ARIA. Enter o flecha abajo lo abren con el foco en la primera opción; las flechas, Inicio y Fin recorren las opciones; Escape lo cierra y devuelve el foco al botón.
+- **Vista previa**: flechas anterior/siguiente como iconos SVG con nombre accesible.
 - **Diálogos**: `<dialog>` nativo con `showModal()`, que da el foco atrapado, el cierre con Escape y el resto de la página inerte. Al cerrarse, el foco vuelve al elemento. Los avisos y confirmaciones son un formulario, así que Enter confirma. El botón de confirmar es rojo cuando la acción es destructiva. La vista previa muestra tamaño y fecha (los bytes exactos en el `title`).
 - **Mover**: arrastrar es un atajo de ratón (filas o tarjetas sobre carpetas o "Carpeta superior"). ⋯ → Mover (o la selección → Mover) abre un selector de carpetas: migas de pan, subcarpetas como botones (flechas para recorrerlas, Retroceso para subir de nivel) y "Mover aquí", que se desactiva explicando el motivo en una región `status`.
 - **Selección**: barra flotante con el recuento, Mover, Eliminar y Cancelar.
 - **Avisos (toasts)**: `role="status"` o `role="alert"` según el tipo; 3 s (6 s los errores).
-- **Dashboard**: paneles con borde; el de uso combina cifras (`<dl>`) y el medidor; uso por carpeta y tipos de archivo son tablas con la cifra alineada a la derecha.
+- **Dashboard**: paneles con borde. El de uso combina cifras (`<dl>`: datos de los usuarios, archivos, libre) y el mismo medidor que el explorador: contra `TOTAL_STORAGE_GB` si está configurado y, si no, contra el volumen real del servidor, sin capacidades de referencia inventadas. La copia de seguridad tiene sus acciones ("Descargar el último backup completo" solo si hay alguno), un estado en `role="status"` y el historial de los 10 más recientes (fecha, tipo, tamaño, archivos y descarga de cada uno); con un backup en curso, el botón se desactiva y la página consulta cada 3 s hasta que termina y se recarga. Uso por carpeta y tipos de archivo son tablas con la cifra alineada a la derecha.
 - **Chat**: panel lateral `inert` mientras está cerrado; Escape lo cierra. La conversación es un `role="log"` con `aria-live`.
 
 ## Movimiento
