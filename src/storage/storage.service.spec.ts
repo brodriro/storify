@@ -230,6 +230,19 @@ describe('StorageService access control', () => {
     });
   });
 
+  it('sorts by size, folders first, largest first when descending', async () => {
+    write(usersRoot, 'ALICE/big.bin', 'x'.repeat(500));
+    write(usersRoot, 'ALICE/mid.bin', 'x'.repeat(50));
+    write(usersRoot, 'ALICE/sub/z.txt');
+    const entries = await service.listFiles(ALICE, 'ALICE', 'size', 'desc');
+    expect(entries.map((e) => e.name)).toEqual([
+      'sub',
+      'big.bin',
+      'mid.bin',
+      'own.txt',
+    ]);
+  });
+
   describe('move picker folders', () => {
     beforeEach(() => {
       write(usersRoot, 'ALICE/Fotos/2024/a.jpg');
