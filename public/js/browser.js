@@ -154,55 +154,24 @@
         const bar = $('selectionActionBar');
         bar.hidden = selected.size === 0;
         document.body.classList.toggle('selection-mode', selected.size > 0);
-        if (selected.size > 0) {
+        if (selected.size === 1) {
+            // One item: the bar carries its datasheet line, as the side panel did.
+            const file = files.find((f) => f.path === [...selected][0]);
+            $('selectionCount').textContent = file ? `${file.name} · ${specLine(file)}` : selectedLabel(1);
+        } else if (selected.size > 1) {
             $('selectionCount').textContent = selectedLabel(selected.size);
         } else {
             document.querySelectorAll('.bulk-checkbox').forEach((cb) => (cb.checked = false));
             document.querySelectorAll('.file-card.selected').forEach((c) => c.classList.remove('selected'));
         }
-        updateSpecPanel();
     }
 
-    // --- Spec panel: folder summary, or the datasheet of the selected item ---
-
-    const specTitle = $('specTitle');
-    const specList = $('specList');
-    const summaryTitle = specTitle.textContent;
-    const summaryRows = [...specList.children].map((row) => row.cloneNode(true));
-
-    function specRow(label, value) {
-        const row = document.createElement('div');
-        row.className = 'spec-row';
-        const dt = document.createElement('dt');
-        dt.textContent = label;
-        const dd = document.createElement('dd');
-        dd.textContent = value;
-        row.append(dt, dd);
-        return row;
-    }
-
-    function updateSpecPanel() {
-        if (selected.size === 1) {
-            const path = [...selected][0];
-            const file = files.find((f) => f.path === path);
-            if (!file) return;
-            specTitle.textContent = file.name;
-            const rows = [specRow(t('browser.specType'), file.typeCode)];
-            if (!file.isDir) {
-                rows.push(specRow(t('browser.specSize'), `${file.sizeLabel} · ${t('browser.specBytes', { bytes: file.sizeBytesLabel })}`));
-            }
-            rows.push(specRow(t('browser.specModified'), file.modifiedLabel), specRow(t('browser.specPath'), file.path));
-            specList.replaceChildren(...rows);
-        } else if (selected.size > 1) {
-            specTitle.textContent = selectedLabel(selected.size);
-            specList.replaceChildren(...[...selected].map((path) => {
-                const file = files.find((f) => f.path === path);
-                return specRow(file ? file.typeCode : '', file ? file.name : path);
-            }));
-        } else {
-            specTitle.textContent = summaryTitle;
-            specList.replaceChildren(...summaryRows.map((row) => row.cloneNode(true)));
-        }
+    /** The datasheet line of one entry: "JPG · 8.8 KB (8.980 bytes) · 2026-10-18 10:08". */
+    function specLine(file) {
+        const parts = [file.typeCode];
+        if (!file.isDir) parts.push(`${file.sizeLabel} (${t('browser.specBytes', { bytes: file.sizeBytesLabel })})`);
+        parts.push(file.modifiedLabel);
+        return parts.join(' · ');
     }
 
     function setSelected(card, isSelected) {
@@ -224,6 +193,7 @@
         if (!file) return;
         previewIndex = index;
         $('modalTitle').textContent = file.name;
+        $('modalMeta').textContent = specLine(file);
         $('modalDownloadLink').href = file.downloadUrl;
         const body = $('modalBody');
         body.replaceChildren();

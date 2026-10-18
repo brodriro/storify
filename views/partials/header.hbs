@@ -30,7 +30,7 @@
             <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
-            {{t "header.darkTheme"}}
+            <span class="btn-label">{{t "header.darkTheme"}}</span>
         </button>
         {{#if user}}
         {{#if_eq userRole "admin"}}
@@ -38,7 +38,7 @@
             <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M3 13h4v8H3zM10 3h4v18h-4zM17 9h4v12h-4z"></path>
             </svg>
-            {{t "header.admin"}}
+            <span class="btn-label">{{t "header.admin"}}</span>
         </a>
         {{/if_eq}}
         <a href="/auth/logout" class="btn btn-quiet btn-sm">
@@ -47,7 +47,7 @@
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
             </svg>
-            {{t "header.logout"}}
+            <span class="btn-label">{{t "header.logout"}}</span>
         </a>
         {{/if}}
     </nav>

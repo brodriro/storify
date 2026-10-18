@@ -99,7 +99,8 @@ a:hover {
 .ref-label,
 .figure-ref,
 .sort-label,
-.stat-title,
+.data-row dt,
+.scale-legend,
 .data-table th {
     font-stretch: var(--stretch-semi);
     font-size: 0.75rem;
@@ -296,7 +297,7 @@ a:hover {
     font-stretch: var(--stretch-condensed);
     font-size: 1.5rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
 }
 
@@ -429,14 +430,17 @@ a:hover {
 }
 
 .capacity-bar-cell {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
     padding-right: 0 !important;
     border-bottom: 1px solid var(--rule);
 }
 
-.capacity-bar-cell .usage-bar {
+.capacity-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.capacity-bar .usage-bar {
     flex: 1;
 }
 
@@ -557,10 +561,6 @@ a:hover {
 }
 
 .sheet-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    align-items: start;
-    gap: var(--space-xl);
     padding-top: var(--space-lg);
 }
 
@@ -673,6 +673,40 @@ a:hover {
 .sort-link:hover .sort-icon,
 .sort-link.is-active .sort-icon {
     opacity: 1;
+}
+
+/* Totals row: the sheet's foot. */
+.spec-table tfoot th,
+.spec-table tfoot td {
+    height: 44px;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.spec-table tfoot .size-value {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.scale-legend {
+    display: block;
+    font-size: 0.6875rem;
+    cursor: help;
+}
+
+.sheet-totals {
+    margin: var(--space-lg) 0 0;
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--rule);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+/* On phones the hidden columns come back as a line under the name. */
+.row-meta {
+    display: none;
 }
 
 /* Datasheet part number. */
@@ -862,6 +896,28 @@ tr.parent-card .file-open {
     position: absolute;
 }
 
+/* Folders and non-image files: the type code is the figure. */
+.figure-code {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    font-stretch: var(--stretch-condensed);
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: var(--text);
+}
+
+.figure-code-size {
+    font-stretch: var(--stretch-semi);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--text-muted);
+}
+
 .figure-caption {
     display: flex;
     flex-direction: column;
@@ -894,11 +950,23 @@ tr.parent-card .file-open {
 
 /* Selection checkbox and ⋯: on hover devices they appear on hover or focus;
    on touch they are always shown (no hover-only actions). */
+/* Printed tick box: a hairline square, filled when ticked (the browser's
+   default rendered a grey block on the negative print). */
 .bulk-checkbox {
+    appearance: none;
     width: 24px;
     height: 24px;
     margin: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    background: var(--surface);
     cursor: pointer;
+}
+
+.bulk-checkbox:checked {
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: inset 0 0 0 4px var(--surface);
 }
 
 .figure .bulk-checkbox {
@@ -1010,44 +1078,6 @@ tr.parent-card .file-open {
     padding: var(--space-lg) 0;
     color: var(--text-muted);
     font-size: 0.875rem;
-}
-
-/* ---- Spec panel ----------------------------------------------------------- */
-
-.spec-panel {
-    position: sticky;
-    top: var(--space-lg);
-    border-top: 2px solid var(--rule);
-}
-
-.spec-title {
-    margin: 0;
-    padding: var(--space-sm) 0;
-    font-size: 1.125rem;
-    overflow-wrap: anywhere;
-    border-bottom: 1px solid var(--rule);
-}
-
-.spec-list {
-    margin: 0;
-}
-
-.spec-row {
-    display: grid;
-    grid-template-columns: 7.5rem minmax(0, 1fr);
-    gap: var(--space-sm);
-    padding: var(--space-sm) 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.spec-row dt {
-    padding-top: 2px;
-}
-
-.spec-row dd {
-    margin: 0;
-    font-size: 0.9375rem;
-    overflow-wrap: anywhere;
 }
 
 /* ---- Selection bar -------------------------------------------------------- */
@@ -1416,10 +1446,28 @@ tr.parent-card .file-open {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    margin: 0;
+    margin: 0 0 var(--space-md);
     padding: var(--space-sm) 0;
     border-bottom: 1px solid var(--rule);
+    font-size: 1.125rem;
     color: var(--text);
+}
+
+.data-list {
+    margin: var(--space-md) 0 0;
+}
+
+.data-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-sm);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-row dd {
+    margin: 0;
+    font-weight: 600;
 }
 
 .stat-text {
@@ -1574,16 +1622,6 @@ tr.parent-card .file-open {
 
 /* ---- Smaller screens ----------------------------------------------------------- */
 
-@media (max-width: 1100px) {
-    .sheet-body {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .spec-panel {
-        position: static;
-    }
-}
-
 @media (max-width: 900px) {
     .masthead {
         flex-wrap: wrap;
@@ -1623,22 +1661,148 @@ tr.parent-card .file-open {
         padding: 0 var(--space-md) var(--space-2xl);
     }
 
+    /* First viewport budget: the first file row within ~420 px. */
     .masthead {
-        margin-bottom: var(--space-lg);
+        margin-bottom: var(--space-md);
+        padding-top: var(--space-sm);
+        border-top-width: 4px;
     }
 
     .header-controls {
-        width: 100%;
-        margin-left: 0;
+        margin-left: auto;
         padding-left: 0;
         border-left: none;
-        flex-wrap: wrap;
+    }
+
+    .header-controls .btn-label,
+    .segment .btn-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+
+    .header-controls .btn {
+        min-width: var(--target-min);
+        padding: 0;
+    }
+
+    .revision {
+        padding-top: var(--space-xs);
+    }
+
+    .revision dt {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+    }
+
+    .revision-cell {
+        padding: 0 var(--space-sm);
+    }
+
+    .sheet-head {
+        gap: var(--space-sm);
+        padding-bottom: var(--space-sm);
+    }
+
+    .page-title {
+        font-size: 1.875rem;
+    }
+
+    .ref-line {
+        margin-top: var(--space-xs);
+    }
+
+    /* Capacity in one ruled line: label + value pairs, then the bar. */
+    .capacity caption,
+    .capacity thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+    }
+
+    .capacity,
+    .capacity tbody,
+    .capacity tr,
+    .capacity td {
+        display: block;
+    }
+
+    .capacity {
+        border-top: 1px solid var(--rule);
+    }
+
+    .capacity .capacity-values {
+        display: flex;
+        gap: var(--space-md);
+        padding-top: var(--space-xs);
+    }
+
+    .capacity tbody tr:first-child td {
+        padding: 0;
+        font-size: 0.9375rem;
+    }
+
+    .capacity-values td::before {
+        content: attr(data-label);
+        margin-right: var(--space-xs);
+        font-stretch: var(--stretch-semi);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+    }
+
+    .capacity-bar-cell {
+        padding: var(--space-xs) 0 !important;
+    }
+
+    .action-row {
+        gap: var(--space-sm);
+        padding: var(--space-sm) 0;
+    }
+
+    .action-row .btn {
+        min-height: var(--target-min);
+    }
+
+    .sort-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+    }
+
+    .sort-controls {
+        gap: var(--space-xs);
+    }
+
+    .action-group-end {
+        gap: var(--space-sm);
+    }
+
+    .sheet-body {
+        padding-top: 0;
     }
 
     .action-group-end {
         margin-left: 0;
         width: 100%;
         justify-content: space-between;
+        flex-wrap: nowrap;
     }
 
     /* Rows become a grid: select · name · size · ⋯. Sorting moves to the
@@ -1658,11 +1822,72 @@ tr.parent-card .file-open {
         border-top: 1px solid var(--rule);
     }
 
-    .spec-table tbody tr {
+    .spec-table tbody tr,
+    .spec-table tfoot tr {
         display: grid;
-        grid-template-columns: 36px minmax(0, 1fr) auto 44px;
+        grid-template-columns: 36px minmax(0, 1fr) 44px;
         align-items: center;
-        min-height: 52px;
+        min-height: 56px;
+    }
+
+    .spec-table tfoot {
+        display: block;
+    }
+
+    .spec-table tfoot tr {
+        grid-template-columns: minmax(0, 1fr) auto;
+        min-height: 44px;
+    }
+
+    .spec-table tfoot .col-select,
+    .spec-table tfoot .col-type,
+    .spec-table tfoot .col-date,
+    .spec-table tfoot .col-actions,
+    .spec-table .col-size {
+        display: none;
+    }
+
+    .spec-table tfoot .col-size {
+        display: block;
+        text-align: right;
+    }
+
+    .spec-table tfoot th,
+    .spec-table tfoot td {
+        height: auto;
+        border: none;
+    }
+
+    .spec-table tfoot {
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
+    }
+
+    .row-meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        padding-left: 40px;
+        margin-top: -6px;
+        padding-bottom: var(--space-xs);
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    .row-meta .type-code {
+        min-width: 0;
+        padding: 0 4px;
+        font-size: 0.6875rem;
+    }
+
+    .row-meta .size-scale {
+        display: inline-block;
+        width: 32px;
+        margin-left: 0;
+    }
+
+    .spec-table .col-actions {
+        padding: 0;
     }
 
     .spec-table tbody td {
@@ -1671,9 +1896,9 @@ tr.parent-card .file-open {
         padding: 0 var(--space-xs);
     }
 
-    .spec-table .col-type,
-    .spec-table .col-date,
-    .size-scale {
+    .spec-table tbody .col-type,
+    .spec-table tbody .col-date,
+    .col-size .size-scale {
         display: none;
     }
 
@@ -1691,10 +1916,7 @@ tr.parent-card .file-open {
         display: none;
     }
 
-    .spec-table .col-size {
-        font-size: 0.875rem;
-        color: var(--text-muted);
-    }
+
 
     .file-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));

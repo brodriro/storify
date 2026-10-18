@@ -1,0 +1,25 @@
+<table class="capacity">
+    <caption>{{t "browser.capacity"}}</caption>
+    <thead>
+        <tr>
+            <th scope="col">{{t "browser.used"}}</th>
+            <th scope="col">{{t "browser.free"}}</th>
+            <th scope="col">{{t "browser.total"}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="capacity-values">
+            <td data-label="{{t "browser.used"}}">{{storage.usedLabel}}</td>
+            <td data-label="{{t "browser.free"}}">{{storage.freeLabel}}</td>
+            <td data-label="{{t "browser.total"}}">{{storage.totalLabel}}</td>
+        </tr>
+        <tr>
+            <td colspan="3" class="capacity-bar-cell">
+                <div class="capacity-bar">
+                    <progress class="usage-bar" max="100" value="{{storage.percent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
+                    <span class="capacity-percent">{{storage.percent}} %</span>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>

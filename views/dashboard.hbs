@@ -23,15 +23,14 @@
                 </svg>
                 {{t "dashboard.usage"}}
             </h2>
-            <p class="usage-files-count">
-                {{stats.totalFiles}} <span class="usage-files-label">{{t "dashboard.files"}}</span>
-            </p>
-            <div class="usage-meta">
-                <span>{{t "dashboard.totalSize"}}</span>
-                <strong>{{totalSizeLabel}}</strong>
-            </div>
-            <progress class="usage-bar" max="100" value="{{usagePercent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
-            <p class="usage-note">{{#if limitEnforced}}{{t "dashboard.usageLimit" gb=config.totalStorageGb}}{{else}}{{t "dashboard.usageReference" gb=config.totalStorageGb}}{{/if}}</p>
+            {{> capacity}}
+            <dl class="data-list">
+                <div class="data-row"><dt>{{t "dashboard.files"}}</dt><dd>{{stats.totalFiles}}</dd></div>
+                <div class="data-row"><dt>{{t "dashboard.totalSize"}}</dt><dd>{{totalSizeLabel}}</dd></div>
+            </dl>
+            {{#if limitEnforced}}
+            <p class="usage-note">{{t "dashboard.usageLimit" gb=totalStorageGb}}</p>
+            {{/if}}
         </section>
 
         <section class="panel stat-card" aria-labelledby="types-title">

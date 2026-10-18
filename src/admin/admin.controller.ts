@@ -35,15 +35,10 @@ export class AdminController {
   @Get('dashboard')
   @Render('dashboard')
   async dashboard(@CurrentUser() user: AuthUser) {
-    const stats = await this.storageService.getGlobalStats();
-    const totalStorageGb = this.configService.get('totalStorageGb', {
-      infer: true,
-    });
-    const totalBytesLimit = totalStorageGb * 1024 ** 3;
-    const usagePercent =
-      totalBytesLimit > 0
-        ? Math.min(100, Math.round((stats.totalSize / totalBytesLimit) * 100))
-        : 0;
+    const [stats, storage] = await Promise.all([
+      this.storageService.getGlobalStats(),
+      this.storageService.getStorageSummary(),
+    ]);
 
     // Same adaptive units as the browser (a 2 KB total used to read "0 MB").
     const userUsage = Object.fromEntries(
@@ -59,11 +54,20 @@ export class AdminController {
       userRole: user.role,
       stats,
       userUsage,
-      config: { totalStorageGb },
+      // The same capacity the browser shows: against TOTAL_STORAGE_GB when it
+      // is enforced, otherwise the real volume (no "reference" figure).
+      storage: {
+        usedLabel: formatSize(storage.usedBytes),
+        totalLabel: formatSize(storage.totalBytes),
+        freeLabel: formatSize(
+          Math.max(0, storage.totalBytes - storage.usedBytes),
+        ),
+        percent: storage.percent,
+      },
       limitEnforced:
         this.configService.get('storageLimitBytes', { infer: true }) !== null,
+      totalStorageGb: this.configService.get('totalStorageGb', { infer: true }),
       isAdmin: true,
-      usagePercent,
       totalSizeLabel: formatSize(stats.totalSize),
     };
   }

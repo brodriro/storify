@@ -18,29 +18,7 @@
             </nav>
         </div>
 
-        <table class="capacity">
-            <caption>{{t "browser.capacity"}}</caption>
-            <thead>
-                <tr>
-                    <th scope="col">{{t "browser.used"}}</th>
-                    <th scope="col">{{t "browser.free"}}</th>
-                    <th scope="col">{{t "browser.total"}}</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>{{storage.usedLabel}}</td>
-                    <td>{{storage.freeLabel}}</td>
-                    <td>{{storage.totalLabel}}</td>
-                </tr>
-                <tr>
-                    <td colspan="3" class="capacity-bar-cell">
-                        <progress class="usage-bar" max="100" value="{{storage.percent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
-                        <span class="capacity-percent">{{storage.percent}} %</span>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        {{> capacity}}
     </div>
 
     <div class="action-row">
@@ -75,7 +53,7 @@
                         <line x1="3" y1="12" x2="4" y2="12"></line>
                         <line x1="3" y1="18" x2="4" y2="18"></line>
                     </svg>
-                    {{t "browser.viewList"}}
+                    <span class="btn-label">{{t "browser.viewList"}}</span>
                 </a>
                 <a class="segment" href="{{viewGridUrl}}" {{#if isGrid}}aria-current="true"{{/if}}>
                     <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -84,7 +62,7 @@
                         <rect x="3" y="14" width="7" height="7"></rect>
                         <rect x="14" y="14" width="7" height="7"></rect>
                     </svg>
-                    {{t "browser.viewGrid"}}
+                    <span class="btn-label">{{t "browser.viewGrid"}}</span>
                 </a>
             </nav>
             <div class="sort-controls">
@@ -146,9 +124,7 @@
                     {{/if}}
                         <span class="file-icon">
                             {{#if this.isDirectory}}
-                            <svg class="icon-xl" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                            </svg>
+                            <span class="figure-code" aria-hidden="true">{{this.typeCode}}</span>
                             {{else if this.isImage}}
                             <img src="{{this.thumbnailUrl}}" alt="" class="file-thumbnail" loading="lazy">
                             <svg class="icon-xl icon-muted fallback-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden>
@@ -161,10 +137,7 @@
                                 <source src="{{this.downloadUrl}}#t=0.5">
                             </video>
                             {{else}}
-                            <svg class="icon-xl icon-muted" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                                <polyline points="13 2 13 9 20 9"></polyline>
-                            </svg>
+                            <span class="figure-code" aria-hidden="true">{{this.typeCode}}<span class="figure-code-size">{{this.sizeLabel}}</span></span>
                             {{/if}}
                         </span>
                         <span class="figure-caption">
@@ -186,6 +159,9 @@
                 </li>
                 {{/each}}
             </ul>
+            {{#if files.length}}
+            <p class="sheet-totals">{{t "browser.totals" folders=summary.folders files=summary.files size=summary.sizeLabel}}</p>
+            {{/if}}
             {{else}}
             {{#if files.length}}
             <table class="spec-table">
@@ -264,6 +240,7 @@
                             {{else}}
                             </button>
                             {{/if}}
+                            <span class="row-meta"><span class="type-code">{{this.typeCode}}</span>{{#unless this.isDirectory}} {{this.sizeLabel}} <meter class="size-scale" min="0" max="{{../sizeScaleMax}}" value="{{this.sizeScale}}" aria-hidden="true"></meter>{{/unless}} <time datetime="{{this.modifiedIso}}">{{this.modifiedLabel}}</time></span>
                         </td>
                         <td class="col-size">
                             {{#unless this.isDirectory}}
@@ -278,6 +255,19 @@
                     </tr>
                     {{/each}}
                 </tbody>
+                <tfoot>
+                    <tr>
+                        {{#if canWrite}}<td class="col-select"></td>{{/if}}
+                        <th scope="row" class="col-type">{{t "browser.total"}}</th>
+                        <td class="col-name">{{t "browser.totalsCounts" folders=summary.folders files=summary.files}}</td>
+                        <td class="col-size">
+                            <span class="size-value">{{summary.sizeLabel}}</span>
+                            <span class="scale-legend" title="{{t "browser.scaleLegendTitle"}}">{{t "browser.scaleLegend"}}</span>
+                        </td>
+                        <td class="col-date"></td>
+                        {{#if canWrite}}<td class="col-actions"></td>{{/if}}
+                    </tr>
+                </tfoot>
             </table>
             {{/if}}
             {{/if}}
@@ -295,14 +285,6 @@
             {{/if}}
         </section>
 
-        <aside class="spec-panel" aria-labelledby="specTitle">
-            <h2 id="specTitle" class="spec-title">{{t "browser.summary"}}</h2>
-            <dl id="specList" class="spec-list">
-                <div class="spec-row"><dt>{{t "browser.summaryFolders"}}</dt><dd>{{summary.folders}}</dd></div>
-                <div class="spec-row"><dt>{{t "browser.summaryFiles"}}</dt><dd>{{summary.files}}</dd></div>
-                <div class="spec-row"><dt>{{t "browser.summarySize"}}</dt><dd>{{summary.sizeLabel}}</dd></div>
-            </dl>
-        </aside>
     </div>
 
     {{#if canWrite}}

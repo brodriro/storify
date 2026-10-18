@@ -19,7 +19,7 @@ OWN-WORLD: white paper, one near-black ink, 1 px hairline rules, a grey for seco
 
 STORY: the owner reads the sheet (where, how full, what is inside), acts through ruled rows, and signs off any agent change in a CAUTION box.
 
-FIRST VIEWPORT: masthead band: wordmark, document title = folder name, Ref. = path, revision block (user, role, date) with account controls; below, a capacity table and the action row; then the folder as a sortable specification table (type code, name, size with a fixed log scale bar, modified) or, in grid view, numbered figures (Fig. n · name). Primary actions Upload / New folder sit on the action row, right.
+FIRST VIEWPORT: masthead band: wordmark, document title = folder name, Ref. = path, revision block (user, role, date) with account controls; below, a capacity table and the action row; then the folder as a sortable specification table (type code, name, size with a fixed log scale bar, modified) or, in grid view, numbered figures (Fig. n · name). Primary actions Upload / New folder lead the action row on the left (amended after the finish review: reading and tab order reach the primary action first, and on phones they come first anyway); view switch and sort sit right. The approved card's "ficha del elemento" lives in the selection bar (one selected item shows its datasheet line) and in the preview's meta line, not in a side column that stood mostly empty; folder totals are the table's tfoot (grid: a totals line). On phones rows keep type code, size, scale bar and date as a line under the name.
 
 FORM: Hoja de datos, position 3 of 7 on my ordered list; seed f2baea04; raises: fixed size scale (star atlas), blue reserved for location (wayfinding), fixed type code (Saville), two values + tabular figures (Ikeda).
 
