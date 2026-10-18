@@ -1,108 +1,109 @@
 {{#> main}}
-<div class="page animate-slide-up">
-    <div class="page-header">
-        <h1 class="page-title">{{t "dashboard.title"}}</h1>
-        <a href="/files/browser" class="btn btn-secondary">
-            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <polyline points="15 18 9 12 15 6"></polyline>
-                <line x1="9" y1="12" x2="21" y2="12"></line>
-            </svg>
-            {{t "dashboard.back"}}
-        </a>
-    </div>
+<div class="page">
+    <header class="page-header">
+        <div class="page-heading">
+            <h1 class="page-title">{{t "dashboard.title"}}</h1>
+            <p class="page-subtitle">{{t "dashboard.subtitle"}}</p>
+        </div>
+    </header>
 
-    <div class="stats-grid">
-        <section class="panel stat-card" aria-labelledby="usage-title">
-            <h2 id="usage-title" class="stat-title">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path
-                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                    </path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-                {{t "dashboard.usage"}}
-            </h2>
-            <p class="usage-files-count">
-                {{stats.totalFiles}} <span class="usage-files-label">{{t "dashboard.files"}}</span>
-            </p>
-            <div class="usage-meta">
-                <span>{{t "dashboard.totalSize"}}</span>
-                <strong>{{totalSizeLabel}}</strong>
+    <div class="dashboard-grid">
+        <section class="panel usage-panel" aria-labelledby="usage-title">
+            <h2 id="usage-title" class="panel-title">{{t "dashboard.usage"}}</h2>
+            <dl class="stat-row">
+                <div class="stat">
+                    <dt class="stat-label">{{t "dashboard.totalSize"}}</dt>
+                    <dd class="stat-value">{{totalSizeLabel}}</dd>
+                </div>
+                <div class="stat">
+                    <dt class="stat-label">{{t "dashboard.files"}}</dt>
+                    <dd class="stat-value">{{stats.totalFiles}}</dd>
+                </div>
+                <div class="stat">
+                    <dt class="stat-label">{{t "dashboard.capacity"}}</dt>
+                    <dd class="stat-value">{{t "dashboard.capacityValue" gb=config.totalStorageGb}}</dd>
+                </div>
+            </dl>
+            <div class="storage-meter meter-{{usageLevel}}">
+                <div class="meter-label">
+                    <span>{{t "browser.storageUsed"}}</span>
+                    <span class="meter-value">{{usagePercent}} %</span>
+                </div>
+                <progress class="usage-bar" max="100" value="{{usagePercent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
+                <small class="meter-detail">{{#if limitEnforced}}{{t "dashboard.usageLimit" gb=config.totalStorageGb}}{{else}}{{t "dashboard.usageReference" gb=config.totalStorageGb}}{{/if}}</small>
             </div>
-            <progress class="usage-bar" max="100" value="{{usagePercent}}" aria-label="{{t "browser.storageUsed"}}"></progress>
-            <p class="usage-note">{{#if limitEnforced}}{{t "dashboard.usageLimit" gb=config.totalStorageGb}}{{else}}{{t "dashboard.usageReference" gb=config.totalStorageGb}}{{/if}}</p>
         </section>
 
-        <section class="panel stat-card" aria-labelledby="types-title">
-            <h2 id="types-title" class="stat-title">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="12" y1="18" x2="12" y2="12"></line>
-                    <line x1="9" y1="15" x2="15" y2="15"></line>
-                </svg>
-                {{t "dashboard.fileTypes"}}
-            </h2>
-            <ul class="list-clean">
-                {{#each stats.fileTypes}}
-                <li class="list-item-row">
-                    <span class="file-type">{{@key}}</span>
-                    <span class="badge">{{this}}</span>
-                </li>
-                {{/each}}
-            </ul>
-        </section>
-
-        <section class="panel stat-card" aria-labelledby="quotas-title">
-            <h2 id="quotas-title" class="stat-title">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                {{t "dashboard.perUser"}}
-            </h2>
-            <ul class="list-clean">
-                {{#each userUsage}}
-                <li class="list-item-row">
-                    <span class="list-key">{{@key}}</span>
-                    <span class="list-value">{{this}}</span>
-                </li>
-                {{/each}}
-            </ul>
-        </section>
-
-        <section class="panel stat-card" aria-labelledby="backup-title">
-            <h2 id="backup-title" class="stat-title">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                {{t "dashboard.backup"}}
-            </h2>
-            <p class="stat-text">{{t "dashboard.backupText"}}</p>
-            <div class="stack">
-                <button type="button" class="btn btn-primary btn-block" id="createBackupBtn">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <section class="panel backup-panel" aria-labelledby="backup-title">
+            <h2 id="backup-title" class="panel-title">{{t "dashboard.backup"}}</h2>
+            <p class="panel-text">{{t "dashboard.backupText"}}</p>
+            <div class="panel-actions">
+                <button type="button" class="btn btn-primary" id="createBackupBtn">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    {{t "dashboard.createBackup"}}
+                </button>
+                <a href="/admin/backup/download" class="btn btn-secondary">
+                    <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    {{t "dashboard.createBackup"}}
-                </button>
-                <a href="/admin/backup/download" class="btn btn-secondary btn-block">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
                     {{t "dashboard.downloadBackup"}}
                 </a>
-                <p id="backupToast" class="backup-status" role="status" aria-live="polite"></p>
             </div>
+            <p id="backupToast" class="backup-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="panel" aria-labelledby="quotas-title">
+            <h2 id="quotas-title" class="panel-title">{{t "dashboard.perUser"}}</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{t "dashboard.folder"}}</th>
+                        <th scope="col" class="num">{{t "dashboard.size"}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each userUsage}}
+                    <tr>
+                        <th scope="row">{{@key}}</th>
+                        <td class="num">{{this}}</td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="2" class="text-muted">{{t "dashboard.none"}}</td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel" aria-labelledby="types-title">
+            <h2 id="types-title" class="panel-title">{{t "dashboard.fileTypes"}}</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{t "dashboard.type"}}</th>
+                        <th scope="col" class="num">{{t "dashboard.count"}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each stats.fileTypes}}
+                    <tr>
+                        <th scope="row"><span class="type-tag">{{@key}}</span></th>
+                        <td class="num">{{this}}</td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="2" class="text-muted">{{t "dashboard.none"}}</td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
         </section>
     </div>
 </div>

@@ -1,0 +1,61 @@
+<aside class="sidebar">
+    <a class="brand" href="/files/browser">
+        <svg class="icon brand-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="3" y="4" width="18" height="7" rx="1.5"></rect>
+            <rect x="3" y="13" width="18" height="7" rx="1.5"></rect>
+            <line x1="7" y1="7.5" x2="7.01" y2="7.5"></line>
+            <line x1="7" y1="16.5" x2="7.01" y2="16.5"></line>
+        </svg>
+        <span>{{t "app.brand"}}</span>
+    </a>
+
+    <nav class="sidebar-nav" aria-label="{{t "nav.main"}}">
+        <ul class="nav-list">
+            <li>
+                <a class="nav-link" href="/files/browser" {{#if_eq section "files"}}aria-current="page"{{/if_eq}}>
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span class="nav-label">{{t "nav.files"}}</span>
+                </a>
+            </li>
+            {{#if_eq user.role "admin"}}
+            <li>
+                <a class="nav-link" href="/admin/dashboard" {{#if_eq section "admin"}}aria-current="page"{{/if_eq}}>
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M3 13h4v8H3zM10 3h4v18h-4zM17 9h4v12h-4z"></path>
+                    </svg>
+                    <span class="nav-label">{{t "nav.admin"}}</span>
+                </a>
+            </li>
+            {{/if_eq}}
+        </ul>
+    </nav>
+
+    <div class="sidebar-account" role="group" aria-label="{{t "header.account"}}">
+        <p class="account-id">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span class="account-text">
+                <span class="account-name">{{user.username}}</span>
+                <span class="account-role">{{#if_eq user.role "admin"}}{{t "roles.admin"}}{{/if_eq}}{{#if_eq user.role "member"}}{{t "roles.member"}}{{/if_eq}}{{#if_eq user.role "guest"}}{{t "roles.guest"}}{{/if_eq}}</span>
+            </span>
+        </p>
+        <button type="button" id="themeToggle" class="nav-link" aria-pressed="false">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span class="nav-label">{{t "header.darkTheme"}}</span>
+        </button>
+        <a href="/auth/logout" class="nav-link">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span class="nav-label">{{t "header.logout"}}</span>
+        </a>
+    </div>
+</aside>
