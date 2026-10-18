@@ -94,8 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('chatResponse', (data) => {
         finishWaiting();
-        appendMessage(String((data && data.response) || ''), 'ai');
+        // A proposal is shown once, as the CAUTION box that gets signed; the
+        // server's text ("Necesito tu confirmación para: …") would repeat it.
         if (data && data.confirmation) appendConfirmation(data.confirmation);
+        else appendMessage(String((data && data.response) || ''), 'ai');
         chatMessageInput.focus();
     });
 
