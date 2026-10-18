@@ -1,0 +1,16 @@
+<div class="file-menu">
+    <button type="button" class="kebab-toggle" data-action="menu" id="menu-button-{{@index}}"
+        aria-haspopup="menu" aria-expanded="false" aria-controls="menu-{{@index}}"
+        aria-label="{{t "browser.actionsFor" name=this.name}}">
+        <svg class="icon icon-filled" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="2"></circle>
+            <circle cx="12" cy="5" r="2"></circle>
+            <circle cx="12" cy="19" r="2"></circle>
+        </svg>
+    </button>
+    <div class="dropdown-content" role="menu" id="menu-{{@index}}" aria-labelledby="menu-button-{{@index}}" hidden>
+        <button type="button" role="menuitem" tabindex="-1" class="dropdown-item" data-action="rename">{{t "browser.rename"}}</button>
+        <button type="button" role="menuitem" tabindex="-1" class="dropdown-item" data-action="move">{{t "browser.move"}}</button>
+        <button type="button" role="menuitem" tabindex="-1" class="dropdown-item danger" data-action="delete">{{t "browser.delete"}}</button>
+    </div>
+</div>

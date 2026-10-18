@@ -6,6 +6,7 @@ import { existsSync } from 'fs';
 import hbs from 'hbs';
 import helmet from 'helmet';
 import { dirname, join } from 'path';
+import { formatDate } from './files/browser-view';
 import { clientMessagesJson, format, lookup } from './i18n';
 import { ViewExceptionFilter } from './common/view-exception.filter';
 
@@ -101,6 +102,12 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
         throw new Error(`Unknown message key: ${key}`);
       return format(template, options.hash as Record<string, unknown>);
     },
+  );
+  // {{today}}: the masthead's revision date (YYYY-MM-DD).
+  hbs.registerHelper('today', () => formatDate(new Date()));
+  // {{roleLabel userRole}}: the role's name in the catalog.
+  hbs.registerHelper('roleLabel', (role: string) =>
+    lookup(`header.roles.${role}`),
   );
   hbs.registerHelper(
     'clientMessages',

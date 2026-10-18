@@ -62,6 +62,9 @@ const pairs: [string, string, number][] = [
   ['--focus-ring', '--surface', UI],
   ['--accent', '--surface', UI],
   ['--rule', '--bg', UI],
+  // Primary buttons: paper-coloured text on solid ink.
+  ['--bg', '--text', TEXT],
+  ['--bg', '--ink-hover', TEXT],
   ['--accent-text', '--surface-hover', TEXT],
 ];
 

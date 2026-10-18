@@ -33,6 +33,8 @@
 
     --text: #111111;
     --text-muted: #555555;
+    /* Primary actions are solid ink (blue is reserved for location). */
+    --ink-hover: #333333;
 
     /* Location and selection only. */
     --accent: #1d4ed8;
@@ -112,6 +114,7 @@
 
     --text: #ececea;
     --text-muted: #a2a6ad;
+    --ink-hover: #c9c9c6;
 
     --accent: #7aa2ff;
     --accent-hover: #a3bfff;
@@ -152,6 +155,7 @@
 
         --text: #ececea;
         --text-muted: #a2a6ad;
+        --ink-hover: #c9c9c6;
 
         --accent: #7aa2ff;
         --accent-hover: #a3bfff;

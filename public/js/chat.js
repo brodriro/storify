@@ -100,9 +100,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /** Confirm / cancel buttons for actions that change files (server waits for this). */
+    let confirmSeq = 0;
+
+    /** A CAUTION box: the proposed changes, signed off with Confirmar / Cancelar. */
     function appendConfirmation(confirmation) {
         const bar = document.createElement('div');
         bar.className = 'chat-confirm';
+        bar.setAttribute('role', 'group');
+        const labelId = `chat-confirm-${++confirmSeq}`;
+        bar.setAttribute('aria-labelledby', labelId);
+        const label = document.createElement('p');
+        label.className = 'chat-confirm-label';
+        label.id = labelId;
+        label.textContent = t('chat.caution');
+        const text = document.createElement('p');
+        text.className = 'chat-confirm-text';
+        text.textContent = t('chat.cautionText');
+        const list = document.createElement('ul');
+        list.className = 'chat-confirm-actions';
+        for (const action of (confirmation && confirmation.actions) || []) {
+            const item = document.createElement('li');
+            item.textContent = String(action.summary || action.tool || '');
+            list.appendChild(item);
+        }
+        const buttons = document.createElement('div');
+        buttons.className = 'chat-confirm-buttons';
         const decide = (approved) => {
             bar.querySelectorAll('button').forEach((b) => (b.disabled = true));
             bar.dataset.decided = approved ? 'approved' : 'declined';
@@ -118,7 +140,8 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelBtn.className = 'btn btn-secondary btn-sm';
         cancelBtn.textContent = t('chat.cancel');
         cancelBtn.addEventListener('click', () => decide(false));
-        bar.append(confirmBtn, cancelBtn);
+        buttons.append(confirmBtn, cancelBtn);
+        bar.append(label, text, list, buttons);
         chatHistory.appendChild(bar);
         scrollToBottom();
     }
