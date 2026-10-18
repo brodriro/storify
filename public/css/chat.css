@@ -104,7 +104,7 @@
 .chat-title {
     margin: 0;
     font-size: 1.1rem;
-    font-family: 'Fira Sans', system-ui, sans-serif;
+    font-family: var(--font-sans);
 }
 
 .chat-header p {
@@ -239,14 +239,14 @@
     padding: 0.75rem;
     border-radius: 8px;
     overflow-x: auto;
-    font-family: 'Fira Code', monospace;
+    font-family: var(--font-mono);
     font-size: 0.85rem;
     border: 1px solid var(--border);
     margin: 0.75rem 0;
 }
 
 .chat-message.ai code {
-    font-family: 'Fira Code', monospace;
+    font-family: var(--font-mono);
     background: var(--surface-sunken);
     padding: 0.1rem 0.3rem;
     border-radius: 4px;

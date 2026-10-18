@@ -41,7 +41,7 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
           // No inline styles either (U11): views use classes only. Scripts may
           // still set element.style through the CSSOM, which CSP allows.
           styleSrc: ["'self'"],
-          // Fonts are self-hosted (/vendor/fira-*): no Google Fonts.
+          // Fonts are self-hosted (/vendor/archivo/): no Google Fonts.
           fontSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
           mediaSrc: ["'self'", 'blob:'],
@@ -66,15 +66,13 @@ export async function configureApp(app: NestExpressApplication): Promise<void> {
   app.useStaticAssets(dirname(require.resolve('dompurify')), {
     prefix: '/vendor/dompurify/',
   });
-  for (const font of ['fira-sans', 'fira-code']) {
-    app.useStaticAssets(
-      join(
-        dirname(require.resolve(`@fontsource/${font}/package.json`)),
-        'files',
-      ),
-      { prefix: `/vendor/${font}/`, maxAge: '30d', immutable: true },
-    );
-  }
+  app.useStaticAssets(
+    join(
+      dirname(require.resolve('@fontsource-variable/archivo/package.json')),
+      'files',
+    ),
+    { prefix: '/vendor/archivo/', maxAge: '30d', immutable: true },
+  );
   app.setBaseViewsDir(viewsPath);
   app.setViewEngine('hbs');
 

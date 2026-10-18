@@ -61,6 +61,8 @@ const pairs: [string, string, number][] = [
   ['--focus-ring', '--bg', UI],
   ['--focus-ring', '--surface', UI],
   ['--accent', '--surface', UI],
+  ['--rule', '--bg', UI],
+  ['--accent-text', '--surface-hover', TEXT],
 ];
 
 describe.each([

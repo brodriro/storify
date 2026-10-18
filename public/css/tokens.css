@@ -1,10 +1,14 @@
 /*
- * Design tokens (D6: the dark "technical NAS" master, with a derived light
- * theme). Components use only these semantic names, never raw colours.
+ * Design tokens: "Hoja de datos" (the component datasheet). White paper,
+ * one near-black ink, 1 px rules, tabular figures. Two signal colours with
+ * one job each: blue marks where you are and what is selected, red marks
+ * caution. Square corners, no shadows, no blur. The dark theme is the
+ * negative print of the same sheet.
  *
- * The theme is html[data-theme], set by theme.js before first paint from the
- * saved choice or the system preference; without JavaScript the media query
- * below applies the system preference.
+ * Components use only these semantic names, never raw colours. The theme is
+ * html[data-theme], set by theme.js before first paint from the saved choice
+ * or the system preference; without JavaScript the media query below
+ * applies the system preference.
  *
  * Contrast is checked by src/ui/contrast.spec.ts (WCAG 2.x AA): keep both
  * themes in sync when changing a value.
@@ -13,41 +17,45 @@
 :root {
     color-scheme: light;
 
-    --bg: #f8fafc;
-    --bg-glow-1: hsla(210, 100%, 96%, 1);
-    --bg-glow-2: hsla(220, 100%, 98%, 1);
+    /* Paper and ink */
+    --bg: #ffffff;
+    --bg-glow-1: #ffffff;
+    --bg-glow-2: #ffffff;
     --surface: #ffffff;
-    --surface-sunken: #f1f5f9;
-    --surface-hover: #f1f5f9;
-    --overlay: rgba(15, 23, 42, 0.6);
-    --border: #e2e8f0;
+    --surface-sunken: #f3f3f2;
+    --surface-hover: #ececea;
+    --overlay: rgba(17, 17, 17, 0.45);
+    /* Inner rules (between rows); --rule is the ink rule of sections. */
+    --border: #d6d6d3;
+    --rule: #111111;
     /* Borders that identify a control (inputs, checkboxes): 3:1 required. */
-    --border-strong: #64748b;
+    --border-strong: #6b6b6b;
 
-    --text: #0f172a;
-    --text-muted: #475569;
+    --text: #111111;
+    --text-muted: #555555;
 
-    /* The master's #22c55e fails with white text (2.28:1) on light: a darker
-       green per theme instead (U3). */
-    --accent: #15803d;
-    --accent-hover: #166534;
+    /* Location and selection only. */
+    --accent: #1d4ed8;
+    --accent-hover: #1e40af;
     --on-accent: #ffffff;
-    --accent-text: #15803d;
-    --accent-soft: rgba(21, 128, 61, 0.1);
+    --accent-text: #1d4ed8;
+    --accent-soft: rgba(29, 78, 216, 0.09);
 
+    /* Caution only. */
     --danger: #b91c1c;
     --danger-hover: #991b1b;
     --on-danger: #ffffff;
     --danger-text: #b91c1c;
-    --danger-soft: rgba(185, 28, 28, 0.08);
+    --danger-soft: rgba(185, 28, 28, 0.07);
 
-    --code-text: #0369a1;
-    --focus-ring: #15803d;
+    --code-text: #111111;
+    --focus-ring: #1d4ed8;
 
-    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-    --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08);
-    --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1);
-    --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.14);
+    /* Print has no shadows: depth is a rule. */
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
 
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;
@@ -56,30 +64,34 @@
     --space-xl: 2rem;
     --space-2xl: 3rem;
 
-    --rounded-sm: 6px;
-    --rounded-md: 10px;
-    --rounded-lg: 16px;
+    --rounded-sm: 0;
+    --rounded-md: 0;
+    --rounded-lg: 0;
 
-    --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
-    --font-mono: 'Fira Code', ui-monospace, monospace;
+    /* One family: Archivo, condensed for mastheads, references and type
+       codes, normal width for reading. Figures are always tabular. */
+    --font-sans: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    --stretch-condensed: 72%;
+    --stretch-semi: 87%;
 
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --transition-fast: 150ms var(--ease-out);
-    --transition-medium: 250ms var(--ease-out);
+    --transition-fast: 120ms var(--ease-out);
+    --transition-medium: 200ms var(--ease-out);
 
     /* WCAG 2.5.8 minimum is 24px; 44px where space allows. */
     --target-min: 44px;
 
     /* Floating chat button, and the room bottom-anchored overlays (toasts,
        selection bar, chat panel) leave so they never cover it or its target. */
-    --fab-size: 64px;
+    --fab-size: 56px;
     --fab-offset: var(--space-xl);
     --fab-clearance: calc(var(--fab-offset) + var(--fab-size) + var(--space-md));
 }
 
 @media (max-width: 640px) {
     :root {
-        --fab-size: 56px;
+        --fab-size: 52px;
         --fab-offset: var(--space-md);
     }
 }
@@ -87,24 +99,25 @@
 :root[data-theme='dark'] {
     color-scheme: dark;
 
-    --bg: #020617;
-    --bg-glow-1: hsla(222, 47%, 11%, 1);
-    --bg-glow-2: hsla(222, 47%, 8%, 1);
-    --surface: #0f172a;
-    --surface-sunken: #020617;
-    --surface-hover: #1e293b;
-    --overlay: rgba(2, 6, 23, 0.8);
-    --border: #1e293b;
-    --border-strong: #64748b;
+    --bg: #0e0f11;
+    --bg-glow-1: #0e0f11;
+    --bg-glow-2: #0e0f11;
+    --surface: #0e0f11;
+    --surface-sunken: #17191c;
+    --surface-hover: #1f2226;
+    --overlay: rgba(0, 0, 0, 0.6);
+    --border: #2e3237;
+    --rule: #e8e8e6;
+    --border-strong: #8b9098;
 
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
+    --text: #ececea;
+    --text-muted: #a2a6ad;
 
-    --accent: #22c55e;
-    --accent-hover: #4ade80;
-    --on-accent: #052e16;
-    --accent-text: #4ade80;
-    --accent-soft: rgba(34, 197, 94, 0.12);
+    --accent: #7aa2ff;
+    --accent-hover: #a3bfff;
+    --on-accent: #0b1220;
+    --accent-text: #8fb0ff;
+    --accent-soft: rgba(122, 162, 255, 0.14);
 
     --danger: #dc2626;
     --danger-hover: #b91c1c;
@@ -112,13 +125,13 @@
     --danger-text: #f87171;
     --danger-soft: rgba(248, 113, 113, 0.12);
 
-    --code-text: #38bdf8;
-    --focus-ring: #4ade80;
+    --code-text: #ececea;
+    --focus-ring: #8fb0ff;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.35);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
 }
 
 /* No JavaScript: follow the system. Same values as [data-theme='dark']. */
@@ -126,24 +139,25 @@
     :root:not([data-theme]) {
         color-scheme: dark;
 
-        --bg: #020617;
-        --bg-glow-1: hsla(222, 47%, 11%, 1);
-        --bg-glow-2: hsla(222, 47%, 8%, 1);
-        --surface: #0f172a;
-        --surface-sunken: #020617;
-        --surface-hover: #1e293b;
-        --overlay: rgba(2, 6, 23, 0.8);
-        --border: #1e293b;
-        --border-strong: #64748b;
+        --bg: #0e0f11;
+        --bg-glow-1: #0e0f11;
+        --bg-glow-2: #0e0f11;
+        --surface: #0e0f11;
+        --surface-sunken: #17191c;
+        --surface-hover: #1f2226;
+        --overlay: rgba(0, 0, 0, 0.6);
+        --border: #2e3237;
+        --rule: #e8e8e6;
+        --border-strong: #8b9098;
 
-        --text: #f8fafc;
-        --text-muted: #94a3b8;
+        --text: #ececea;
+        --text-muted: #a2a6ad;
 
-        --accent: #22c55e;
-        --accent-hover: #4ade80;
-        --on-accent: #052e16;
-        --accent-text: #4ade80;
-        --accent-soft: rgba(34, 197, 94, 0.12);
+        --accent: #7aa2ff;
+        --accent-hover: #a3bfff;
+        --on-accent: #0b1220;
+        --accent-text: #8fb0ff;
+        --accent-soft: rgba(122, 162, 255, 0.14);
 
         --danger: #dc2626;
         --danger-hover: #b91c1c;
@@ -151,12 +165,12 @@
         --danger-text: #f87171;
         --danger-soft: rgba(248, 113, 113, 0.12);
 
-        --code-text: #38bdf8;
-        --focus-ring: #4ade80;
+        --code-text: #ececea;
+        --focus-ring: #8fb0ff;
 
-        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.35);
-        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
-        --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+        --shadow-sm: none;
+        --shadow-md: none;
+        --shadow-lg: none;
+        --shadow-xl: none;
     }
 }

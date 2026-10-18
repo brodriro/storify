@@ -159,8 +159,7 @@ describe('Storify (e2e)', () => {
       '/js/browser.js',
       '/css/fonts.css',
       '/favicon.svg',
-      '/vendor/fira-sans/fira-sans-latin-400-normal.woff2',
-      '/vendor/fira-code/fira-code-latin-600-normal.woff2',
+      '/vendor/archivo/archivo-latin-wdth-normal.woff2',
     ]) {
       await request(app.getHttpServer()).get(url).expect(200);
     }
