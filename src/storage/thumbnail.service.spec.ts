@@ -71,10 +71,13 @@ describe('ThumbnailService (C3)', () => {
     const marker = path.join(storage, '.thumbs', markers[0]);
     const past = new Date(Date.now() - 60_000);
     fs.utimesSync(marker, past, past);
+    // Compare with what the filesystem stored: utimes may round the
+    // milliseconds (…194.999 for …195).
+    const markedAt = fs.statSync(marker).mtimeMs;
     await expect(
       service.get(broken, fs.statSync(broken)),
     ).rejects.toMatchObject({ status: 415 });
-    expect(fs.statSync(marker).mtimeMs).toBe(past.getTime());
+    expect(fs.statSync(marker).mtimeMs).toBe(markedAt);
   });
 
   it('prunes old thumbnails and leftover partials', async () => {

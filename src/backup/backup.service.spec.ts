@@ -127,13 +127,21 @@ describe('BackupService (C5)', () => {
     await backup('full');
     const before = fs.readdirSync(backupDir).sort();
 
-    const unreadable = path.join(storage, 'users/ALICE/locked.txt');
-    write('ALICE/locked.txt', 'secret');
-    fs.chmodSync(unreadable, 0o000);
+    // The ZIP cannot be written (a full or unmounted disk). This fails for
+    // any user; the old chmod 000 on a source file does not stop root, so
+    // the backup succeeded in containers and the test failed.
+    // The module object itself: `import * as fs` is a read-only wrapper.
+    const nodeFs = jest.requireActual<typeof fs>('fs');
+    const realCreateWriteStream = nodeFs.createWriteStream;
+    const spy = jest
+      .spyOn(nodeFs, 'createWriteStream')
+      .mockImplementation(() =>
+        realCreateWriteStream(path.join(storage, 'missing', 'backup.zip')),
+      );
     try {
       await backup('full');
     } finally {
-      fs.chmodSync(unreadable, 0o600);
+      spy.mockRestore();
     }
 
     expect(fs.readdirSync(backupDir).sort()).toEqual(before);
