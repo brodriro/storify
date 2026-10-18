@@ -1100,6 +1100,10 @@ tr.parent-card .file-open {
     font-weight: 600;
 }
 
+.spec-part {
+    white-space: nowrap;
+}
+
 .selection-actions {
     display: flex;
     gap: var(--space-sm);
@@ -1210,6 +1214,9 @@ tr.parent-card .file-open {
 }
 
 .modal-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     pointer-events: auto;
     width: 44px;
     height: 44px;
@@ -1764,8 +1771,10 @@ tr.parent-card .file-open {
         color: var(--text-muted);
     }
 
+    /* One rule closes the block: the sheet head's (R1). */
     .capacity-bar-cell {
         padding: var(--space-xs) 0 !important;
+        border-bottom: none;
     }
 
     .action-row {
@@ -1918,9 +1927,12 @@ tr.parent-card .file-open {
 
 
 
+    /* Same rule and gap as the list's header (R2). */
     .file-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: var(--space-md);
+        padding-top: var(--space-md);
+        border-top: 1px solid var(--rule);
     }
 
     .selection-action-bar {

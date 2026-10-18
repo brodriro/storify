@@ -157,7 +157,8 @@
         if (selected.size === 1) {
             // One item: the bar carries its datasheet line, as the side panel did.
             const file = files.find((f) => f.path === [...selected][0]);
-            $('selectionCount').textContent = file ? `${file.name} · ${specLine(file)}` : selectedLabel(1);
+            if (file) renderSpec($('selectionCount'), [file.name, ...specParts(file)]);
+            else $('selectionCount').textContent = selectedLabel(1);
         } else if (selected.size > 1) {
             $('selectionCount').textContent = selectedLabel(selected.size);
         } else {
@@ -166,12 +167,25 @@
         }
     }
 
-    /** The datasheet line of one entry: "JPG · 8.8 KB (8.980 bytes) · 2026-10-18 10:08". */
-    function specLine(file) {
+    /** The datasheet parts of one entry: type, size (exact bytes), modified. */
+    function specParts(file) {
         const parts = [file.typeCode];
         if (!file.isDir) parts.push(`${file.sizeLabel} (${t('browser.specBytes', { bytes: file.sizeBytesLabel })})`);
         parts.push(file.modifiedLabel);
-        return parts.join(' · ');
+        return parts;
+    }
+
+    /** Renders parts that never break inside (a date stays whole); lines may
+        only wrap between them, at the " · ". */
+    function renderSpec(el, parts) {
+        el.replaceChildren();
+        parts.forEach((part, i) => {
+            if (i) el.append(' · ');
+            const span = document.createElement('span');
+            span.className = 'spec-part';
+            span.textContent = part;
+            el.appendChild(span);
+        });
     }
 
     function setSelected(card, isSelected) {
@@ -193,7 +207,7 @@
         if (!file) return;
         previewIndex = index;
         $('modalTitle').textContent = file.name;
-        $('modalMeta').textContent = specLine(file);
+        renderSpec($('modalMeta'), specParts(file));
         $('modalDownloadLink').href = file.downloadUrl;
         const body = $('modalBody');
         body.replaceChildren();
