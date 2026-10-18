@@ -112,7 +112,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = document.createElement('p');
         label.className = 'chat-confirm-label';
         label.id = labelId;
-        label.textContent = t('chat.caution');
+        // Drawn warning triangle (no glyph icons), then the label.
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const warn = document.createElementNS(SVG_NS, 'svg');
+        warn.setAttribute('class', 'chat-confirm-icon');
+        warn.setAttribute('viewBox', '0 0 24 24');
+        warn.setAttribute('aria-hidden', 'true');
+        for (const [tag, attrs] of [
+            ['path', { d: 'M12 3 2 21h20L12 3z' }],
+            ['line', { x1: 12, y1: 10, x2: 12, y2: 14 }],
+            ['line', { x1: 12, y1: 17, x2: 12, y2: 18 }],
+        ]) {
+            const el = document.createElementNS(SVG_NS, tag);
+            for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+            warn.appendChild(el);
+        }
+        label.append(warn, t('chat.caution'));
         const text = document.createElement('p');
         text.className = 'chat-confirm-text';
         text.textContent = t('chat.cautionText');

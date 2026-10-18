@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T12:00:00Z",
+  "title": "Design System: Storify",
+  "extensions": {
+    "colorMeta": {
+      "paper": { "role": "neutral", "displayName": "Papel", "canonical": "#ffffff", "tonalRamp": ["#111111", "#333333", "#555555", "#6b6b6b", "#d6d6d3", "#ececea", "#f3f3f2", "#ffffff"] },
+      "paper-sunken": { "role": "neutral", "displayName": "Papel hundido", "canonical": "#f3f3f2", "tonalRamp": ["#111111", "#333333", "#555555", "#6b6b6b", "#d6d6d3", "#ececea", "#f3f3f2", "#ffffff"] },
+      "paper-hover": { "role": "neutral", "displayName": "Papel de hover", "canonical": "#ececea", "tonalRamp": ["#111111", "#333333", "#555555", "#6b6b6b", "#d6d6d3", "#ececea", "#f3f3f2", "#ffffff"] },
+      "hairline": { "role": "neutral", "displayName": "Filete fino", "canonical": "#d6d6d3", "tonalRamp": ["#111111", "#333333", "#555555", "#6b6b6b", "#d6d6d3", "#ececea", "#f3f3f2", "#ffffff"] },
+      "ink": { "role": "neutral", "displayName": "Tinta", "canonical": "#111111", "tonalRamp": ["#111111", "#333333", "#555555", "#6b6b6b", "#d6d6d3", "#ececea", "#f3f3f2", "#ffffff"] },
+      "ink-hover": { "role": "neutral", "displayName": "Tinta de hover", "canonical": "#333333", "tonalRamp": ["#111111", "#333333", "#555555", "#6b6b6b", "#d6d6d3", "#ececea", "#f3f3f2", "#ffffff"] },
+      "ink-muted": { "role": "neutral", "displayName": "Tinta secundaria", "canonical": "#555555", "tonalRamp": ["#111111", "#333333", "#555555", "#6b6b6b", "#d6d6d3", "#ececea", "#f3f3f2", "#ffffff"] },
+      "control-border": { "role": "neutral", "displayName": "Borde de control", "canonical": "#6b6b6b", "tonalRamp": ["#111111", "#333333", "#555555", "#6b6b6b", "#d6d6d3", "#ececea", "#f3f3f2", "#ffffff"] },
+      "location-blue": { "role": "primary", "displayName": "Azul de ubicación", "canonical": "#1d4ed8", "tonalRamp": ["#0b1f5c", "#132f86", "#1e40af", "#1d4ed8", "#4a72e6", "#7aa2ff", "#a3bfff", "#dbe5ff"] },
+      "location-blue-deep": { "role": "primary", "displayName": "Azul de ubicación profundo", "canonical": "#1e40af", "tonalRamp": ["#0b1f5c", "#132f86", "#1e40af", "#1d4ed8", "#4a72e6", "#7aa2ff", "#a3bfff", "#dbe5ff"] },
+      "location-blue-wash": { "role": "primary", "displayName": "Lavado de selección", "canonical": "rgba(29, 78, 216, 0.09)" },
+      "caution-red": { "role": "secondary", "displayName": "Rojo de precaución", "canonical": "#b91c1c", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#f87171", "#fca5a5", "#fee2e2"] },
+      "caution-red-deep": { "role": "secondary", "displayName": "Rojo de precaución profundo", "canonical": "#991b1b", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#f87171", "#fca5a5", "#fee2e2"] },
+      "caution-red-wash": { "role": "secondary", "displayName": "Lavado de precaución", "canonical": "rgba(185, 28, 28, 0.07)" },
+      "overlay": { "role": "neutral", "displayName": "Velo", "canonical": "rgba(17, 17, 17, 0.45)" },
+      "negative-paper": { "role": "neutral", "displayName": "Papel (negativo)", "canonical": "#0e0f11", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-paper-sunken": { "role": "neutral", "displayName": "Papel hundido (negativo)", "canonical": "#17191c", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-paper-hover": { "role": "neutral", "displayName": "Papel de hover (negativo)", "canonical": "#1f2226", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-hairline": { "role": "neutral", "displayName": "Filete fino (negativo)", "canonical": "#2e3237", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-rule": { "role": "neutral", "displayName": "Filete de tinta (negativo)", "canonical": "#e8e8e6", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-ink": { "role": "neutral", "displayName": "Tinta (negativo)", "canonical": "#ececea", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-ink-hover": { "role": "neutral", "displayName": "Tinta de hover (negativo)", "canonical": "#c9c9c6", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-ink-muted": { "role": "neutral", "displayName": "Tinta secundaria (negativo)", "canonical": "#a2a6ad", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-control-border": { "role": "neutral", "displayName": "Borde de control (negativo)", "canonical": "#8b9098", "tonalRamp": ["#0e0f11", "#17191c", "#1f2226", "#2e3237", "#8b9098", "#a2a6ad", "#c9c9c6", "#ececea"] },
+      "negative-location-blue": { "role": "primary", "displayName": "Azul de ubicación (negativo)", "canonical": "#7aa2ff", "tonalRamp": ["#0b1220", "#132f86", "#1e40af", "#1d4ed8", "#4a72e6", "#7aa2ff", "#a3bfff", "#dbe5ff"] },
+      "negative-location-blue-text": { "role": "primary", "displayName": "Texto azul (negativo)", "canonical": "#8fb0ff", "tonalRamp": ["#0b1220", "#132f86", "#1e40af", "#1d4ed8", "#4a72e6", "#8fb0ff", "#a3bfff", "#dbe5ff"] },
+      "negative-location-blue-hover": { "role": "primary", "displayName": "Azul de hover (negativo)", "canonical": "#a3bfff", "tonalRamp": ["#0b1220", "#132f86", "#1e40af", "#1d4ed8", "#4a72e6", "#7aa2ff", "#a3bfff", "#dbe5ff"] },
+      "negative-on-blue": { "role": "primary", "displayName": "Tinta sobre azul (negativo)", "canonical": "#0b1220", "tonalRamp": ["#0b1220", "#132f86", "#1e40af", "#1d4ed8", "#4a72e6", "#7aa2ff", "#a3bfff", "#dbe5ff"] },
+      "negative-caution-red": { "role": "secondary", "displayName": "Rojo de precaución (negativo)", "canonical": "#dc2626", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#f87171", "#fca5a5", "#fee2e2"] },
+      "negative-caution-red-text": { "role": "secondary", "displayName": "Texto rojo (negativo)", "canonical": "#f87171", "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#f87171", "#fca5a5", "#fee2e2"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Título del documento", "purpose": "Nombre de la carpeta o título de la página; el único h1." },
+      "wordmark": { "displayName": "Logotipo", "purpose": "STORIFY en el membrete." },
+      "figure-code": { "displayName": "Código de figura", "purpose": "Código de tipo grande en las figuras sin miniatura." },
+      "headline": { "displayName": "Título de sección", "purpose": "Diálogos, tablas del dashboard, chat (h2)." },
+      "body": { "displayName": "Texto", "purpose": "Texto corrido, cifras tabulares." },
+      "body-row": { "displayName": "Texto de fila", "purpose": "Nombres en filas y migas de pan." },
+      "button": { "displayName": "Botón", "purpose": "Botones y segmentos, ancho 87 %." },
+      "label": { "displayName": "Etiqueta", "purpose": "Versalitas semicondensadas para encabezados de columna, dt, leyendas y formularios." },
+      "type-code": { "displayName": "Código de tipo", "purpose": "Número de pieza DIR/PDF/JPG en su caja de filete." },
+      "code": { "displayName": "Código", "purpose": "Solo código en las respuestas del asistente." }
+    },
+    "shadows": [
+      { "name": "none", "value": "none", "purpose": "La hoja impresa no tiene sombras: --shadow-sm a --shadow-xl valen none en ambos temas. La profundidad es un filete." }
+    ],
+    "rules": [
+      { "name": "hairline", "value": "1px solid var(--border)", "purpose": "Entre filas de tablas y listas." },
+      { "name": "section-rule", "value": "1px solid var(--rule)", "purpose": "Abre y cierra secciones: cabecera de hoja, thead/tfoot, menús, avisos, pie de figura." },
+      { "name": "overlay-rule", "value": "2px solid var(--rule)", "purpose": "Lo que flota sobre la hoja (diálogos, barra de selección, panel del chat) y la apertura de las tablas del dashboard." },
+      { "name": "masthead-rule", "value": "6px solid var(--rule)", "purpose": "Filete superior del membrete y de la portada del login (4px en móvil)." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "La única curva del sistema." },
+      { "name": "transition-fast", "value": "120ms var(--ease-out)", "purpose": "Color, borde y opacidad de controles; rotación de la flecha de orden." },
+      { "name": "transition-medium", "value": "200ms var(--ease-out)", "purpose": "Entrada de avisos y del panel del chat, contorno de la zona de soltar." },
+      { "name": "fade-in", "value": "fadeIn 160-240ms var(--ease-out)", "purpose": "Entrada de páginas, diálogos y mensajes; con reduced-motion solo quedan fundidos de opacidad." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "900px" },
+      { "name": "sm", "value": "640px" },
+      { "name": "coarse-pointer", "value": "(pointer: coarse)" },
+      { "name": "no-hover", "value": "(hover: none)" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción primaria de tinta sólida (Subir, Entrar).",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"></path><polyline points=\"17 8 12 3 7 8\"></polyline><line x1=\"12\" y1=\"3\" x2=\"12\" y2=\"15\"></line></svg>Subir</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 1px solid transparent; border-radius: 0; font-family: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif; font-stretch: 87%; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.01em; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1), border-color 120ms cubic-bezier(0.16, 1, 0.3, 1), color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: square; stroke-linejoin: miter; } .ds-btn-primary { background: var(--text, #111111); color: var(--bg, #ffffff); } .ds-btn-primary:hover { background: var(--ink-hover, #333333); } .ds-btn:focus-visible { outline: 2px solid var(--focus-ring, #1d4ed8); outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Papel con borde de control (Nueva carpeta, Volver).",
+      "html": "<button class=\"ds-btn-secondary\">Nueva carpeta</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; background: var(--surface, #ffffff); color: var(--text, #111111); border: 1px solid var(--border-strong, #6b6b6b); border-radius: 0; font-family: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif; font-stretch: 87%; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-secondary:hover { background: var(--surface-hover, #ececea); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--focus-ring, #1d4ed8); outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón destructivo",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Solo para confirmar una acción destructiva.",
+      "html": "<button class=\"ds-btn-danger\">Eliminar</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; background: var(--danger, #b91c1c); color: var(--on-danger, #ffffff); border: 1px solid transparent; border-radius: 0; font-family: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif; font-stretch: 87%; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 120ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-danger:hover { background: var(--danger-hover, #991b1b); } .ds-btn-danger:focus-visible { outline: 2px solid var(--focus-ring, #1d4ed8); outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de 44 px con etiqueta en versalitas encima.",
+      "html": "<label class=\"ds-label\" for=\"ds-user\">Usuario</label><input id=\"ds-user\" class=\"ds-input\" type=\"text\">",
+      "css": ".ds-label { display: block; margin-bottom: 4px; font-family: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif; font-stretch: 87%; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted, #555555); } .ds-input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--border-strong, #6b6b6b); border-radius: 0; background: var(--surface, #ffffff); color: var(--text, #111111); font: inherit; } .ds-input:focus { border-color: var(--rule, #111111); } .ds-input:focus-visible { outline: 2px solid var(--focus-ring, #1d4ed8); outline-offset: 2px; }"
+    },
+    {
+      "name": "Referencia (migas de pan)",
+      "kind": "nav",
+      "refersTo": "breadcrumb",
+      "description": "Ref. y la ruta; la carpeta actual en azul.",
+      "html": "<nav class=\"ds-ref\" aria-label=\"Ruta\"><span class=\"ds-ref-label\">Ref.</span><ol class=\"ds-crumbs\"><li><a href=\"#\">Inicio</a></li><li><a href=\"#\" aria-current=\"page\">ALICE</a></li></ol></nav>",
+      "css": ".ds-ref { display: flex; align-items: baseline; gap: 8px; font-family: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif; } .ds-ref-label { font-stretch: 87%; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted, #555555); } .ds-crumbs { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; } .ds-crumbs li + li::before { content: '/'; margin-right: 4px; color: var(--text-muted, #555555); } .ds-crumbs a { font-size: 0.9375rem; color: var(--text, #111111); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; } .ds-crumbs a:hover { text-decoration-thickness: 2px; } .ds-crumbs a[aria-current] { color: var(--accent-text, #1d4ed8); font-weight: 600; text-decoration: none; } .ds-crumbs a:focus-visible { outline: 2px solid var(--focus-ring, #1d4ed8); outline-offset: 2px; }"
+    },
+    {
+      "name": "Selector de vista",
+      "kind": "chip",
+      "refersTo": "segment-current",
+      "description": "Segmentado Lista / Cuadrícula; el actual es una selección en azul.",
+      "html": "<nav class=\"ds-seg\" aria-label=\"Vista\"><a href=\"#\" aria-current=\"true\">Lista</a><a href=\"#\">Cuadrícula</a></nav>",
+      "css": ".ds-seg { display: inline-flex; border: 1px solid var(--border-strong, #6b6b6b); font-family: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif; } .ds-seg a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 8px; font-stretch: 87%; font-size: 0.8125rem; font-weight: 600; color: var(--text, #111111); text-decoration: none; } .ds-seg a + a { border-left: 1px solid var(--border-strong, #6b6b6b); } .ds-seg a:hover { background: var(--surface-hover, #ececea); } .ds-seg a[aria-current] { background: var(--accent-soft, rgba(29, 78, 216, 0.09)); color: var(--accent-text, #1d4ed8); } .ds-seg a:focus-visible { outline: 2px solid var(--focus-ring, #1d4ed8); outline-offset: 2px; }"
+    },
+    {
+      "name": "Fila de especificación",
+      "kind": "custom",
+      "refersTo": "spec-row",
+      "description": "Fila de la tabla: código de tipo, nombre, tamaño con barra de escala fija, fecha.",
+      "html": "<table class=\"ds-spec\"><thead><tr><th>Tipo</th><th>Nombre</th><th class=\"ds-num\">Tamaño</th><th>Modificado</th></tr></thead><tbody><tr><td><span class=\"ds-code\">PDF</span></td><td>informe.pdf</td><td class=\"ds-num\">717 KB <meter class=\"ds-scale\" min=\"0\" max=\"12\" value=\"5.9\"></meter></td><td class=\"ds-date\">2026-10-18 10:08</td></tr><tr><td><span class=\"ds-code\">DIR</span></td><td>Fotos</td><td></td><td class=\"ds-date\">2026-10-18 10:08</td></tr></tbody></table>",
+      "css": ".ds-spec { width: 100%; border-collapse: collapse; font-family: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: var(--text, #111111); } .ds-spec th { height: 36px; padding: 0 8px; text-align: left; border-top: 1px solid var(--rule, #111111); border-bottom: 1px solid var(--rule, #111111); font-stretch: 87%; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted, #555555); } .ds-spec td { height: 46px; padding: 0 8px; font-size: 0.9375rem; } .ds-spec tbody tr { border-bottom: 1px solid var(--border, #d6d6d3); } .ds-spec tbody tr:hover { background: var(--surface-hover, #ececea); } .ds-num { text-align: right !important; } .ds-date { font-size: 0.875rem; color: var(--text-muted, #555555); } .ds-code { display: inline-block; min-width: 40px; padding: 1px 5px; border: 1px solid var(--border-strong, #6b6b6b); font-stretch: 72%; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-align: center; } .ds-scale { width: 56px; height: 5px; margin-left: 8px; vertical-align: middle; } .ds-scale::-webkit-meter-bar { height: 5px; border: none; border-radius: 0; background: var(--border, #d6d6d3); } .ds-scale::-webkit-meter-optimum-value { border-radius: 0; background: var(--text-muted, #555555); } .ds-scale::-moz-meter-bar { background: var(--text-muted, #555555); }"
+    },
+    {
+      "name": "Caja PRECAUCIÓN",
+      "kind": "card",
+      "refersTo": "caution-box",
+      "description": "Cambio propuesto por el agente, que el propietario aprueba o rechaza.",
+      "html": "<div class=\"ds-caution\"><p class=\"ds-caution-label\">Precaución</p><p class=\"ds-caution-text\">El asistente propone estos cambios:</p><ul class=\"ds-caution-list\"><li>Mover informe.pdf a Documentos</li></ul><div class=\"ds-caution-buttons\"><button class=\"ds-cb-ok\">Aprobar</button><button class=\"ds-cb-no\">Rechazar</button></div></div>",
+      "css": ".ds-caution { padding: 8px 16px 16px; border: 2px solid var(--danger-text, #b91c1c); background: var(--danger-soft, rgba(185, 28, 28, 0.07)); color: var(--text, #111111); font-family: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif; } .ds-caution-label { margin: 0 0 4px; font-stretch: 72%; font-size: 0.875rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--danger-text, #b91c1c); } .ds-caution-text { margin: 0 0 4px; font-size: 0.875rem; } .ds-caution-list { margin: 0 0 8px; padding-left: 1.25rem; font-size: 0.875rem; font-weight: 600; } .ds-caution-buttons { display: flex; gap: 8px; } .ds-cb-ok, .ds-cb-no { min-height: 32px; padding: 0 8px; border-radius: 0; font: inherit; font-stretch: 87%; font-size: 0.8125rem; font-weight: 600; cursor: pointer; } .ds-cb-ok { background: var(--danger, #b91c1c); color: var(--on-danger, #ffffff); border: 1px solid transparent; } .ds-cb-ok:hover { background: var(--danger-hover, #991b1b); } .ds-cb-no { background: var(--surface, #ffffff); color: var(--text, #111111); border: 1px solid var(--border-strong, #6b6b6b); } .ds-cb-no:hover { background: var(--surface-hover, #ececea); } .ds-cb-ok:focus-visible, .ds-cb-no:focus-visible { outline: 2px solid var(--focus-ring, #1d4ed8); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La hoja de datos del componente",
+    "overview": "Cada carpeta es la hoja de datos de un componente: su contenido y su estado, medidos y tabulados. La página es papel blanco con una sola tinta casi negra, filetes de 1 px y un gris para la tinta secundaria. La cabecera es un membrete con el logotipo, el título del documento (el nombre de la carpeta), una referencia (la ruta) y un bloque de revisión (usuario, rol, fecha). Debajo vienen la tabla de capacidad, la fila de acciones y la carpeta como tabla de especificaciones; en cuadrícula, como figuras numeradas (\"Fig. n · JPG\"). El dashboard sigue el mismo modelo con tablas de características, y el login es la portada de la hoja.\n\nEs una herramienta de experto: densa, rápida de escanear y nunca rellena. El color no decora. Hay dos colores de señal y cada uno tiene un único trabajo: el azul marca dónde estás y qué está seleccionado, y el rojo marca precaución (cajas PRECAUCIÓN y acciones destructivas). Las acciones primarias son de tinta sólida. Esquinas rectas, sin sombras y sin desenfoque: la profundidad se expresa con filetes. El tema oscuro es el negativo de la misma hoja, no un sistema aparte.\n\nSe rechaza explícitamente el patrón por defecto de la categoría: un dashboard oscuro de tarjetas con un acento de neón.",
+    "keyCharacteristics": [
+      "Una familia (Archivo variable) con dos anchos: condensado para membrete, referencias y códigos de tipo; normal para leer.",
+      "Cifras tabulares en todas partes.",
+      "Filetes como única fuente de jerarquía y profundidad.",
+      "Azul solo para ubicación y selección; rojo solo para precaución.",
+      "Códigos de tipo (DIR, PDF, JPG) como número de pieza de cada fila.",
+      "Escala de tamaño fija y logarítmica, comparable entre carpetas.",
+      "Tema oscuro como negativo de impresión."
+    ],
+    "rules": [
+      { "name": "La regla de un trabajo por color", "body": "El azul significa \"estás aquí / esto está seleccionado\" y el rojo significa \"precaución\". Ningún otro elemento usa color; si algo nuevo necesita destacar, lo hace con peso, ancho o un filete.", "section": "colors" },
+      { "name": "La regla de la tinta única", "body": "Las acciones primarias (Subir, Entrar, enviar en el chat, el botón del chat) son bloques de tinta sólida con texto de papel. El azul está reservado para la ubicación y no sirve para llamar a la acción.", "section": "colors" },
+      { "name": "La regla del negativo", "body": "El tema oscuro invierte la misma hoja. Sus valores viven dos veces en `tokens.css`, en `:root[data-theme='dark']` y en el bloque sin JavaScript (`@media (prefers-color-scheme: dark)` sobre `:root:not([data-theme])`), y los dos deben coincidir. `src/ui/contrast.spec.ts` comprueba el contraste WCAG AA de los pares de tokens en ambos temas (4,5:1 para texto, 3:1 para bordes de control, iconos y foco) y que el bloque sin JavaScript coincide con el tema oscuro. Ejecútalo después de tocar un color. `tokens.css` es el único lugar con valores de color: los componentes usan nombres semánticos.", "section": "colors" },
+      { "name": "La regla de las cifras tabulares", "body": "`font-variant-numeric: tabular-nums` se aplica en `body` y lo hereda todo: tamaños, fechas, contadores y totales se alinean en columna. Las fechas usan el formato ordenable `AAAA-MM-DD HH:MM`, y los bytes exactos, separadores de miles.", "section": "typography" },
+      { "name": "La regla del ancho como voz", "body": "Lo condensado nombra (membrete, títulos, códigos), lo semicondensado etiqueta y lo normal se lee. No se usa una segunda familia para crear jerarquía.", "section": "typography" },
+      { "name": "La regla del filete", "body": "Cada grosor tiene un significado: 1 px de `hairline` separa filas; 1 px de tinta abre y cierra secciones (cabecera de la hoja, encabezado y pie de la tabla, menús, avisos, pie de figura); 2 px de tinta delimitan lo que flota sobre la hoja o abre una tabla del dashboard; 6 px de tinta (4 px en móvil) es el filete superior del membrete y de la portada del login. No se añade un grosor nuevo sin un significado nuevo.", "section": "elevation" },
+      { "name": "La regla de la escala fija", "body": "La escala no se normaliza por carpeta. Si una vista nueva compara tamaños, usa la misma escala logarítmica fija.", "section": "components" }
+    ],
+    "dos": [
+      "Do usa solo los tokens semánticos de `public/css/tokens.css`: es el único archivo con valores de color. Mantén sincronizados el tema claro, el oscuro y el bloque sin JavaScript, y ejecuta `src/ui/contrast.spec.ts` (WCAG AA) después de cambiar un color.",
+      "Do expresa jerarquía y profundidad con filetes: 1 px fino entre filas, 1 px de tinta en secciones, 2 px de tinta en lo que flota y 6 px en el membrete.",
+      "Do reserva el azul para la ubicación y la selección, y el rojo para la precaución y las acciones destructivas.",
+      "Do haz las acciones primarias de tinta sólida (`ink` con texto `paper`).",
+      "Do mantén las cifras tabulares, las fechas `AAAA-MM-DD HH:MM` y la escala de tamaño logarítmica fija de 1 B a 1 TB.",
+      "Do etiqueta los datos con el registro de etiqueta (0,75rem, 600, mayúsculas, 0,06em, ancho 87 %) en la misma celda o línea que el dato.",
+      "Do dibuja los iconos como SVG en línea con trazo de 1,75 y remates rectos, con `aria-hidden=\"true\"` y un nombre accesible en el control.",
+      "Do da 44 px a todos los objetivos con `pointer: coarse` y 24 px como mínimo a la casilla de selección. Deja `--fab-clearance` en todo lo que se ancle abajo.",
+      "Do conserva los patrones de accesibilidad: las carpetas son enlaces y los archivos son botones que cubren la fila o la figura; ⋯ es un *menu button* de WAI-ARIA; los diálogos son `<dialog>` nativos con `showModal()`; el chat está `inert` cuando está cerrado; hay un único `<h1>` por página dentro del `<main id=\"main\">` del layout.",
+      "Do pon todos los textos en español en `src/i18n/es.ts` (decisión D5), con un tono neutro en género.",
+      "Do sirve las fuentes y las librerías desde el propio servidor (Archivo en `/vendor/archivo/`)."
+    ],
+    "donts": [
+      "Don't redondees esquinas, añadas sombras ni uses `backdrop-filter` o desenfoque.",
+      "Don't uses el azul en botones de acción ni el rojo como decoración o para estados que no sean de precaución.",
+      "Don't escribas colores literales fuera de `tokens.css`, estilos inline, atributos `style=\"\"` ni bloques `<style>`: la CSP es `style-src 'self'` y un test e2e lo comprueba.",
+      "Don't introduzcas una segunda familia tipográfica para crear jerarquía. Archivo cambia de ancho y de peso; el monoespaciado es solo para código.",
+      "Don't normalices la barra de tamaño por carpeta.",
+      "Don't pongas acciones que solo aparecen con hover en dispositivos sin hover.",
+      "Don't animes `all` ni conserves movimiento con `prefers-reduced-motion: reduce`: solo se permiten fundidos de opacidad.",
+      "Don't uses caracteres tipográficos (×, !, flechas de texto) como iconos: los iconos son SVG.",
+      "Don't cargues fuentes ni scripts desde un CDN o Google Fonts."
+    ]
+  }
+}

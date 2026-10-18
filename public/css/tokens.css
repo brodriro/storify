@@ -19,8 +19,6 @@
 
     /* Paper and ink */
     --bg: #ffffff;
-    --bg-glow-1: #ffffff;
-    --bg-glow-2: #ffffff;
     --surface: #ffffff;
     --surface-sunken: #f3f3f2;
     --surface-hover: #ececea;
@@ -52,12 +50,6 @@
 
     --code-text: #111111;
     --focus-ring: #1d4ed8;
-
-    /* Print has no shadows: depth is a rule. */
-    --shadow-sm: none;
-    --shadow-md: none;
-    --shadow-lg: none;
-    --shadow-xl: none;
 
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;
@@ -102,8 +94,6 @@
     color-scheme: dark;
 
     --bg: #0e0f11;
-    --bg-glow-1: #0e0f11;
-    --bg-glow-2: #0e0f11;
     --surface: #0e0f11;
     --surface-sunken: #17191c;
     --surface-hover: #1f2226;
@@ -131,10 +121,6 @@
     --code-text: #ececea;
     --focus-ring: #8fb0ff;
 
-    --shadow-sm: none;
-    --shadow-md: none;
-    --shadow-lg: none;
-    --shadow-xl: none;
 }
 
 /* No JavaScript: follow the system. Same values as [data-theme='dark']. */
@@ -143,8 +129,6 @@
         color-scheme: dark;
 
         --bg: #0e0f11;
-        --bg-glow-1: #0e0f11;
-        --bg-glow-2: #0e0f11;
         --surface: #0e0f11;
         --surface-sunken: #17191c;
         --surface-hover: #1f2226;
@@ -172,9 +156,5 @@
         --code-text: #ececea;
         --focus-ring: #8fb0ff;
 
-        --shadow-sm: none;
-        --shadow-md: none;
-        --shadow-lg: none;
-        --shadow-xl: none;
     }
 }

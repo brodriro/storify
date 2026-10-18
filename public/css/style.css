@@ -90,18 +90,15 @@ a:hover {
 }
 
 /* Small capitals in condensed width: every label, caption and column head. */
-.label,
 .capacity caption,
 .capacity th,
 .spec-table th,
 .revision dt,
-.spec-row dt,
 .ref-label,
 .figure-ref,
 .sort-label,
 .data-row dt,
-.scale-legend,
-.data-table th {
+.scale-legend {
     font-stretch: var(--stretch-semi);
     font-size: 0.75rem;
     font-weight: 600;
@@ -254,8 +251,6 @@ a:hover {
     padding: 0;
     background: transparent;
     border: 1px solid transparent;
-    font-size: 1.5rem;
-    line-height: 1;
     color: var(--text);
     cursor: pointer;
 }

@@ -362,16 +362,15 @@
     color: var(--danger-text);
 }
 
-.chat-confirm-label::before {
-    content: '!';
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.chat-confirm-icon {
     width: 18px;
     height: 18px;
-    border: 2px solid currentColor;
-    font-size: 0.75rem;
-    line-height: 1;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
 }
 
 .chat-confirm-text {
