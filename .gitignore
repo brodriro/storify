@@ -54,3 +54,8 @@ temp_uploads/
 
 # Local audit / improvement plan (not versioned)
 plan-mejoras/
+
+# Impeccable working files (review captures, decision-page state)
+/.impeccable/review/
+/.impeccable/questions/
+/.impeccable/mocks/
