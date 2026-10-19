@@ -16,6 +16,8 @@ export interface AppConfig {
   jwtSecret: string;
   cookieSecure: boolean;
   llm: LlmConfig;
+  /** Assistant requests (messages + confirmations) per user per minute. */
+  chatMessagesPerMinute: number;
   upload: { maxFileSizeMb: number; maxFiles: number };
   /** Ideally on another disk than storagePath (default: <storagePath>/backups). */
   backup: { path: string; keepFull: number };
@@ -143,6 +145,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     jwtSecret,
     cookieSecure: env.NODE_ENV === 'production',
     llm: loadLlmConfig(env, errors),
+    chatMessagesPerMinute: parsePositiveInt(
+      'CHAT_MESSAGES_PER_MINUTE',
+      env.CHAT_MESSAGES_PER_MINUTE,
+      20,
+      errors,
+    ),
     upload: {
       maxFileSizeMb: parsePositiveInt(
         'UPLOAD_MAX_FILE_SIZE_MB',

@@ -119,7 +119,6 @@ export const es = {
     noBackups: 'Todavía no hay ningún backup.',
   },
   chat: {
-    open: 'Abrir asistente',
     assistant: 'Asistente',
     title: 'Storify AI',
     subtitle: 'Asistente del NAS',
@@ -196,6 +195,8 @@ export const es = {
     },
   },
   errors: {
+    chatRateLimited:
+      'Has enviado muchas peticiones al asistente. Espera {seconds} s y vuelve a intentarlo.',
     invalidPath: 'Ruta no válida',
     invalidName: 'Nombre no válido',
     accessDenied: 'Acceso denegado',

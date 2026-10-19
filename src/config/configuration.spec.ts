@@ -68,6 +68,17 @@ describe('loadConfig', () => {
     );
   });
 
+  it('limits assistant requests per user (20/min by default)', () => {
+    expect(loadConfig(base).chatMessagesPerMinute).toBe(20);
+    expect(
+      loadConfig({ ...base, CHAT_MESSAGES_PER_MINUTE: '5' })
+        .chatMessagesPerMinute,
+    ).toBe(5);
+    expect(() =>
+      loadConfig({ ...base, CHAT_MESSAGES_PER_MINUTE: '0' }),
+    ).toThrow('CHAT_MESSAGES_PER_MINUTE');
+  });
+
   it('only limits uploads when TOTAL_STORAGE_GB is set', () => {
     const unset = loadConfig(base);
     expect(unset.totalStorageGb).toBe(10);

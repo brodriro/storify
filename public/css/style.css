@@ -150,8 +150,8 @@ a:hover {
 
 /* ---- Buttons ------------------------------------------------------------- */
 
-/* 36 px with a mouse; every control reaches 44 px on touch (see the
-   pointer: coarse block at the end). */
+/* 36 px with a mouse; every control reaches 44 px on touch and phone widths
+   (see the pointer: coarse block at the end). */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -387,10 +387,9 @@ a:hover {
     border-bottom: 1px solid var(--border);
 }
 
-/* The bottom padding keeps the last rows clear of the chat button. */
 .main-content {
     min-width: 0;
-    padding: var(--space-xl) var(--space-xl) var(--fab-clearance);
+    padding: var(--space-xl);
 }
 
 .main-content-single {
@@ -754,6 +753,18 @@ a:hover {
     border-bottom: 1px solid var(--border);
 }
 
+/* The column header stays in view while a long list scrolls (desktop; on
+   small screens the top bar already takes that place). */
+@media (min-width: 901px) {
+    .file-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--surface);
+        box-shadow: inset 0 -1px 0 var(--border);
+    }
+}
+
 .file-table thead th {
     height: 40px;
     font-size: var(--text-sm);
@@ -808,6 +819,14 @@ a:hover {
 .file-table .col-type {
     width: 104px;
     color: var(--text-muted);
+}
+
+/* The name takes the remaining width and ellipsizes; without max-width: 0
+   an auto-layout table grows to fit a long name (horizontal scroll on
+   phones). */
+.file-table td.col-name {
+    width: 100%;
+    max-width: 0;
 }
 
 .file-table .col-actions {
@@ -1084,6 +1103,11 @@ a:hover {
     animation: fadeIn 150ms var(--ease-out);
 }
 
+.dropdown-content.drop-up {
+    top: auto;
+    bottom: calc(100% + 4px);
+}
+
 .dropdown-item {
     display: flex;
     align-items: center;
@@ -1153,12 +1177,15 @@ a:hover {
 
 /* ---- Selection bar ------------------------------------------------------- */
 
+/* Sticky at the foot of the page: it stays in view over long lists, and at
+   the end it sits after the last row instead of covering it. */
 .selection-action-bar {
-    position: fixed;
-    bottom: var(--space-lg);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 900;
+    position: sticky;
+    bottom: var(--space-md);
+    z-index: 60;
+    align-self: center;
+    width: fit-content;
+    max-width: 100%;
     display: flex;
     align-items: center;
     gap: var(--space-md);
@@ -1376,14 +1403,31 @@ a:hover {
     cursor: pointer;
 }
 
-.folder-item::before {
-    content: '';
-    width: 16px;
-    height: 12px;
-    margin-right: var(--space-sm);
+.folder-item {
+    gap: var(--space-sm);
+    min-height: 40px;
+}
+
+.folder-item .icon-folder {
     flex-shrink: 0;
-    border: 2px solid var(--accent);
-    border-radius: 2px;
+}
+
+.folder-item-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.folder-item-chevron {
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.folder-item:disabled .icon-folder {
+    opacity: 0.5;
+}
+
+.folder-item:disabled .folder-item-chevron {
+    visibility: hidden;
 }
 
 .folder-item:hover:not(:disabled),
@@ -1397,8 +1441,10 @@ a:hover {
 }
 
 .move-status {
-    min-height: 1.5em;
-    margin: var(--space-sm) 0 0;
+    flex: 1;
+    min-width: 0;
+    align-self: center;
+    margin: 0;
     color: var(--text-muted);
     font-size: var(--text-md);
 }
@@ -1407,8 +1453,8 @@ a:hover {
 
 .toast-container {
     position: fixed;
-    bottom: var(--fab-clearance);
-    right: var(--fab-offset);
+    bottom: var(--space-lg);
+    right: var(--space-lg);
     z-index: 2000;
     display: flex;
     flex-direction: column;
@@ -1665,9 +1711,9 @@ a:hover {
     }
 }
 
-/* Touch: every control reaches the 44 px target (the compact sizes are for
-   mouse pointers only). */
-@media (pointer: coarse) {
+/* Touch and phone widths: every control reaches the 44 px target (the
+   compact sizes are for mouse pointers on wide screens only). */
+@media (pointer: coarse), (max-width: 640px) {
     .btn,
     .btn-sm,
     .brand,
@@ -1743,7 +1789,7 @@ a:hover {
     }
 
     .main-content {
-        padding: var(--space-lg) var(--space-md) var(--fab-clearance);
+        padding: var(--space-lg) var(--space-md);
     }
 
     .dashboard-grid {
@@ -1857,10 +1903,9 @@ a:hover {
     }
 
     .selection-action-bar {
-        left: var(--space-md);
-        right: var(--space-md);
-        bottom: var(--fab-clearance);
-        transform: none;
+        align-self: stretch;
+        width: auto;
+        bottom: var(--space-sm);
         flex-wrap: wrap;
         justify-content: center;
     }

@@ -105,6 +105,8 @@ Sin proveedor configurado, el resto de la aplicación funciona con normalidad y 
 
 Implementación: `src/agent/` (bucle en `agent.service.ts`, una herramienta por archivo en `tools/`).
 
+El asistente admite como mucho `CHAT_MESSAGES_PER_MINUTE` peticiones por usuario y minuto (20 por defecto), sumando todas sus pestañas. Para comprobar un modelo o un cambio en el agente, `pnpm eval:agent` ejecuta una batería de casos contra el LLM configurado (ver `test/agent-evals/README.md`).
+
 ---
 
 ## Requisitos
@@ -125,6 +127,7 @@ Copia `.env.example` a `.env` y ajústalo. La aplicación **valida la configurac
 | `USER_<NOMBRE>` | Sí, una por usuario | Contraseña de cada usuario. Recomendado: hash bcrypt (ver abajo) |
 | `STORAGE_PATH` | No | Raíz del almacenamiento (por defecto `./public_storage`) |
 | `TOTAL_STORAGE_GB` | No | Límite de almacenamiento en GB. Si se define, las subidas que lo superarían se rechazan (507); sin definir, se muestran 10 GB en el dashboard solo como referencia |
+| `CHAT_MESSAGES_PER_MINUTE` | No | Peticiones al asistente por usuario y minuto, mensajes y confirmaciones (por defecto 20) |
 | `UPLOAD_MAX_FILE_SIZE_MB` / `UPLOAD_MAX_FILES` | No | Límites de subida (2048 MB por archivo, 10 archivos por petición) |
 | `BACKUP_PATH` | No | Carpeta de backups (por defecto `<STORAGE_PATH>/backups`); idealmente en otro disco |
 | `BACKUP_KEEP_FULL` | No | Backups completos que se conservan (por defecto 3) |
