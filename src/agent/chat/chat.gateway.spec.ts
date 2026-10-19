@@ -1,12 +1,16 @@
+import type { ConfigService } from '@nestjs/config';
 import type { Socket } from 'socket.io';
 import type { AuthService } from '../../auth/auth.service';
 import type { AgentService } from '../agent.service';
 import type { AuditService } from '../../audit/audit.service';
+import type { AppConfig } from '../../config/configuration';
 import { ChatGateway } from './chat.gateway';
 
-function fakeSocket(cookie?: string) {
+const CHAT_LIMIT = 5;
+
+function fakeSocket(cookie?: string, id = 'socket-1') {
   return {
-    id: 'socket-1',
+    id,
     data: {} as Record<string, unknown>,
     handshake: { headers: cookie ? { cookie } : {} },
     disconnect: jest.fn(),
@@ -33,6 +37,52 @@ describe('ChatGateway', () => {
         providerLabel: () => 'OpenAI',
       } as unknown as AgentService,
       { verifyToken } as unknown as AuthService,
+      { get: () => CHAT_LIMIT } as unknown as ConfigService<AppConfig, true>,
+    );
+  });
+
+  it('limits assistant requests per user, across sockets', async () => {
+    verifyToken.mockReturnValue({ username: 'ALICE', role: 'member' });
+    processMessage.mockResolvedValue({ response: 'r' });
+    const first = fakeSocket('jwt=good', 'tab-1');
+    const second = fakeSocket('jwt=good', 'tab-2');
+    gateway.handleConnection(first as unknown as Socket);
+    gateway.handleConnection(second as unknown as Socket);
+
+    for (let i = 0; i < CHAT_LIMIT; i++) {
+      const socket = i % 2 ? second : first;
+      await gateway.handleMessage(`m${i}`, socket as unknown as Socket);
+    }
+    await gateway.handleMessage('una más', second as unknown as Socket);
+
+    expect(processMessage).toHaveBeenCalledTimes(CHAT_LIMIT);
+    const [event, payload] = second.emit.mock.calls.at(-1) as [
+      string,
+      { response: string },
+    ];
+    expect(event).toBe('chatResponse');
+    expect(payload.response).toMatch(/Espera \d+ s/);
+  });
+
+  it('keeps separate limits for different users', async () => {
+    processMessage.mockResolvedValue({ response: 'r' });
+    verifyToken.mockReturnValue({ username: 'ALICE', role: 'member' });
+    const alice = fakeSocket('jwt=a', 'a');
+    gateway.handleConnection(alice as unknown as Socket);
+    verifyToken.mockReturnValue({ username: 'BOB', role: 'member' });
+    const bob = fakeSocket('jwt=b', 'b');
+    gateway.handleConnection(bob as unknown as Socket);
+
+    for (let i = 0; i < CHAT_LIMIT + 1; i++) {
+      await gateway.handleMessage('hola', alice as unknown as Socket);
+    }
+    await gateway.handleMessage('hola', bob as unknown as Socket);
+
+    expect(processMessage).toHaveBeenCalledTimes(CHAT_LIMIT + 1);
+    expect(processMessage).toHaveBeenLastCalledWith(
+      'hola',
+      [],
+      expect.objectContaining({ username: 'BOB' }),
     );
   });
 

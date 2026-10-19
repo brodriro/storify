@@ -1,4 +1,5 @@
 import { Logger, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ConnectedSocket,
   MessageBody,
@@ -17,6 +18,9 @@ import {
 } from '../agent.service';
 import { ChatMessage } from '../interfaces/ChatMessage';
 import { AuditService } from '../../audit/audit.service';
+import type { AppConfig } from '../../config/configuration';
+import { t } from '../../i18n';
+import { ChatRateLimiter } from './chat-rate-limiter';
 
 /** Messages kept per socket (user + assistant turns). */
 const MAX_HISTORY_MESSAGES = 20;
@@ -52,12 +56,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly conversationHistory = new Map<string, ChatMessage[]>();
   /** At most one action awaiting confirmation per socket. */
   private readonly pending = new Map<string, ParkedRun>();
+  private readonly rateLimiter: ChatRateLimiter;
 
   constructor(
     private readonly auditService: AuditService,
     private readonly agentService: AgentService,
     private readonly authService: AuthService,
-  ) {}
+    configService: ConfigService<AppConfig, true>,
+  ) {
+    this.rateLimiter = new ChatRateLimiter(
+      configService.get('chatMessagesPerMinute', { infer: true }),
+    );
+  }
 
   /** Authenticates the socket with the same JWT cookie as the HTTP session. */
   handleConnection(client: Socket): void {
@@ -89,6 +99,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const user = this.userOf(client);
     if (!user) return;
     if (typeof message !== 'string' || message.trim() === '') return;
+    if (!this.withinRateLimit(client, user)) return;
     const text = message.slice(0, MAX_MESSAGE_LENGTH);
 
     this.auditService.log(
@@ -126,6 +137,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
       return;
     }
+    if (!this.withinRateLimit(client, user)) {
+      // Keep the proposal: the user can confirm again once the window allows.
+      return;
+    }
     this.pending.delete(client.id);
     if (Date.now() > parked.expiresAt) {
       client.emit('chatResponse', {
@@ -150,6 +165,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       turn.response,
     );
     this.reply(client, turn);
+  }
+
+  /** Per-user limit on requests that reach the LLM; tells the user when not. */
+  private withinRateLimit(client: Socket, user: AuthUser): boolean {
+    const { allowed, retryAfterMs } = this.rateLimiter.take(user.username);
+    if (allowed) return true;
+    this.logger.warn(`Chat rate limit reached for ${user.username}`);
+    client.emit('chatResponse', {
+      response: t('errors.chatRateLimited', {
+        seconds: Math.max(1, Math.ceil(retryAfterMs / 1000)),
+      }),
+    });
+    return false;
   }
 
   private userOf(client: Socket): AuthUser | null {
