@@ -251,8 +251,22 @@
             if (toggle === except) return;
             toggle.setAttribute('aria-expanded', 'false');
             menuOf(toggle).hidden = true;
+            menuOf(toggle).classList.remove('drop-up');
             toggle.closest('.file-item').classList.remove('menu-open');
         });
+    }
+
+    /** Opens the menu upwards when it does not fit below its button (last
+        rows, short screens), as long as it fits above. The sticky selection
+        bar counts as the end of the visible area. */
+    function placeMenu(toggle, menu) {
+        menu.classList.remove('drop-up');
+        let bottom = window.innerHeight;
+        const bar = $('selectionActionBar');
+        if (bar && !bar.hidden) bottom = Math.min(bottom, bar.getBoundingClientRect().top);
+        const button = toggle.getBoundingClientRect();
+        const height = menu.getBoundingClientRect().height;
+        if (button.bottom + height + 4 > bottom && button.top - height - 4 >= 0) menu.classList.add('drop-up');
     }
 
     function openMenu(toggle, focusLast = false) {
@@ -261,6 +275,7 @@
         toggle.setAttribute('aria-expanded', 'true');
         menu.hidden = false;
         toggle.closest('.file-item').classList.add('menu-open');
+        placeMenu(toggle, menu);
         const items = menu.querySelectorAll('[role="menuitem"]');
         items[focusLast ? items.length - 1 : 0].focus();
     }
@@ -403,6 +418,19 @@
         return li;
     }
 
+    function svgIcon(className, shapes) {
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('class', className);
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('aria-hidden', 'true');
+        for (const [tag, attrs] of shapes) {
+            const el = document.createElementNS(SVG_NS, tag);
+            for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+            svg.appendChild(el);
+        }
+        return svg;
+    }
+
     async function loadMoveFolder(path) {
         const status = $('moveStatus');
         const list = $('moveFolderList');
@@ -434,7 +462,14 @@
                 button.className = 'folder-item';
                 button.dataset.moveTo = folder.path;
                 const moving = insideMoved(folder.path, moveState.paths);
-                button.textContent = moving ? t('browser.beingMoved', { name: folder.name }) : folder.name;
+                const name = document.createElement('span');
+                name.className = 'folder-item-name';
+                name.textContent = moving ? t('browser.beingMoved', { name: folder.name }) : folder.name;
+                button.append(
+                    svgIcon('icon icon-folder', [['path', { d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z' }]]),
+                    name,
+                    svgIcon('icon icon-sm folder-item-chevron', [['polyline', { points: '9 18 15 12 9 6' }]]),
+                );
                 button.disabled = moving;
                 li.appendChild(button);
                 return li;

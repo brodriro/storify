@@ -1,69 +1,50 @@
-.chat-button {
-    position: fixed;
-    bottom: var(--fab-offset);
-    right: var(--fab-offset);
-    width: var(--fab-size);
-    height: var(--fab-size);
-    background: var(--accent);
-    color: var(--on-accent);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: var(--shadow-lg);
-    z-index: 1000;
-    transition: background-color var(--transition-fast);
-    border: none;
-}
-
-.chat-button:hover {
-    background: var(--accent-hover);
-}
-
-.chat-button svg {
-    width: 24px;
-    height: 24px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
+/* The launcher is #chat-button in the sidebar (a .nav-link); the panel
+   opens anchored to the right edge, over the content, never floating over
+   the list while closed. */
 /* Widget Container */
 .chat-sidebar {
     position: fixed;
-    bottom: var(--fab-clearance);
-    right: -450px;
-    width: 380px;
-    height: min(600px, calc(100vh - var(--fab-clearance) - var(--space-xl)));
+    right: var(--space-lg);
+    bottom: var(--space-lg);
+    width: 400px;
+    height: min(720px, calc(100vh - 2 * var(--space-lg)));
     background: var(--surface);
     border: 1px solid var(--border-strong);
     border-radius: var(--rounded-lg);
     box-shadow: var(--shadow-xl);
     z-index: 1001;
-    transition: right var(--transition-medium), opacity var(--transition-medium);
     display: flex;
     flex-direction: column;
     opacity: 0;
+    visibility: hidden;
+    transform: translateX(16px);
+    transition:
+        opacity var(--transition-medium),
+        transform var(--transition-medium),
+        visibility 0s linear var(--transition-medium);
 }
 
 .chat-sidebar.open {
-    right: var(--fab-offset);
     opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition:
+        opacity var(--transition-medium),
+        transform var(--transition-medium);
+}
+
+#chat-button[aria-expanded='true'] {
+    background: var(--surface-selected);
+    color: var(--text);
 }
 
 @media (max-width: 640px) {
     .chat-sidebar {
-        width: calc(100% - 2rem);
-        right: -100%;
-        bottom: var(--fab-clearance);
-        height: calc(100vh - var(--fab-clearance) - var(--space-md));
-    }
-
-    .chat-sidebar.open {
-        right: 1rem;
+        right: var(--space-sm);
+        bottom: var(--space-sm);
+        left: var(--space-sm);
+        width: auto;
+        height: calc(100vh - 2 * var(--space-sm));
     }
 }
 

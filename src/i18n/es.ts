@@ -119,7 +119,6 @@ export const es = {
     noBackups: 'Todavía no hay ningún backup.',
   },
   chat: {
-    open: 'Abrir asistente',
     assistant: 'Asistente',
     title: 'Storify AI',
     subtitle: 'Asistente del NAS',
