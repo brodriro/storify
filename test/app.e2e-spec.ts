@@ -105,10 +105,13 @@ describe('Storify (e2e)', () => {
 
   it('opens the dashboard for the admin', async () => {
     const { cookie } = await login('ADMIN', 'admin-pass');
-    await request(app.getHttpServer())
+    const res = await request(app.getHttpServer())
       .get('/admin/dashboard')
       .set('Cookie', cookie!)
       .expect(200);
+    // No backup yet: an empty history and no "latest backup" link to a 404.
+    expect(res.text).toContain('Todavía no hay ningún backup.');
+    expect(res.text).not.toContain('href="/admin/backup/download"');
   });
 
   it('returns 403 (not 500) for a member reaching another user folder', async () => {
@@ -360,6 +363,26 @@ describe('Storify (e2e)', () => {
     expect((zip.body as Buffer).subarray(0, 4)).toEqual(
       Buffer.from([0x50, 0x4b, 0x03, 0x04]),
     );
+
+    // The dashboard's history lists it with its own download link, and the
+    // "latest full backup" link appears now that one exists.
+    const name = (list.body as { backups: { name: string }[] }).backups[0].name;
+    const dashboard = await request(server)
+      .get('/admin/dashboard')
+      .set('Cookie', cookie!)
+      .expect(200);
+    expect(dashboard.text).toContain('href="/admin/backup/download"');
+    const rowLink = `/admin/backup/download?name=${encodeURIComponent(name)}`;
+    // hbs escapes '=' in attributes; browsers decode it back.
+    expect(dashboard.text).toContain(
+      `href="${rowLink.replace('=', '&#x3D;')}"`,
+    );
+    expect(dashboard.text).not.toContain('Todavía no hay ningún backup.');
+    await request(server)
+      .get(rowLink)
+      .set('Cookie', cookie!)
+      .expect(200)
+      .expect('Content-Type', 'application/zip');
   });
 
   describe('page navigations get redirects, API calls get JSON (A7)', () => {
