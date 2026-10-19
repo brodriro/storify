@@ -38,6 +38,8 @@ Thumbs.db
 
 # Testing
 coverage/
+# Agent eval reports (pnpm eval:agent)
+evals-results/
 .nyc_output/
 
 # Temporary files
